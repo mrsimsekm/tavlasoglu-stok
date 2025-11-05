@@ -43,8 +43,8 @@
       </div>
       <div class="col-span-4 md:col-span-1">
         <label class="label-style">Miktar</label>
+        <p v-if="stokYetersiz" class="text-xs text-red-500 mb-1">⚠️ Yetersiz Stok: {{ mevcutStok }}</p>
         <input v-model.number="yeniKalem.miktar" type="number" class="form-input mt-1" :class="{'border-red-500': stokYetersiz}"/>
-        <p v-if="stokYetersiz" class="text-xs text-red-500 mt-1">Stok: {{ mevcutStok }}</p>
       </div>
       <div class="col-span-4 md:col-span-1"><label class="label-style">Birim Fiyat</label><input v-model.number="yeniKalem.birim_fiyat" type="number" step="0.01" class="form-input mt-1" /></div>
       <div class="col-span-4 md:col-span-1"><button @click="kalemEkle" type="button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg mt-6" :disabled="stokYetersiz">Ekle</button></div>

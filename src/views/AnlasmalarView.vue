@@ -51,6 +51,25 @@
             <div class="col-span-2"><label class="label-style">Anlaşma Adı (*)</label><input v-model="aktifAnlasma.ad" type="text" required class="form-input"></div>
             <div><label class="label-style">Tedarikçi (*)</label><select v-model="aktifAnlasma.tedarikci_id" required class="form-input"><option :value="null" disabled>Tedarikçi Seçin</option><option v-for="tedarikci in tedarikciler" :key="tedarikci.id" :value="tedarikci.id">{{ tedarikci.ad }}</option></select></div>
             <div><label class="label-style">Anlaşma Tipi</label><select v-model="aktifAnlasma.tip" class="form-input" :disabled="duzenlemeModu"><option>Tutar Bazlı</option><option>Ürün Bazlı</option></select></div>
+            <div class="col-span-2">
+              <label class="label-style">Durum</label>
+              <div class="flex items-center mt-2">
+                <label class="inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    v-model="aktifAnlasma.aktif_mi" 
+                    class="sr-only peer"
+                  >
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                  <span class="ms-3 text-sm font-medium" :class="aktifAnlasma.aktif_mi ? 'text-green-700' : 'text-gray-500'">
+                    {{ aktifAnlasma.aktif_mi ? 'Aktif' : 'Pasif' }}
+                  </span>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ aktifAnlasma.aktif_mi ? 'Anlaşma aktif olarak kullanılabilir' : 'Anlaşma pasif durumda, iş emirlerinde görünmez' }}
+              </p>
+            </div>
           </div>
           <div v-if="aktifAnlasma.tip === 'Tutar Bazlı'" class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
             <div><label class="label-style">Taahhüt Tutarı</label><input v-model.number="aktifAnlasma.taahhut_tutari" type="number" step="0.01" class="form-input"></div>
