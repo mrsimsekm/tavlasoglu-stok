@@ -16,6 +16,7 @@
       <table class="min-w-full leading-normal">
         <thead>
           <tr>
+            <th class="th-style">İş Emri No</th>
             <th @click="siralamayiDegistir('siparis_tarihi')" class="th-style cursor-pointer hover:bg-gray-200">
               <div class="flex items-center">
                 <span>Sipariş Tarihi</span>
@@ -33,9 +34,14 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading"><td colspan="6" class="text-center py-4">Yükleniyor...</td></tr>
-          <tr v-else-if="!filtrelenmisIsEmirleri || filtrelenmisIsEmirleri.length === 0"><td colspan="6" class="text-center py-4">Gösterilecek iş emri bulunamadı.</td></tr>
+          <tr v-if="loading"><td colspan="7" class="text-center py-4">Yükleniyor...</td></tr>
+          <tr v-else-if="!filtrelenmisIsEmirleri || filtrelenmisIsEmirleri.length === 0"><td colspan="7" class="text-center py-4">Gösterilecek iş emri bulunamadı.</td></tr>
           <tr v-else v-for="isEmri in filtrelenmisIsEmirleri" :key="isEmri.id">
+            <td class="td-style">
+              <span class="font-mono font-semibold text-indigo-600">
+                {{ isEmri.numara || 'N/A' }}
+              </span>
+            </td>
             <td class="td-style">{{ new Date(isEmri.siparis_tarihi).toLocaleDateString('tr-TR') }}</td>
             <td class="td-style">{{ isEmri.musteriler ? isEmri.musteriler.unvan : 'Müşteri Bulunamadı' }}</td>
             <td class="td-style">{{ isEmri.toplam_tutar }} TL</td>

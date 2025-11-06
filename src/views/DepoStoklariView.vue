@@ -42,11 +42,11 @@
           <tr>
             <th class="th-style">Ürün Kodu</th>
             <th class="th-style">Açıklama</th>
-            <th class="th-style">Depo</th>
-            <th class="th-style text-right">Toplam Miktar</th>
-            <th class="th-style text-right">Rezerve</th>
-            <th class="th-style text-right">Mevcut</th>
-            <th class="th-style">Durum</th>
+            <th class="th-style text-right" style="width: 130px;">Depo</th>
+            <th class="th-style text-right" style="width: 150px;">Toplam Miktar</th>
+            <th class="th-style text-right" style="width: 100px;">Rezerve</th>
+            <th class="th-style text-right" style="width: 100px;">Mevcut</th>
+            <!--<th class="th-style">Durum</th>-->
           </tr>
         </thead>
         <tbody>
@@ -71,22 +71,22 @@
                 {{ stok.depolar?.ad || '-' }}
               </span>
             </td>
-            <td class="td-style text-right">
+            <td class="td-style text-center">
               <p class="font-semibold text-gray-900">{{ stok.miktar || 0 }}</p>
             </td>
-            <td class="td-style text-right">
+            <td class="td-style text-center">
               <p class="text-orange-600">{{ stok.rezerve_miktar || 0 }}</p>
             </td>
-            <td class="td-style text-right">
+            <td class="td-style text-center">
               <p class="font-bold" :class="getMevcutRenk(stok.miktar - stok.rezerve_miktar)">
                 {{ (stok.miktar || 0) - (stok.rezerve_miktar || 0) }}
               </p>
             </td>
-            <td class="td-style">
+            <!--<td class="td-style">
               <span :class="getDurumBadge(stok.miktar - stok.rezerve_miktar)">
                 {{ getDurumMetni(stok.miktar - stok.rezerve_miktar) }}
               </span>
-            </td>
+            </td>-->
           </tr>
         </tbody>
       </table>

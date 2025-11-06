@@ -1,8 +1,23 @@
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">İş Emri Detayı <span v-if="isEditing" class="text-yellow-500 text-xl">(Düzenleme Modu)</span></h1>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">İş Emri Detayı <span v-if="isEditing" class="text-yellow-500 text-xl">(Düzenleme Modu)</span></h1>
+        <p v-if="isEmri" class="text-sm text-gray-500 mt-1">
+          İş Emri No: <span class="font-mono font-semibold text-indigo-600">{{ isEmri.numara || 'N/A' }}</span>
+        </p>
+      </div>
       <div class="flex items-center space-x-4">
+            <button 
+              v-if="isEmri && !isEditing"
+              @click="yazdirModaliniAc"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+              </svg>
+              Yazdır
+            </button>
         <div v-if="isEmri && isEmri.durum === 'Açık'">
           <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary bg-yellow-500 hover:bg-yellow-600 text-white">Düzenle</button>
           <div v-else>
@@ -91,16 +106,6 @@
           </table>
         </div>
       </div>
-      
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Finansal Özet</h2>
-        <div class="flex justify-end text-xl space-x-8 font-semibold">
-          <span>Genel Toplam: <span class="text-blue-600">{{ toplamTutar.toFixed(2) }} TL</span></span>
-          <span>Ödenen: <span class="text-green-600">{{ (isEmri.odenen_tutar || 0).toFixed(2) }} TL</span></span>
-          <span>Kalan Bakiye: <span class="text-red-600">{{ (toplamTutar - (isEmri.odenen_tutar || 0)).toFixed(2) }} TL</span></span>
-        </div>
-      </div>
-
       <!-- YENİ: NOTLAR BÖLÜMÜ -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4">
@@ -139,6 +144,21 @@
           </div>
         </div>
       </div>
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <!-- <h2 class="text-xl font-semibold mb-4 text-gray-700">Finansal Özet</h2> -->
+        <div class="flex justify-end text-xl space-x-8 font-semibold">
+          <span>Genel Toplam: <span class="text-blue-600">{{ toplamTutar.toFixed(2) }} TL</span></span>
+          <span>Ödenen: <span class="text-green-600">{{ (isEmri.odenen_tutar || 0).toFixed(2) }} TL</span></span>
+          <span>Kalan Bakiye: <span class="text-red-600">{{ (toplamTutar - (isEmri.odenen_tutar || 0)).toFixed(2) }} TL</span></span>
+          <button
+            v-if="isEmri.durum === 'Açık' && (toplamTutar - (isEmri.odenen_tutar || 0)) > 0"
+            @click="tahsilatEkleModaliniAc"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm"
+          >
+            + Tahsilat Ekle
+          </button>
+        </div>
+      </div>
     </div>
 
     <IsEmriKapanisModal 
@@ -147,6 +167,92 @@
       @close="kapanisModalGoster = false"
       @success="kapanisBasarili"
     />
+    <BaseModal :show="yazdirModalGoster" @close="yazdirModalGoster = false">
+      <template #header>İş Emri Yazdır</template>
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-gray-700">İş emri yazdırma seçenekleri:</p>
+          
+          <div class="border rounded-lg p-4 bg-gray-50">
+            <label class="flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                v-model="yazdirFiyatGoster"
+                class="h-5 w-5 text-indigo-600 rounded border-gray-300"
+              >
+              <span class="ml-3 text-sm font-medium text-gray-700">
+                Fiyat bilgilerini dahil et
+              </span>
+            </label>
+            <p class="text-xs text-gray-500 mt-2 ml-8">
+              İşaretlenirse birim fiyat ve toplam tutarlar yazdırılan belgede görünür
+            </p>
+          </div>
+
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>İş Emri No:</strong> {{ isEmri?.numara || 'N/A' }}
+            </p>
+            <p class="text-sm text-blue-800">
+              <strong>Müşteri:</strong> {{ isEmri?.musteriler?.unvan || '-' }}
+            </p>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <button @click="yazdirModalGoster = false" class="btn-secondary">İptal</button>
+        <button @click="isEmriYazdir" class="btn-primary ml-2">Yazdır</button>
+      </template>
+    </BaseModal> 
+    <!-- TAHSİLAT EKLE MODAL -->
+    <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false">
+      <template #header>Tahsilat Ekle</template>
+      <template #body>
+        <div class="space-y-4">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600">Kalan Tutar</p>
+            <p class="text-2xl font-bold text-red-600">
+              {{ ((toplamTutar - (isEmri.odenen_tutar || 0))).toFixed(2) }} TL
+            </p>
+          </div>
+
+          <div>
+            <label class="label-style">Tahsilat Tutarı (*)</label>
+            <input 
+              v-model.number="tahsilatEkleForm.tutar" 
+              type="number" 
+              step="0.01" 
+              class="form-input"
+            >
+          </div>
+
+          <div>
+            <label class="label-style">Ödeme Yöntemi (*)</label>
+            <select v-model="tahsilatEkleForm.yontem" class="form-input">
+              <option value="">Seçiniz</option>
+              <option value="Nakit">Nakit</option>
+              <option value="Kredi Kartı">Kredi Kartı</option>
+              <option value="Havale/EFT">Havale/EFT</option>
+              <option value="Çek">Çek</option>
+              <option value="Diğer">Diğer</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="label-style">Notlar</label>
+            <textarea 
+              v-model="tahsilatEkleForm.notlar" 
+              rows="3" 
+              class="form-input"
+            ></textarea>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <button @click="tahsilatEkleModalGoster = false" class="btn-secondary">İptal</button>
+        <button @click="tahsilatEkle" class="btn-primary ml-2">Tahsilat Ekle</button>
+      </template>
+    </BaseModal> 
   </div>
 </template>
 
@@ -167,6 +273,8 @@ import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 import IsEmriKapanisModal from '../components/IsEmriKapanisModal.vue';
 import { useLoading } from '../composables/useLoading.js';
 
+
+
 const { isLoading: guncellemeYapiliyor, withLoading: guncelleWithLoading } = useLoading();
 const { isLoading: notKayitYapiliyor, withLoading: notKaydetWithLoading } = useLoading();
 const route = useRoute();
@@ -185,7 +293,182 @@ const kapanisModalGoster = ref(false);
 // YENİ: Notlar için değişkenler
 const notDuzenleniyor = ref(false);
 const notIcerigi = ref('');
+// Mevcut değişkenlere ekleyin:
+const yazdirModalGoster = ref(false);
+const yazdirFiyatGoster = ref(true);
 
+
+
+const tahsilatEkleModalGoster = ref(false);
+const tahsilatEkleForm = ref({
+  tutar: 0,
+  yontem: '',
+  notlar: ''
+});
+
+const tahsilatEkleModaliniAc = () => {
+  const kalanTutar = toplamTutar.value - (isEmri.value.odenen_tutar || 0);
+  tahsilatEkleForm.value = {
+    tutar: kalanTutar,
+    yontem: '',
+    notlar: ''
+  };
+  tahsilatEkleModalGoster.value = true;
+};
+
+const tahsilatEkle = async () => {
+  if (!tahsilatEkleForm.value.tutar || tahsilatEkleForm.value.tutar <= 0) {
+    alert('Lütfen geçerli bir tutar giriniz.');
+    return;
+  }
+
+  if (!tahsilatEkleForm.value.yontem) {
+    alert('Lütfen ödeme yöntemi seçiniz.');
+    return;
+  }
+
+  const kalanTutar = toplamTutar.value - (isEmri.value.odenen_tutar || 0);
+  if (tahsilatEkleForm.value.tutar > kalanTutar) {
+    alert(`Tahsilat tutarı kalan tutardan (${kalanTutar.toFixed(2)} TL) fazla olamaz!`);
+    return;
+  }
+
+  try {
+    // Ödeme kaydı oluştur
+    const { error: odemeError } = await supabase.from('odemeler').insert([{
+      is_emri_id: isEmri.value.id,
+      tutar: tahsilatEkleForm.value.tutar,
+      yontem: tahsilatEkleForm.value.yontem,
+      notlar: tahsilatEkleForm.value.notlar || null,
+      islem_yapan_kullanici_id: userStore.user?.id || null
+    }]);
+
+    if (odemeError) throw odemeError;
+
+    // İş emrindeki odenen_tutar'ı güncelle
+    const yeniOdenenTutar = parseFloat(isEmri.value.odenen_tutar || 0) + tahsilatEkleForm.value.tutar;
+    const { error: guncellemeError } = await supabase
+      .from('is_emirleri')
+      .update({ odenen_tutar: yeniOdenenTutar })
+      .eq('id', isEmriId);
+
+    if (guncellemeError) throw guncellemeError;
+
+    alert('Tahsilat başarıyla eklendi!');
+    tahsilatEkleModalGoster.value = false;
+    await getGerekliVeriler();
+  } catch (error) {
+    console.error('Tahsilat ekleme hatası:', error);
+    alert('Hata: ' + error.message);
+  }
+};
+
+
+
+
+
+
+const yazdirModaliniAc = () => {
+  yazdirFiyatGoster.value = false; // Default: fiyatsız
+  yazdirModalGoster.value = true;
+};
+
+const isEmriYazdir = () => {
+  // Yazdırma penceresini aç
+  const yazdirIcerik = olusturYazdirIcerik();
+  
+  const yazdirPencere = window.open('', '_blank', 'width=800,height=600');
+  yazdirPencere.document.write(yazdirIcerik);
+  yazdirPencere.document.close();
+  yazdirPencere.focus();
+  
+  setTimeout(() => {
+    yazdirPencere.print();
+    yazdirModalGoster.value = false;
+  }, 250);
+};
+
+const olusturYazdirIcerik = () => {
+  const kalemlerHTML = isEmri.value.is_emri_kalemleri.map(kalem => `
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px;">${kalem.aciklama}</td>
+      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${kalem.miktar}</td>
+      ${yazdirFiyatGoster.value ? `
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${kalem.birim_fiyat.toFixed(2)} TL</td>
+        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">${(kalem.miktar * kalem.birim_fiyat).toFixed(2)} TL</td>
+      ` : ''}
+    </tr>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>İş Emri - ${isEmri.value.numara || 'N/A'}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .info-section { margin-bottom: 20px; }
+        .info-row { display: flex; justify-content: space-between; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #f0f0f0; border: 1px solid #ddd; padding: 10px; text-align: left; }
+        td { border: 1px solid #ddd; padding: 8px; }
+        .total-section { margin-top: 20px; text-align: right; font-size: 18px; font-weight: bold; }
+        @media print {
+          body { margin: 0; }
+          button { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>İŞ EMRİ</h1>
+        <p>İş Emri No: <strong>${isEmri.value.numara || 'N/A'}</strong></p>
+      </div>
+      
+      <div class="info-section">
+        <div class="info-row">
+          <span><strong>Müşteri:</strong> ${isEmri.value.musteriler?.unvan || '-'}</span>
+          <span><strong>Tarih:</strong> ${new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR')}</span>
+        </div>
+        <div class="info-row">
+          <span><strong>Durum:</strong> ${isEmri.value.durum}</span>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Açıklama</th>
+            <th style="width: 100px; text-align: center;">Miktar</th>
+            ${yazdirFiyatGoster.value ? `
+              <th style="width: 120px; text-align: right;">Birim Fiyat</th>
+              <th style="width: 120px; text-align: right;">Toplam</th>
+            ` : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${kalemlerHTML}
+        </tbody>
+      </table>
+
+      ${yazdirFiyatGoster.value ? `
+        <div class="total-section">
+          Genel Toplam: ${toplamTutar.value.toFixed(2)} TL
+        </div>
+      ` : ''}
+
+      ${isEmri.value.notlar ? `
+        <div style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-left: 4px solid #333;">
+          <strong>Notlar:</strong><br>
+          ${isEmri.value.notlar.replace(/\n/g, '<br>')}
+        </div>
+      ` : ''}
+    </body>
+    </html>
+  `;
+};
 const toplamTutar = computed(() => {
   const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
   return kalemListesi.reduce((total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 0);

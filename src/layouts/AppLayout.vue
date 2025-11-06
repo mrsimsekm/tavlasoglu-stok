@@ -23,29 +23,51 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+      <div class="mb-6 flex flex-col items-center">
+        <div class="w-54 h-18 bg-white rounded-lg flex items-center justify-center mb-2">
+          <!-- Buraya logonuzu ekleyin -->
+          <!-- Önerilen oran: 4:3 (genişlik:yükseklik) veya 16:12 -->
+          <img src="/logo.png" alt="Şirket Logo" class="max-w-full max-h-full object-contain p-2">
+        </div>
 
+      </div>
       <div class="text-2xl font-bold mb-8">Stok Takip</div>
       <nav>
         <ul>
           <li class="mb-4">
-            <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
-              Ana Sayfa
+            <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                </svg>
+                Ana Sayfa
+              </div>
             </RouterLink>
           </li>
           
           <li class="mb-4">
-            <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
-              Müşteriler
+            <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+                Müşteriler
+              </div>
             </RouterLink>
           </li>
           
-          <!-- STOK MENÜSÜ -->
+          <!-- Stok Menüsü - İkon eklenmiş -->
           <li class="mb-2">
             <div @click="toggleStokMenu" class="link-style flex justify-between items-center cursor-pointer">
-              <span>Stok</span>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" :class="{'rotate-90': stokMenuAcik}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" />
+                </svg>
+                <span>Stok</span>              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" :class="{'rotate-90': stokMenuAcik}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
+              </div>
+
             </div>
             <ul v-if="stokMenuAcik" class="mt-2 ml-4 space-y-2">
               <li>
@@ -67,27 +89,27 @@
           </li>
           
           <li class="mb-4">
-            <RouterLink to="/app/is-emirleri" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
-              İş Emirleri
-            </RouterLink>
-          </li>
-          
-          <!-- ALACAKLAR -->
-          <li class="mb-4">
-            <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
+            <RouterLink to="/app/is-emirleri" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                  <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
                 </svg>
-                Alacaklar
+                İş Emirleri
               </div>
             </RouterLink>
           </li>
           
+          <!-- Alacaklar zaten ikonlu -->
+          
           <li class="mb-4">
-            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
-              Anlaşmalar
+            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                </svg>
+                Anlaşmalar
+              </div>
             </RouterLink>
           </li>
         </ul>
