@@ -76,7 +76,9 @@
       </template>
       <template #footer>
         <button @click="formModalGoster = false" class="btn-secondary">İptal</button>
-        <button @click="formuKaydet" class="btn-primary">{{ duzenlemeModu ? 'Güncelle' : 'Kaydet' }}</button>
+        <button @click="formuKaydet" :disabled="musteriKayitYapiliyor" class="btn-primary">
+          {{ musteriKayitYapiliyor ? 'Kaydediliyor...' : (duzenlemeModu ? 'Güncelle' : 'Kaydet') }}
+        </button>      
       </template>
     </BaseModal>
   </div>
@@ -95,7 +97,9 @@
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { supabase } from '../supabase.js';
 import BaseModal from '../components/BaseModal.vue';
+import { useLoading } from '../composables/useLoading.js';
 
+const { isLoading: musteriKayitYapiliyor, withLoading } = useLoading();
 const tumMusteriler = ref([]);
 const loading = ref(true);
 const aramaMetni = ref('');
@@ -117,11 +121,15 @@ const formModaliniAc = (musteri = null) => {
 };
 
 const formuKaydet = async () => {
-  if (!aktifMusteri.value.unvan) { alert('Unvan alanı zorunludur.'); return; }
-  try {
+  if (!aktifMusteri.value.unvan || !aktifMusteri.value.musteri_kodu) {
+    alert('Ünvan ve Müşteri Kodu alanları zorunludur.');
+    return;
+  }
+  
+  await withLoading(async () => {
     let error;
     if (duzenlemeModu.value) {
-      const { id, created_at, musteri_kodu, ...guncellenecekVeri } = aktifMusteri.value;
+      const { id, ...guncellenecekVeri } = aktifMusteri.value;
       ({ error } = await supabase.from('musteriler').update(guncellenecekVeri).match({ id }));
     } else {
       ({ error } = await supabase.from('musteriler').insert([aktifMusteri.value]));
@@ -130,10 +138,7 @@ const formuKaydet = async () => {
     await getMusteriler();
     formModalGoster.value = false;
     alert(`Müşteri başarıyla ${duzenlemeModu.value ? 'güncellendi' : 'eklendi'}!`);
-  } catch (error) {
-    console.error('Müşteri kaydedilirken hata:', error.message);
-    alert('Hata: ' + error.message);
-  }
+  });
 };
 
 const musteriSil = async (musteri) => {

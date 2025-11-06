@@ -10,7 +10,8 @@ import IsEmirleriView from '../views/IsEmirleriView.vue'
 import IsEmriFormView from '../views/IsEmriFormView.vue'
 import IsEmriDetayView from '../views/IsEmriDetayView.vue'
 import StokGirisView from '../views/StokGirisView.vue'
-import AlacaklarView from '../views/AlacaklarView.vue' // YENİ
+import DepoStoklariView from '../views/DepoStoklariView.vue'
+import AlacaklarView from '../views/AlacaklarView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,7 +26,8 @@ const router = createRouter({
         { path: 'musteriler', name: 'musteriler', component: MusterilerView },
         { path: 'stok', name: 'stok-kartlari', component: StokView },
         { path: 'stok/giris', name: 'stok-giris', component: StokGirisView },
-        { path: 'alacaklar', name: 'alacaklar', component: AlacaklarView }, // YENİ
+        { path: 'stok/depolar', name: 'depo-stoklari', component: DepoStoklariView },
+        { path: 'alacaklar', name: 'alacaklar', component: AlacaklarView },
         { path: 'anlasmalar', name: 'anlasmalar', component: AnlasmalarView },
         { path: 'is-emirleri', name: 'is-emirleri-liste', component: IsEmirleriView },
         { path: 'is-emirleri/yeni', name: 'is-emri-yeni', component: IsEmriFormView },

@@ -97,7 +97,9 @@
       </template>
       <template #footer>
         <button @click="formModalGoster = false" class="btn-secondary mr-2">İptal</button>
-        <button @click="formuKaydet" class="btn-primary">{{ duzenlemeModu ? 'Güncelle' : 'Kaydet' }}</button>
+        <button @click="formuKaydet" :disabled="anlasmaKayitYapiliyor" class="btn-primary">
+          {{ anlasmaKayitYapiliyor ? 'Kaydediliyor...' : (duzenlemeModu ? 'Güncelle' : 'Kaydet') }}
+        </button>
       </template>
     </BaseModal>
 
@@ -248,7 +250,9 @@ import { ref, onMounted, onActivated, computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { supabase } from '../supabase.js';
 import BaseModal from '../components/BaseModal.vue';
+import { useLoading } from '../composables/useLoading.js';
 
+const { isLoading: anlasmaKayitYapiliyor, withLoading } = useLoading();
 const tumAnlasmalar = ref([]);
 const tedarikciler = ref([]);
 const loading = ref(true);
@@ -341,9 +345,14 @@ const formModaliniAc = (anlasma = null) => {
 };
 
 const formuKaydet = async () => {
-  if (!aktifAnlasma.value.ad || !aktifAnlasma.value.tedarikci_id) { alert('Anlaşma Adı ve Tedarikçi alanları zorunludur.'); return; }
-  const { tedarikciler, kullanilan_tutar, kullanim_orani, toplam_taahhut_adet, toplam_kullanilan_adet, anlasma_kalemleri, ...anlasmaVerisi } = aktifAnlasma.value;
-  try {
+  if (!aktifAnlasma.value.ad || !aktifAnlasma.value.tedarikci_id) { 
+    alert('Anlaşma Adı ve Tedarikçi alanları zorunludur.'); 
+    return; 
+  }
+  
+  await withLoading(async () => {
+    const { tedarikciler, kullanilan_tutar, kullanim_orani, toplam_taahhut_adet, toplam_kullanilan_adet, anlasma_kalemleri, ...anlasmaVerisi } = aktifAnlasma.value;
+    
     let anlasmaId;
     if (duzenlemeModu.value) {
       const { data, error } = await supabase.from('anlasmalar').update(anlasmaVerisi).match({ id: anlasmaVerisi.id }).select('id').single();
@@ -355,16 +364,20 @@ const formuKaydet = async () => {
       if (error) throw error;
       anlasmaId = data.id;
     }
+    
     if (aktifAnlasma.value.tip === 'Ürün Bazlı' && anlasma_kalemleri?.length > 0) {
-      const kalemlerToInsert = anlasma_kalemleri.map(k => ({ anlasma_id: anlasmaId, urun_id: k.urun_id, taahhut_edilen_miktar: k.taahhut_edilen_miktar, }));
+      const kalemlerToInsert = anlasma_kalemleri.map(k => ({ 
+        anlasma_id: anlasmaId, 
+        urun_id: k.urun_id, 
+        taahhut_edilen_miktar: k.taahhut_edilen_miktar 
+      }));
       const { error: kalemError } = await supabase.from('anlasma_kalemleri').insert(kalemlerToInsert);
       if (kalemError) throw kalemError;
     }
+    
     await getAnlasmalar();
     formModalGoster.value = false;
-  } catch (err) {
-    alert('Hata: ' + err.message);
-  }
+  });
 };
 
 const anlasmaSil = async (anlasma) => {

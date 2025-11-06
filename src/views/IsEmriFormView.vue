@@ -26,11 +26,24 @@
         </div>
         <div>
           <h2 class="text-xl font-semibold mb-4 text-gray-700">Malzemeler ve Hizmetler</h2>
-          <IsEmriKalemEkle v-if="kaynaklarHazir" @kalemler-guncellendi="handleKalemlerGuncellendi" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :varsayilan-anlasma="secilenVarsayilanAnlasma" />
+          <IsEmriKalemEkle 
+            v-if="kaynaklarHazir" 
+            @kalemler-guncellendi="handleKalemlerGuncellendi" 
+            :depolar="depolar" 
+            :tedarikciler="tedarikciler" 
+            :anlasmalar="anlasmalar" 
+            :varsayilan-anlasma="secilenVarsayilanAnlasma" 
+          />
           <div v-else class="text-center p-4 text-gray-500">Kaynaklar yükleniyor...</div>
         </div>
         <div class="flex justify-end pt-6 border-t">
-          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg">İş Emrini Kaydet</button>
+          <button 
+            type="submit" 
+            :disabled="isEmriKayitYapiliyor"
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {{ isEmriKayitYapiliyor ? 'Kaydediliyor...' : 'İş Emrini Kaydet' }}
+          </button>
         </div>
       </form>
     </div>
@@ -41,10 +54,13 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
 import { supabase } from '../supabase.js';
+import { useLoading } from '../composables/useLoading.js';
 import MusteriAramaInput from '../components/MusteriAramaInput.vue';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 
+const { isLoading: isEmriKayitYapiliyor, withLoading } = useLoading();
 const router = useRouter();
+
 const isEmri = ref({
   musteri_id: null,
   anlasma_id: null,
@@ -54,6 +70,7 @@ const isEmri = ref({
   odenen_tutar: 0,
   notlar: ''
 });
+
 const secilenVarsayilanAnlasma = ref(null);
 const isEmriKalemleri = ref([]);
 const secilenMusteriUnvani = ref('');
@@ -89,17 +106,35 @@ watch(secilenVarsayilanAnlasma, (newAnlasma) => {
 });
 
 const kaydet = async () => {
-  if (!isEmri.value.musteri_id) { alert('Lütfen bir müşteri seçin.'); return; }
-  if (isEmriKalemleri.value.length === 0) { alert('Lütfen en az bir malzeme veya hizmet ekleyin.'); return; }
+  if (!isEmri.value.musteri_id) { 
+    alert('Lütfen bir müşteri seçin.'); 
+    return; 
+  }
+  
+  if (isEmriKalemleri.value.length === 0) { 
+    alert('Lütfen en az bir malzeme veya hizmet ekleyin.'); 
+    return; 
+  }
 
-  try {
-    isEmri.value.toplam_tutar = isEmriKalemleri.value.reduce((total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 0);
+  await withLoading(async () => {
+    // Toplam tutarı hesapla
+    isEmri.value.toplam_tutar = isEmriKalemleri.value.reduce(
+      (total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 
+      0
+    );
     
-    const { data: isEmriData, error: isEmriError } = await supabase.from('is_emirleri').insert(isEmri.value).select('id').single();
+    // İş emrini kaydet
+    const { data: isEmriData, error: isEmriError } = await supabase
+      .from('is_emirleri')
+      .insert(isEmri.value)
+      .select('id')
+      .single();
+    
     if (isEmriError) throw isEmriError;
+    
     const newIsEmriId = isEmriData.id;
 
-    // GÜVENLİ VERİ TEMİZLEME
+    // Güvenli veri temizleme - sadece gerekli alanları al
     const kalemlerToInsert = isEmriKalemleri.value.map(kalem => ({
       is_emri_id: newIsEmriId,
       urun_id: kalem.urun_id || null,
@@ -112,16 +147,15 @@ const kaydet = async () => {
     }));
     
     if (kalemlerToInsert.length > 0) {
-      const { error: kalemlerError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+      const { error: kalemlerError } = await supabase
+        .from('is_emri_kalemleri')
+        .insert(kalemlerToInsert);
+      
       if (kalemlerError) throw kalemlerError;
     }
 
     alert('İş emri başarıyla kaydedildi!');
     router.push('/app/is-emirleri');
-
-  } catch (error) {
-    console.error("İş emri kaydetme hatası:", error.message);
-    alert('Hata: ' + error.message);
-  }
+  });
 };
 </script>

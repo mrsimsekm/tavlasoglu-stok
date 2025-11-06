@@ -218,11 +218,14 @@ import { ref, onMounted, computed } from 'vue';
 import { supabase } from '../supabase.js';
 import { useUserStore } from '../stores/userStore.js';
 import BaseModal from '../components/BaseModal.vue';
+import { useLoading } from '../composables/useLoading.js';
 
+const { isLoading: tahsilatYapiliyor, withLoading } = useLoading();
 const userStore = useUserStore();
 const loading = ref(false);
-const tahsilatYapiliyor = ref(false);
-const loadingOdemeler = ref(false);
+//const tahsilatYapiliyor = ref(false);
+//const loadingOdemeler = ref(false);
+const { isLoading: loadingOdemeler, withLoading: odemelerWithLoading } = useLoading(); // ✅
 const alacaklar = ref([]);
 const odemeler = ref([]);
 const tahsilatModalGoster = ref(false);
@@ -297,6 +300,7 @@ const tahsilatModaliniAc = (alacak) => {
 };
 
 // Tahsilat yap
+
 const tahsilatYap = async () => {
   if (!tahsilatForm.value.tutar || tahsilatForm.value.tutar <= 0) {
     alert('Lütfen geçerli bir tutar giriniz.');
@@ -313,9 +317,7 @@ const tahsilatYap = async () => {
     return;
   }
 
-  try {
-    tahsilatYapiliyor.value = true;
-
+  await withLoading(async () => {
     const { data, error } = await supabase.rpc('alacak_tahsil_et', {
       p_alacak_id: aktifAlacak.value.id,
       p_tutar: tahsilatForm.value.tutar,
@@ -333,21 +335,16 @@ const tahsilatYap = async () => {
     alert('Tahsilat başarıyla kaydedildi!');
     tahsilatModalGoster.value = false;
     await alacaklariGetir();
-  } catch (error) {
-    console.error('Tahsilat hatası:', error.message);
-    alert('Hata: ' + error.message);
-  } finally {
-    tahsilatYapiliyor.value = false;
-  }
+  });
 };
 
 // Ödemeleri gör
+
 const odemeleriniGor = async (alacak) => {
   aktifAlacak.value = alacak;
   odemelerModalGoster.value = true;
-  loadingOdemeler.value = true;
 
-  try {
+  await odemelerWithLoading(async () => {
     const { data, error } = await supabase
       .from('alacak_odemeleri')
       .select('*')
@@ -356,11 +353,7 @@ const odemeleriniGor = async (alacak) => {
 
     if (error) throw error;
     odemeler.value = data || [];
-  } catch (error) {
-    console.error('Ödemeler çekilirken hata:', error.message);
-  } finally {
-    loadingOdemeler.value = false;
-  }
+  });
 };
 
 // Filtreleri temizle

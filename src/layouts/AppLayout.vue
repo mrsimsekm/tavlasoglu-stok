@@ -1,17 +1,40 @@
 <template>
-  <div class="flex h-screen bg-gray-100">
-    <aside class="w-64 flex-shrink-0 bg-gray-800 text-white p-4">
+  <div class="flex h-screen bg-gray-100 overflow-hidden">
+    <!-- OVERLAY (Mobile) -->
+    <div 
+      v-if="sidebarAcik" 
+      @click="sidebarAcik = false"
+      class="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+    ></div>
+
+    <!-- SIDEBAR -->
+    <aside 
+      :class="[
+        'w-64 flex-shrink-0 bg-gray-800 text-white p-4 fixed lg:relative h-full z-30 transition-transform duration-300',
+        sidebarAcik ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      ]"
+    >
+      <!-- Close Button (Mobile) -->
+      <button 
+        @click="sidebarAcik = false"
+        class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       <div class="text-2xl font-bold mb-8">Stok Takip</div>
       <nav>
         <ul>
           <li class="mb-4">
-            <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
               Ana Sayfa
             </RouterLink>
           </li>
           
           <li class="mb-4">
-            <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
               Müşteriler
             </RouterLink>
           </li>
@@ -26,27 +49,32 @@
             </div>
             <ul v-if="stokMenuAcik" class="mt-2 ml-4 space-y-2">
               <li>
-                <RouterLink to="/app/stok" class="link-style-sub" active-class="bg-gray-600 text-white">
+                <RouterLink to="/app/stok" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
                   Stok Kartları
                 </RouterLink>
               </li>
               <li>
-                <RouterLink to="/app/stok/giris" class="link-style-sub" active-class="bg-gray-600 text-white">
+                <RouterLink to="/app/stok/giris" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
                   Stok Girişleri
+                </RouterLink>
+              </li>
+              <li>
+                <RouterLink to="/app/stok/depolar" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
+                  Depo Stokları
                 </RouterLink>
               </li>
             </ul>
           </li>
           
           <li class="mb-4">
-            <RouterLink to="/app/is-emirleri" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/is-emirleri" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
               İş Emirleri
             </RouterLink>
           </li>
           
-          <!-- ALACAKLAR - YENİ -->
+          <!-- ALACAKLAR -->
           <li class="mb-4">
-            <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
@@ -58,7 +86,7 @@
           </li>
           
           <li class="mb-4">
-            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600" @click="sidebarAcik = false">
               Anlaşmalar
             </RouterLink>
           </li>
@@ -71,9 +99,25 @@
         </button>
       </div>
     </aside>
-    
-    <main class="flex-1 p-8 overflow-y-auto">
-      <RouterView />
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto">
+      <!-- Hamburger Button (Mobile) -->
+      <div class="lg:hidden bg-white shadow-sm p-4 flex items-center">
+        <button 
+          @click="sidebarAcik = true"
+          class="text-gray-600 hover:text-gray-800"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 class="ml-4 text-lg font-bold text-gray-800">Stok Takip</h1>
+      </div>
+
+      <div class="p-4 lg:p-8">
+        <RouterView />
+      </div>
     </main>
   </div>
 </template>
@@ -95,6 +139,7 @@ import { supabase } from '../supabase.js'
 
 const router = useRouter()
 const stokMenuAcik = ref(false)
+const sidebarAcik = ref(false) // YENİ: Mobile sidebar kontrolü
 
 const toggleStokMenu = () => { 
   stokMenuAcik.value = !stokMenuAcik.value 

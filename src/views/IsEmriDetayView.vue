@@ -7,7 +7,9 @@
           <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary bg-yellow-500 hover:bg-yellow-600 text-white">Düzenle</button>
           <div v-else>
             <button @click="iptalEt" class="btn-secondary">İptal</button>
-            <button @click="guncelle" class="btn-primary ml-2">Değişiklikleri Kaydet</button>
+            <button @click="guncelle" :disabled="guncellemeYapiliyor" class="btn-primary ml-2">
+              {{ guncellemeYapiliyor ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet' }}
+            </button>
           </div>
         </div>
         
@@ -131,11 +133,8 @@
             >
               İptal
             </button>
-            <button 
-              @click="notuKaydet" 
-              class="btn-primary"
-            >
-              Kaydet
+            <button @click="notuKaydet" :disabled="notKayitYapiliyor" class="btn-primary">
+              {{ notKayitYapiliyor ? 'Kaydediliyor...' : 'Kaydet' }}
             </button>
           </div>
         </div>
@@ -166,7 +165,10 @@ import { useRoute, RouterLink, useRouter } from 'vue-router';
 import { supabase } from '../supabase.js';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 import IsEmriKapanisModal from '../components/IsEmriKapanisModal.vue';
+import { useLoading } from '../composables/useLoading.js';
 
+const { isLoading: guncellemeYapiliyor, withLoading: guncelleWithLoading } = useLoading();
+const { isLoading: notKayitYapiliyor, withLoading: notKaydetWithLoading } = useLoading();
 const route = useRoute();
 const router = useRouter();
 const isEmriId = route.params.id;
@@ -236,32 +238,29 @@ const getGerekliVeriler = async () => {
 
 const guncelle = async () => {
   if (!isEmri.value) return;
-  const guncellenecekIsEmri = { toplam_tutar: toplamTutar.value };
-  const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
-  if (isEmriError) { 
-    alert('Hata: ' + isEmriError.message); 
-    return; 
-  }
-  const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
-  if (deleteError) { 
-    alert('Hata: ' + deleteError.message); 
-    return; 
-  }
-  if (guncelKalemler.value.length > 0) {
-    const kalemlerToInsert = guncelKalemler.value.map(k => {
-      const { id, created_at, depolar, tedarikciler, anlasmalar, kaynak_adi, ...rest } = k;
-      rest.is_emri_id = isEmriId;
-      return rest;
-    });
-    const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
-    if (insertError) { 
-      alert('Hata: ' + insertError.message); 
-      return; 
+  
+  await guncelleWithLoading(async () => {
+    const guncellenecekIsEmri = { toplam_tutar: toplamTutar.value };
+    const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
+    if (isEmriError) throw isEmriError;
+    
+    const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
+    if (deleteError) throw deleteError;
+    
+    if (guncelKalemler.value.length > 0) {
+      const kalemlerToInsert = guncelKalemler.value.map(k => {
+        const { id, created_at, depolar, tedarikciler, anlasmalar, kaynak_adi, ...rest } = k;
+        rest.is_emri_id = isEmriId;
+        return rest;
+      });
+      const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+      if (insertError) throw insertError;
     }
-  }
-  alert('İş emri başarıyla güncellendi!');
-  isEditing.value = false;
-  await getGerekliVeriler();
+    
+    alert('İş emri başarıyla güncellendi!');
+    isEditing.value = false;
+    await getGerekliVeriler();
+  });
 };
 
 const iptalEt = async () => {
@@ -306,7 +305,7 @@ const notDuzenlemeIptal = () => {
 const notuKaydet = async () => {
   if (!isEmri.value) return;
   
-  try {
+  await notKaydetWithLoading(async () => {
     const { error } = await supabase
       .from('is_emirleri')
       .update({ notlar: notIcerigi.value || null })
@@ -317,10 +316,7 @@ const notuKaydet = async () => {
     alert('Not başarıyla kaydedildi!');
     notDuzenleniyor.value = false;
     await getGerekliVeriler();
-  } catch (err) {
-    console.error('Not kaydedilirken hata:', err.message);
-    alert('Hata: ' + err.message);
-  }
+  });
 };
 
 onMounted(() => {

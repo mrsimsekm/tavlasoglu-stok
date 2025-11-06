@@ -146,7 +146,9 @@
       </template>
       <template #footer>
         <button @click="formModalGoster = false" class="btn-secondary">İptal</button>
-        <button @click="formuKaydet" class="btn-primary">{{ duzenlemeModu ? 'Güncelle' : 'Kaydet' }}</button>
+        <button @click="formuKaydet" :disabled="formKayitYapiliyor" class="btn-primary">
+          {{ formKayitYapiliyor ? 'Kaydediliyor...' : (duzenlemeModu ? 'Güncelle' : 'Kaydet') }}
+        </button>      
       </template>
     </BaseModal>
   </div>
@@ -165,7 +167,10 @@
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { supabase } from '../supabase.js';
 import BaseModal from '../components/BaseModal.vue';
+import { useLoading } from '../composables/useLoading.js';
 
+// Değişkenler bölümüne:
+const { isLoading: formKayitYapiliyor, withLoading } = useLoading();
 const tumUrunler = ref([]);
 const loading = ref(true);
 const aramaMetni = ref('');
@@ -326,7 +331,8 @@ const formuKaydet = async () => {
     alert('Ürün Kodu alanı zorunludur.');
     return;
   }
-  try {
+  
+  await withLoading(async () => {
     let error;
     if (duzenlemeModu.value) {
       const { id, ...guncellenecekVeri } = aktifUrun.value;
@@ -338,10 +344,7 @@ const formuKaydet = async () => {
     await getUrunler();
     formModalGoster.value = false;
     alert(`Stok kartı başarıyla ${duzenlemeModu.value ? 'güncellendi' : 'eklendi'}!`);
-  } catch (error) {
-    console.error('Stok kartı kaydedilirken hata:', error.message);
-    alert('Hata: ' + error.message);
-  }
+  });
 };
 
 const urunSil = async (urun) => {

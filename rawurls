@@ -31,3 +31,9 @@ https://raw.githubusercontent.com/mrsimsekm/tavlasoglu-stok/refs/heads/main/src/
 https://raw.githubusercontent.com/mrsimsekm/tavlasoglu-stok/refs/heads/main/src/views/MusterilerView.vue
 https://raw.githubusercontent.com/mrsimsekm/tavlasoglu-stok/refs/heads/main/src/views/StokGirisView.vue
 https://raw.githubusercontent.com/mrsimsekm/tavlasoglu-stok/refs/heads/main/src/views/StokView.vue
+
+
+responsive tasarım büyük ölçüde iyi ancak ekran iyice daralınca sandwich menu olarak gizlenmesini istiyorum sol menünün 
+iş emirleri için numara "KHSEİ-"+"yıl"+"5000den başlayan sayı" şeklinde olsun.
+bir butona tıkladığımda veritabanında bir işlem bekleme ihtimali varsa ikinci kez tıklamamı engelle
+stok kartlarını görüntülerken hangi depoda kaç tane var, kaçı rezerve bunları görebileceğim kolonlar ekleyebiliriz veya depolardaki stokları ayrı bir sayfada gösterebiliriz, hangisi mantıklı?
