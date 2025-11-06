@@ -13,7 +13,7 @@
             </div>
             <div>
               <p class="text-xs text-gray-500">İş Emri No</p>
-              <p class="text-sm font-mono">{{ isEmri.id?.slice(0, 8) || '-' }}</p>
+              <p class="text-sm font-mono">{{ isEmri.numara || isEmri.id?.slice(0, 8) || '-' }}</p>
             </div>
             <div>
               <p class="text-xs text-gray-500">Toplam Tutar</p>
@@ -27,6 +27,73 @@
           <div class="mt-3 pt-3 border-t border-gray-200">
             <p class="text-xs text-gray-500">Kalan Tutar</p>
             <p class="text-2xl font-bold text-red-600">{{ formatParaBirimi(kalanTutar) }}</p>
+          </div>
+        </div>
+
+        <!-- ZORUNLU ALANLAR -->
+        <div class="border-2 border-orange-200 bg-orange-50 p-4 rounded-lg">
+          <h3 class="font-bold text-lg mb-3 text-orange-800 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+            Zorunlu Bilgiler
+          </h3>
+          
+          <div class="space-y-3">
+            <!-- Satışçı -->
+            <div>
+              <label class="label-style">Satışçı (*)</label>
+              <select v-model="kapanisFormu.satisci_id" class="form-input" :class="{'border-red-500': hatalar.satisci}">
+                <option :value="null">Satışçı Seçin</option>
+                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">
+                  {{ satisci.ad_soyad }}
+                </option>
+              </select>
+              <p v-if="hatalar.satisci" class="text-xs text-red-500 mt-1">{{ hatalar.satisci }}</p>
+            </div>
+
+            <!-- Fatura No -->
+            <div>
+              <label class="label-style">Fatura No (*)</label>
+              <input 
+                v-model="kapanisFormu.fatura_no" 
+                type="text" 
+                class="form-input"
+                :class="{'border-red-500': hatalar.fatura_no}"
+                placeholder="Fatura numarasını girin"
+              >
+              <p v-if="hatalar.fatura_no" class="text-xs text-red-500 mt-1">{{ hatalar.fatura_no }}</p>
+            </div>
+
+            <!-- Maliyet -->
+            <div>
+              <label class="label-style">Maliyet (*)</label>
+              <input 
+                v-model.number="kapanisFormu.maliyet" 
+                type="number" 
+                step="0.01" 
+                class="form-input"
+                :class="{'border-red-500': hatalar.maliyet}"
+                placeholder="0.00"
+              >
+              <p v-if="hatalar.maliyet" class="text-xs text-red-500 mt-1">{{ hatalar.maliyet }}</p>
+            </div>
+
+            <!-- İş Tamamlandı -->
+            <div>
+              <label class="flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="kapanisFormu.is_tamamlandi"
+                  class="h-5 w-5 text-green-600 rounded border-gray-300"
+                  :class="{'border-red-500': hatalar.is_tamamlandi}"
+                >
+                <span class="ml-3 text-sm font-medium text-gray-700">
+                  İş tamamlandı (*) 
+                </span>
+              </label>
+              <p v-if="hatalar.is_tamamlandi" class="text-xs text-red-500 mt-1 ml-8">{{ hatalar.is_tamamlandi }}</p>
+            </div>
           </div>
         </div>
 
@@ -49,6 +116,7 @@
                 <p class="text-xs text-gray-500">Maksimum: {{ formatParaBirimi(kalanTutar) }}</p>
                 <button 
                   @click="tahsilatForm.tutar = kalanTutar" 
+                  type="button"
                   class="text-xs text-blue-600 hover:text-blue-800 font-semibold"
                 >
                   Tümünü Tahsil Et
@@ -57,11 +125,12 @@
             </div>
 
             <div>
-              <label class="label-style">Ödeme Yöntemi (*)</label>
+              <label class="label-style">Ödeme Yöntemi</label>
               <div class="grid grid-cols-2 gap-2">
                 <button 
                   v-for="yontem in odemeYontemleri" 
                   :key="yontem"
+                  type="button"
                   @click="tahsilatForm.yontem = yontem"
                   :class="[
                     'py-2 px-3 rounded-lg border-2 text-sm font-semibold transition',
@@ -128,7 +197,7 @@
       <button @click="$emit('close')" class="btn-secondary">İptal</button>
       <button 
         @click="isEmriKapat" 
-        :disabled="islemYapiliyor || (kalanTutar > 0 && tahsilatForm.tutar > 0 && !tahsilatForm.yontem)"
+        :disabled="islemYapiliyor"
         class="btn-primary ml-2"
       >
         {{ islemYapiliyor ? 'İşleniyor...' : 'İş Emrini Kapat' }}
@@ -145,7 +214,7 @@
 </style>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { supabase } from '../supabase.js';
 import { useUserStore } from '../stores/userStore.js';
 import BaseModal from './BaseModal.vue';
@@ -160,8 +229,18 @@ const emit = defineEmits(['close', 'success']);
 const userStore = useUserStore();
 const islemYapiliyor = ref(false);
 const kapanisNotlari = ref('');
+const satiscilar = ref([]);
+const hatalar = ref({});
 
 const odemeYontemleri = ['Nakit', 'Kredi Kartı', 'Havale/EFT', 'Çek', 'Diğer'];
+
+// Zorunlu alanlar formu
+const kapanisFormu = ref({
+  satisci_id: null,
+  fatura_no: '',
+  maliyet: 0,
+  is_tamamlandi: false
+});
 
 const tahsilatForm = ref({
   tutar: 0,
@@ -175,21 +254,80 @@ const kalanTutar = computed(() => {
   return parseFloat(props.isEmri.toplam_tutar || 0) - parseFloat(props.isEmri.odenen_tutar || 0);
 });
 
-// Modal açıldığında formu sıfırla ve kalan tutarı set et
+// Satışçıları yükle
+const satiscilariYukle = async () => {
+  const { data, error } = await supabase
+    .from('satiscilar')
+    .select('id, ad_soyad')
+    .eq('aktif_mi', true)
+    .order('ad_soyad');
+  
+  if (!error) {
+    satiscilar.value = data || [];
+  }
+};
+
+// Modal açıldığında
 watch(() => props.show, (yeniDeger) => {
   if (yeniDeger) {
+    // Formu sıfırla
+    kapanisFormu.value = {
+      satisci_id: props.isEmri?.satisci_id || null,
+      fatura_no: props.isEmri?.fatura_no || '',
+      maliyet: props.isEmri?.maliyet || 0,
+      is_tamamlandi: props.isEmri?.is_tamamlandi || false
+    };
+    
     tahsilatForm.value = {
       tutar: kalanTutar.value,
       yontem: '',
       notlar: ''
     };
+    
     kapanisNotlari.value = '';
+    hatalar.value = {};
+    
+    satiscilariYukle();
   }
 });
+
+// Zorunlu alanları kontrol et
+const zorunluAlanlariKontrolEt = () => {
+  hatalar.value = {};
+  let gecerli = true;
+
+  if (!kapanisFormu.value.satisci_id) {
+    hatalar.value.satisci = 'Satışçı seçimi zorunludur';
+    gecerli = false;
+  }
+
+  if (!kapanisFormu.value.fatura_no || kapanisFormu.value.fatura_no.trim() === '') {
+    hatalar.value.fatura_no = 'Fatura numarası zorunludur';
+    gecerli = false;
+  }
+
+  if (!kapanisFormu.value.maliyet || kapanisFormu.value.maliyet <= 0) {
+    hatalar.value.maliyet = 'Maliyet bilgisi zorunludur ve 0\'dan büyük olmalıdır';
+    gecerli = false;
+  }
+
+  if (!kapanisFormu.value.is_tamamlandi) {
+    hatalar.value.is_tamamlandi = 'İşin tamamlandığını onaylamalısınız';
+    gecerli = false;
+  }
+
+  return gecerli;
+};
 
 // İş emrini kapat
 const isEmriKapat = async () => {
   if (!props.isEmri) return;
+
+  // Zorunlu alanları kontrol et
+  if (!zorunluAlanlariKontrolEt()) {
+    alert('Lütfen tüm zorunlu alanları doldurun!');
+    return;
+  }
 
   // Eğer tahsilat yapılacaksa kontrol et
   if (kalanTutar.value > 0 && tahsilatForm.value.tutar > 0) {
@@ -203,7 +341,7 @@ const isEmriKapat = async () => {
     }
   }
 
-  if (!confirm('İş emrini kapatmak istediğinizden emin misiniz?')) {
+  if (!confirm('İş emrini kapatmak istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
     return;
   }
 
@@ -232,7 +370,7 @@ const isEmriKapat = async () => {
       if (guncellemeError) throw guncellemeError;
     }
 
-    // 2. İş emrini kapat (durum güncelle)
+    // 2. İş emrini kapat (durum ve zorunlu alanları güncelle)
     const guncelNotlar = kapanisNotlari.value 
       ? (props.isEmri.notlar ? props.isEmri.notlar + '\n\n[Kapanış]: ' + kapanisNotlari.value : '[Kapanış]: ' + kapanisNotlari.value)
       : props.isEmri.notlar;
@@ -241,7 +379,11 @@ const isEmriKapat = async () => {
       .from('is_emirleri')
       .update({ 
         durum: 'Tamamlandı',
-        notlar: guncelNotlar
+        notlar: guncelNotlar,
+        satisci_id: kapanisFormu.value.satisci_id,
+        fatura_no: kapanisFormu.value.fatura_no,
+        is_tamamlandi: kapanisFormu.value.is_tamamlandi,
+        maliyet: kapanisFormu.value.maliyet
       })
       .eq('id', props.isEmri.id);
 
@@ -280,4 +422,8 @@ const formatParaBirimi = (tutar) => {
     minimumFractionDigits: 2
   }).format(tutar || 0);
 };
+
+onMounted(() => {
+  satiscilariYukle();
+});
 </script>

@@ -48,7 +48,7 @@
     <div v-else-if="isEmri" class="space-y-6">
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Genel Bilgiler</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <p class="label-style">Müşteri</p>
             <p class="font-semibold">{{ isEmri.musteriler.unvan }}</p>
@@ -62,6 +62,27 @@
             <p class="font-semibold px-2 py-1 inline-block rounded" :class="getDurumRenk(isEmri.durum)">
               {{ isEmri.durum }}
             </p>
+          </div>
+          <!-- YENİ ALAN: Satışçı -->
+          <div>
+            <p class="label-style">Satışçı</p>
+            <p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p>
+          </div>
+          <div>
+            <p class="label-style">Fatura No</p>
+            <p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p>
+          </div>
+          <div>
+            <p class="label-style">İş Tamamlandı</p>
+            <p class="font-semibold">
+              <span :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-orange-600'">
+                {{ isEmri.is_tamamlandi ? '✓ Evet' : '✗ Hayır' }}
+              </span>
+            </p>
+          </div>
+          <div>
+            <p class="label-style">Maliyet</p>
+            <p class="font-semibold text-red-600">{{ (isEmri.maliyet || 0).toFixed(2) }} TL</p>
           </div>
         </div>
       </div>
@@ -272,7 +293,10 @@ import { supabase } from '../supabase.js';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 import IsEmriKapanisModal from '../components/IsEmriKapanisModal.vue';
 import { useLoading } from '../composables/useLoading.js';
+import BaseModal from '../components/BaseModal.vue'; // ← BU EKSİKTİ
+import { useUserStore } from '../stores/userStore.js'; // ← BU EKSİKTİ
 
+const userStore = useUserStore(); // ← BU EKSİKTİ
 
 
 const { isLoading: guncellemeYapiliyor, withLoading: guncelleWithLoading } = useLoading();
@@ -369,7 +393,7 @@ const tahsilatEkle = async () => {
 
 
 const yazdirModaliniAc = () => {
-  yazdirFiyatGoster.value = false; // Default: fiyatsız
+  yazdirFiyatGoster.value = true; // Default: fiyatlı
   yazdirModalGoster.value = true;
 };
 
@@ -487,6 +511,7 @@ const getGerekliVeriler = async () => {
         *, 
         musteriler(*), 
         anlasmalar(*), 
+        satiscilar(ad_soyad), 
         is_emri_kalemleri ( 
           *, 
           anlasmalar(*), 

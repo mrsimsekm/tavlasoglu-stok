@@ -39,8 +39,5 @@ __screenshots__/
 .env.*
 !.env.example
 
-rawurls
-.gitignore
-rawurls
-.gitignore
+.rawurls
 .gitignore
