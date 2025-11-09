@@ -48,7 +48,7 @@
     <div v-else-if="isEmri" class="space-y-6">
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Genel Bilgiler</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p class="label-style">Müşteri</p>
             <p class="font-semibold">{{ isEmri.musteriler.unvan }}</p>
@@ -63,7 +63,13 @@
               {{ isEmri.durum }}
             </p>
           </div>
-          <!-- YENİ ALAN: Satışçı -->
+        </div>
+      </div>
+
+      <!-- YENİ: İş Emri Detayları Bölümü -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">İş Emri Detayları</h2>
+        <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <p class="label-style">Satışçı</p>
             <p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p>
@@ -73,16 +79,39 @@
             <p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p>
           </div>
           <div>
-            <p class="label-style">İş Tamamlandı</p>
-            <p class="font-semibold">
-              <span :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-orange-600'">
-                {{ isEmri.is_tamamlandi ? '✓ Evet' : '✗ Hayır' }}
-              </span>
-            </p>
+            <p class="label-style">Maliyet</p>
+            <p class="font-semibold text-orange-600">{{ formatParaBirimi(isEmri.maliyet || 0) }}</p>
           </div>
           <div>
-            <p class="label-style">Maliyet</p>
-            <p class="font-semibold text-red-600">{{ (isEmri.maliyet || 0).toFixed(2) }} TL</p>
+            <p class="label-style">İş Durumu</p>
+            <p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">
+              {{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}
+            </p>
+          </div>
+        </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="label-style">Satışçı</label>
+            <select v-model="duzenlemeFormu.satisci_id" class="form-input">
+              <option :value="null">Satışçı Seçin</option>
+              <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">
+                {{ satisci.ad_soyad }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="label-style">Fatura No</label>
+            <input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası">
+          </div>
+          <div>
+            <label class="label-style">Maliyet</label>
+            <input v-model.number="duzenlemeFormu.maliyet" type="number" step="0.01" class="form-input" placeholder="0.00">
+          </div>
+          <div class="flex items-center">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded">
+              <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
+            </label>
           </div>
         </div>
       </div>
@@ -97,6 +126,7 @@
           :tedarikciler="tedarikciler" 
           :anlasmalar="anlasmalar" 
           :initialKalemler="isEmri.is_emri_kalemleri" 
+          :kaydedilmis-is-emri="true"
           @kalemler-guncellendi="handleKalemlerGuncellendi"
         />
         <div v-else class="overflow-x-auto">
@@ -127,7 +157,8 @@
           </table>
         </div>
       </div>
-      <!-- YENİ: NOTLAR BÖLÜMÜ -->
+
+      <!-- NOTLAR BÖLÜMÜ -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold text-gray-700">Notlar</h2>
@@ -153,26 +184,21 @@
             placeholder="İş emri ile ilgili notlarınızı buraya yazabilirsiniz..."
           ></textarea>
           <div class="flex justify-end mt-3 space-x-2">
-            <button 
-              @click="notDuzenlemeIptal" 
-              class="btn-secondary"
-            >
-              İptal
-            </button>
+            <button @click="notDuzenlemeIptal" class="btn-secondary">İptal</button>
             <button @click="notuKaydet" :disabled="notKayitYapiliyor" class="btn-primary">
               {{ notKayitYapiliyor ? 'Kaydediliyor...' : 'Kaydet' }}
             </button>
           </div>
         </div>
       </div>
+
       <div class="bg-white p-6 rounded-lg shadow-md">
-        <!-- <h2 class="text-xl font-semibold mb-4 text-gray-700">Finansal Özet</h2> -->
         <div class="flex justify-end text-xl space-x-8 font-semibold">
           <span>Genel Toplam: <span class="text-blue-600">{{ toplamTutar.toFixed(2) }} TL</span></span>
           <span>Ödenen: <span class="text-green-600">{{ (isEmri.odenen_tutar || 0).toFixed(2) }} TL</span></span>
           <span>Kalan Bakiye: <span class="text-red-600">{{ (toplamTutar - (isEmri.odenen_tutar || 0)).toFixed(2) }} TL</span></span>
           <button
-            v-if="isEmri.durum === 'Açık' && (toplamTutar - (isEmri.odenen_tutar || 0)) > 0"
+            v-if="isEmri.durum === 'Açık' && (toplamTutar - (isEmri.odenen_tutar || 0)) > 0 && userStore.yetkiler.tahsilatYapabilir.value"
             @click="tahsilatEkleModaliniAc"
             class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm"
           >
@@ -225,6 +251,7 @@
         <button @click="isEmriYazdir" class="btn-primary ml-2">Yazdır</button>
       </template>
     </BaseModal> 
+
     <!-- TAHSİLAT EKLE MODAL -->
     <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false">
       <template #header>Tahsilat Ekle</template>
@@ -292,17 +319,15 @@ import { useRoute, RouterLink, useRouter } from 'vue-router';
 import { supabase } from '../supabase.js';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 import IsEmriKapanisModal from '../components/IsEmriKapanisModal.vue';
+import BaseModal from '../components/BaseModal.vue';
 import { useLoading } from '../composables/useLoading.js';
-import BaseModal from '../components/BaseModal.vue'; // ← BU EKSİKTİ
-import { useUserStore } from '../stores/userStore.js'; // ← BU EKSİKTİ
-
-const userStore = useUserStore(); // ← BU EKSİKTİ
-
+import { useUserStore } from '../stores/userStore.js';
 
 const { isLoading: guncellemeYapiliyor, withLoading: guncelleWithLoading } = useLoading();
 const { isLoading: notKayitYapiliyor, withLoading: notKaydetWithLoading } = useLoading();
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 const isEmriId = route.params.id;
 const isEmri = ref(null);
 const loading = ref(true);
@@ -311,23 +336,26 @@ const isEditing = ref(false);
 const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
+const satiscilar = ref([]);
 const guncelKalemler = ref([]);
 const kapanisModalGoster = ref(false);
-
-// YENİ: Notlar için değişkenler
 const notDuzenleniyor = ref(false);
 const notIcerigi = ref('');
-// Mevcut değişkenlere ekleyin:
 const yazdirModalGoster = ref(false);
 const yazdirFiyatGoster = ref(true);
-
-
-
 const tahsilatEkleModalGoster = ref(false);
 const tahsilatEkleForm = ref({
   tutar: 0,
   yontem: '',
   notlar: ''
+});
+
+// YENİ: Düzenleme formu
+const duzenlemeFormu = ref({
+  satisci_id: null,
+  fatura_no: '',
+  maliyet: 0,
+  is_tamamlandi: false
 });
 
 const tahsilatEkleModaliniAc = () => {
@@ -358,7 +386,6 @@ const tahsilatEkle = async () => {
   }
 
   try {
-    // Ödeme kaydı oluştur
     const { error: odemeError } = await supabase.from('odemeler').insert([{
       is_emri_id: isEmri.value.id,
       tutar: tahsilatEkleForm.value.tutar,
@@ -369,7 +396,6 @@ const tahsilatEkle = async () => {
 
     if (odemeError) throw odemeError;
 
-    // İş emrindeki odenen_tutar'ı güncelle
     const yeniOdenenTutar = parseFloat(isEmri.value.odenen_tutar || 0) + tahsilatEkleForm.value.tutar;
     const { error: guncellemeError } = await supabase
       .from('is_emirleri')
@@ -387,20 +413,13 @@ const tahsilatEkle = async () => {
   }
 };
 
-
-
-
-
-
 const yazdirModaliniAc = () => {
-  yazdirFiyatGoster.value = true; // Default: fiyatlı
+  yazdirFiyatGoster.value = false;
   yazdirModalGoster.value = true;
 };
 
 const isEmriYazdir = () => {
-  // Yazdırma penceresini aç
   const yazdirIcerik = olusturYazdirIcerik();
-  
   const yazdirPencere = window.open('', '_blank', 'width=800,height=600');
   yazdirPencere.document.write(yazdirIcerik);
   yazdirPencere.document.close();
@@ -493,6 +512,15 @@ const olusturYazdirIcerik = () => {
     </html>
   `;
 };
+
+const formatParaBirimi = (tutar) => {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    minimumFractionDigits: 2
+  }).format(tutar || 0);
+};
+
 const toplamTutar = computed(() => {
   const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
   return kalemListesi.reduce((total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 0);
@@ -506,12 +534,12 @@ const getGerekliVeriler = async () => {
   try {
     loading.value = true; 
     error.value = null;
-    const [isEmriRes, depolarRes, tedarikcilerRes, anlasmalarRes] = await Promise.all([
+    const [isEmriRes, depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes] = await Promise.all([
       supabase.from('is_emirleri').select(`
         *, 
         musteriler(*), 
-        anlasmalar(*), 
-        satiscilar(ad_soyad), 
+        anlasmalar(*),
+        satiscilar(*),
         is_emri_kalemleri ( 
           *, 
           anlasmalar(*), 
@@ -521,7 +549,8 @@ const getGerekliVeriler = async () => {
       `).eq('id', isEmriId).single(),
       supabase.from('depolar').select('*'),
       supabase.from('tedarikciler').select('*'),
-      supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true)
+      supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true),
+      supabase.from('satiscilar').select('id, ad_soyad').eq('aktif_mi', true).order('ad_soyad')
     ]);
     
     if (isEmriRes.error) throw isEmriRes.error;
@@ -537,6 +566,15 @@ const getGerekliVeriler = async () => {
     depolar.value = depolarRes.data || [];
     tedarikciler.value = tedarikcilerRes.data || [];
     anlasmalar.value = anlasmalarRes.data || [];
+    satiscilar.value = satiscilarRes.data || [];
+    
+    // Düzenleme formunu güncelle
+    duzenlemeFormu.value = {
+      satisci_id: isEmri.value.satisci_id || null,
+      fatura_no: isEmri.value.fatura_no || '',
+      maliyet: isEmri.value.maliyet || 0,
+      is_tamamlandi: isEmri.value.is_tamamlandi || false
+    };
   } catch (err) { 
     error.value = err.message; 
   } finally { 
@@ -548,7 +586,13 @@ const guncelle = async () => {
   if (!isEmri.value) return;
   
   await guncelleWithLoading(async () => {
-    const guncellenecekIsEmri = { toplam_tutar: toplamTutar.value };
+    const guncellenecekIsEmri = { 
+      toplam_tutar: toplamTutar.value,
+      satisci_id: duzenlemeFormu.value.satisci_id,
+      fatura_no: duzenlemeFormu.value.fatura_no,
+      maliyet: duzenlemeFormu.value.maliyet,
+      is_tamamlandi: duzenlemeFormu.value.is_tamamlandi
+    };
     const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
     if (isEmriError) throw isEmriError;
     
@@ -599,7 +643,6 @@ const getDurumRenk = (durum) => {
   return renkler[durum] || 'bg-gray-200 text-gray-700';
 };
 
-// YENİ: Not düzenleme fonksiyonları
 const notDuzenlemeyeBasla = () => {
   notIcerigi.value = isEmri.value.notlar || '';
   notDuzenleniyor.value = true;

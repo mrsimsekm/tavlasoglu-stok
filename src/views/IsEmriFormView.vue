@@ -24,6 +24,59 @@
             </select>
           </div>
         </div>
+
+        <!-- YENİ BÖLÜM: İş Emri Detayları -->
+        <div class="border-b pb-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-700">İş Emri Detayları</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Satışçı -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Satışçı</label>
+              <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white">
+                <option :value="null">Satışçı Seçin</option>
+                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">
+                  {{ satisci.ad_soyad }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Fatura No -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Fatura No</label>
+              <input 
+                v-model="isEmri.fatura_no" 
+                type="text" 
+                class="mt-1 block w-full p-2 border rounded-md"
+                placeholder="Fatura numarasını girin"
+              >
+            </div>
+
+            <!-- Maliyet -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Maliyet</label>
+              <input 
+                v-model.number="isEmri.maliyet" 
+                type="number" 
+                step="0.01" 
+                class="mt-1 block w-full p-2 border rounded-md"
+                placeholder="0.00"
+              >
+            </div>
+
+            <!-- İş Tamamlandı -->
+            <div class="flex items-center">
+              <label class="flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  v-model="isEmri.is_tamamlandi"
+                  class="h-5 w-5 text-green-600 rounded border-gray-300"
+                >
+                <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div>
           <h2 class="text-xl font-semibold mb-4 text-gray-700">Malzemeler ve Hizmetler</h2>
           <IsEmriKalemEkle 
@@ -68,7 +121,11 @@ const isEmri = ref({
   durum: 'Açık',
   toplam_tutar: 0,
   odenen_tutar: 0,
-  notlar: ''
+  notlar: '',
+  satisci_id: null,
+  fatura_no: '',
+  is_tamamlandi: false,
+  maliyet: 0
 });
 
 const secilenVarsayilanAnlasma = ref(null);
@@ -77,6 +134,7 @@ const secilenMusteriUnvani = ref('');
 const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
+const satiscilar = ref([]);
 const kaynaklarHazir = ref(false);
 
 const handleMusteriSecildi = (musteri) => {
@@ -89,15 +147,17 @@ const handleKalemlerGuncellendi = (yeniListe) => {
 };
 
 onMounted(async () => {
-  const [depolarRes, tedarikcilerRes, anlasmalarRes] = await Promise.all([
+  const [depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes] = await Promise.all([
     supabase.from('depolar').select('*'),
     supabase.from('tedarikciler').select('*'),
-    supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true)
+    supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true),
+    supabase.from('satiscilar').select('id, ad_soyad').eq('aktif_mi', true).order('ad_soyad')
   ]);
   
   depolar.value = depolarRes.data || [];
   tedarikciler.value = tedarikcilerRes.data || [];
   anlasmalar.value = anlasmalarRes.data || [];
+  satiscilar.value = satiscilarRes.data || [];
   kaynaklarHazir.value = true;
 });
 

@@ -25,11 +25,8 @@
       </button>
       <div class="mb-6 flex flex-col items-center">
         <div class="w-54 h-18 bg-white rounded-lg flex items-center justify-center mb-2">
-          <!-- Buraya logonuzu ekleyin -->
-          <!-- Önerilen oran: 4:3 (genişlik:yükseklik) veya 16:12 -->
           <img src="/logo.png" alt="Şirket Logo" class="max-w-full max-h-full object-contain p-2">
         </div>
-
       </div>
       <div class="text-2xl font-bold mb-8">Stok Takip</div>
       <nav>
@@ -56,18 +53,18 @@
             </RouterLink>
           </li>
           
-          <!-- Stok Menüsü - İkon eklenmiş -->
+          <!-- Stok Menüsü -->
           <li class="mb-2">
             <div @click="toggleStokMenu" class="link-style flex justify-between items-center cursor-pointer">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" />
                 </svg>
-                <span>Stok</span>              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" :class="{'rotate-90': stokMenuAcik}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span>Stok</span>
+              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" :class="{'rotate-90': stokMenuAcik}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-              </div>
-
             </div>
             <ul v-if="stokMenuAcik" class="mt-2 ml-4 space-y-2">
               <li>
@@ -87,20 +84,34 @@
               </li>
             </ul>
           </li>
-          
-          <li class="mb-4">
-            <RouterLink to="/app/is-emirleri" class="link-style" active-class="bg-gray-600">
+
+          <!-- İş Emirleri Menüsü - YENİ -->
+          <li class="mb-2">
+            <div @click="toggleIsEmriMenu" class="link-style flex justify-between items-center cursor-pointer">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                   <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
                 </svg>
-                İş Emirleri
+                <span>İş Emirleri</span>
               </div>
-            </RouterLink>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" :class="{'rotate-90': isEmriMenuAcik}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+            <ul v-if="isEmriMenuAcik" class="mt-2 ml-4 space-y-2">
+              <li>
+                <RouterLink to="/app/is-emirleri" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
+                  Tüm İş Emirleri
+                </RouterLink>
+              </li>
+              <li>
+                <RouterLink to="/app/is-emirleri-satisci" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
+                  Satışçılara Göre
+                </RouterLink>
+              </li>
+            </ul>
           </li>
-          
-          <!-- Alacaklar zaten ikonlu -->
           
           <li class="mb-4">
             <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
@@ -109,6 +120,18 @@
                   <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                 </svg>
                 Anlaşmalar
+              </div>
+            </RouterLink>
+          </li>
+
+          <!-- YÖNETİM PANELİ - Sadece Yönetici -->
+          <li v-if="userStore.isYonetici" class="mb-4 mt-8 pt-4 border-t border-gray-600">
+            <RouterLink to="/app/yonetim" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                </svg>
+                Yönetim Paneli
               </div>
             </RouterLink>
           </li>
@@ -158,13 +181,21 @@
 import { ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { supabase } from '../supabase.js'
+import { useUserStore } from '@/stores/userStore.js'; // <-- 1. EKLENEN SATIR
 
 const router = useRouter()
+const userStore = useUserStore(); // <-- 2. EKLENEN SATIR
+
 const stokMenuAcik = ref(false)
-const sidebarAcik = ref(false) // YENİ: Mobile sidebar kontrolü
+const isEmriMenuAcik = ref(false) // YENİ
+const sidebarAcik = ref(false)
 
 const toggleStokMenu = () => { 
   stokMenuAcik.value = !stokMenuAcik.value 
+}
+
+const toggleIsEmriMenu = () => { // YENİ
+  isEmriMenuAcik.value = !isEmriMenuAcik.value 
 }
 
 const handleLogout = async () => {
