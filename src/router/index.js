@@ -60,7 +60,7 @@ const router = createRouter({
           name: 'is-emirleri-satiscilara-gore', 
           component: SatisciIsEmirleriView,
           meta: {
-            roles: ['satisci', 'yonetici'] 
+            roles: ['satisci', 'yonetici', 'muhasebeci'] 
           }
         },
         { 
