@@ -1,15 +1,17 @@
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-800">Yeni İş Emri</h1>
+      <h1 class="text-3xl font-bold text-gray-800">Yeni İş Emri Oluştur</h1>
       <RouterLink to="/app/is-emirleri" class="text-gray-600 hover:text-gray-800">&larr; Geri Dön</RouterLink>
     </div>
     <div class="bg-white p-6 rounded-lg shadow-md">
       <form @submit.prevent="kaydet" class="space-y-6">
+        
+        <!-- MÜŞTERİ & ANLAŞMA BİLGİLERİ -->
         <div class="border-b pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Müşteri Bilgileri</h2>
-            <label class="block text-sm font-medium text-gray-700">Müşteri Seçimi</label>
+            <label class="block text-sm font-medium text-gray-700">Müşteri Seçimi (*)</label>
             <MusteriAramaInput @musteri-secildi="handleMusteriSecildi" class="mt-1" />
             <div v-if="isEmri.musteri_id" class="mt-4 p-4 bg-gray-50 rounded-lg border">
               <p><strong>Unvan:</strong> {{ secilenMusteriUnvani }}</p>
@@ -25,54 +27,47 @@
           </div>
         </div>
 
-        <!-- YENİ BÖLÜM: İş Emri Detayları -->
+        <!-- İŞ EMRİ DETAYLARI (YENİ ALANLAR EKLENDİ) -->
         <div class="border-b pb-6">
           <h2 class="text-xl font-semibold mb-4 text-gray-700">İş Emri Detayları</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- İş Emri Tipi -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700">İş Emri Tipi (*)</label>
+              <select v-model="isEmri.is_emri_tipi" required class="mt-1 block w-full p-2 border rounded-md bg-white">
+                <option value="SİPARİŞ">Sipariş</option>
+                <option value="ARIZA">Arıza / Servis</option>
+              </select>
+            </div>
             <!-- Satışçı -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Satışçı</label>
               <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white">
                 <option :value="null">Satışçı Seçin</option>
-                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">
-                  {{ satisci.ad_soyad }}
-                </option>
+                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
               </select>
             </div>
-
             <!-- Fatura No -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Fatura No</label>
-              <input 
-                v-model="isEmri.fatura_no" 
-                type="text" 
-                class="mt-1 block w-full p-2 border rounded-md"
-                placeholder="Fatura numarasını girin"
-              >
+              <input v-model="isEmri.fatura_no" type="text" class="mt-1 block w-full p-2 border rounded-md" placeholder="Fatura numarası girin">
             </div>
-
             <!-- Maliyet -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Maliyet</label>
-              <input 
-                v-model.number="isEmri.maliyet" 
-                type="number" 
-                step="0.01" 
-                class="mt-1 block w-full p-2 border rounded-md"
-                placeholder="0.00"
-              >
+              <input v-model.number="isEmri.maliyet" type="number" step="0.01" class="mt-1 block w-full p-2 border rounded-md" placeholder="0.00">
             </div>
-
             <!-- İş Tamamlandı -->
-            <div class="flex items-center">
+            <div class="flex items-end">
               <label class="flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  v-model="isEmri.is_tamamlandi"
-                  class="h-5 w-5 text-green-600 rounded border-gray-300"
-                >
+                <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
                 <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
               </label>
+            </div>
+            <!-- Sevk Adresi -->
+            <div class="md:col-span-3">
+              <label class="block text-sm font-medium text-gray-700">Sevk Adresi</label>
+              <textarea v-model="isEmri.sevk_adresi" rows="3" class="mt-1 block w-full p-2 border rounded-md" placeholder="Ürünlerin veya hizmetin teslim edileceği adres. Boş bırakılırsa müşterinin kayıtlı adresi varsayılır."></textarea>
             </div>
           </div>
         </div>
@@ -92,7 +87,7 @@
         <div class="flex justify-end pt-6 border-t">
           <button 
             type="submit" 
-            :disabled="isEmriKayitYapiliyor"
+            :disabled="isEmriKayitYapiliyor || !isEmri.musteri_id"
             class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {{ isEmriKayitYapiliyor ? 'Kaydediliyor...' : 'İş Emrini Kaydet' }}
@@ -125,7 +120,10 @@ const isEmri = ref({
   satisci_id: null,
   fatura_no: '',
   is_tamamlandi: false,
-  maliyet: 0
+  maliyet: 0,
+  // YENİ ALANLAR EKLENDİ
+  is_emri_tipi: 'SİPARİŞ',
+  sevk_adresi: ''
 });
 
 const secilenVarsayilanAnlasma = ref(null);
@@ -177,13 +175,11 @@ const kaydet = async () => {
   }
 
   await withLoading(async () => {
-    // Toplam tutarı hesapla
     isEmri.value.toplam_tutar = isEmriKalemleri.value.reduce(
       (total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 
       0
     );
     
-    // İş emrini kaydet
     const { data: isEmriData, error: isEmriError } = await supabase
       .from('is_emirleri')
       .insert(isEmri.value)
@@ -194,7 +190,6 @@ const kaydet = async () => {
     
     const newIsEmriId = isEmriData.id;
 
-    // Güvenli veri temizleme - sadece gerekli alanları al
     const kalemlerToInsert = isEmriKalemleri.value.map(kalem => ({
       is_emri_id: newIsEmriId,
       urun_id: kalem.urun_id || null,
@@ -215,7 +210,7 @@ const kaydet = async () => {
     }
 
     alert('İş emri başarıyla kaydedildi!');
-    router.push('/app/is-emirleri');
+    router.push(`/app/is-emirleri/${newIsEmriId}`);
   });
 };
 </script>

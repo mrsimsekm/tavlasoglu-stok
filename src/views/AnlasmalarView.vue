@@ -30,7 +30,7 @@
               </div>
               <div v-else><p class="text-xs text-gray-600">-</p></div>
             </td>
-            <td class="td-style">% {{ anlasma.iskonto_orani || 0 }}</td>
+            <td class="td-style">{{ anlasma.iskonto_orani || '-' }}</td>
             <td class="td-style"><span :class="anlasma.aktif_mi ? 'text-green-600' : 'text-red-600'">{{ anlasma.aktif_mi ? 'Aktif' : 'Pasif' }}</span></td>
             <td class="td-style text-center">
               <div class="flex item-center justify-center space-x-4">
@@ -43,7 +43,8 @@
         </tbody>
       </table>
     </div>
-    <BaseModal :show="formModalGoster" @close="formModalGoster = false">
+    
+    <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-4xl">
       <template #header>{{ duzenlemeModu ? 'Anlaşma Düzenle' : 'Yeni Anlaşma Ekle' }}</template>
       <template #body>
         <form @submit.prevent="formuKaydet" class="space-y-4">
@@ -55,43 +56,57 @@
               <label class="label-style">Durum</label>
               <div class="flex items-center mt-2">
                 <label class="inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    v-model="aktifAnlasma.aktif_mi" 
-                    class="sr-only peer"
-                  >
+                  <input type="checkbox" v-model="aktifAnlasma.aktif_mi" class="sr-only peer">
                   <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  <span class="ms-3 text-sm font-medium" :class="aktifAnlasma.aktif_mi ? 'text-green-700' : 'text-gray-500'">
-                    {{ aktifAnlasma.aktif_mi ? 'Aktif' : 'Pasif' }}
-                  </span>
+                  <span class="ms-3 text-sm font-medium" :class="aktifAnlasma.aktif_mi ? 'text-green-700' : 'text-gray-500'">{{ aktifAnlasma.aktif_mi ? 'Aktif' : 'Pasif' }}</span>
                 </label>
               </div>
-              <p class="text-xs text-gray-500 mt-1">
-                {{ aktifAnlasma.aktif_mi ? 'Anlaşma aktif olarak kullanılabilir' : 'Anlaşma pasif durumda, iş emirlerinde görünmez' }}
-              </p>
+              <p class="text-xs text-gray-500 mt-1">{{ aktifAnlasma.aktif_mi ? 'Anlaşma aktif olarak kullanılabilir' : 'Anlaşma pasif durumda, iş emirlerinde görünmez' }}</p>
             </div>
           </div>
           <div v-if="aktifAnlasma.tip === 'Tutar Bazlı'" class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
             <div><label class="label-style">Taahhüt Tutarı</label><input v-model.number="aktifAnlasma.taahhut_tutari" type="number" step="0.01" class="form-input"></div>
-            <div><label class="label-style">İskonto Oranı (%)</label><input v-model.number="aktifAnlasma.iskonto_orani" type="number" step="0.01" class="form-input"></div>
+            <div><label class="label-style">İskonto Oranı (%)</label><input v-model="aktifAnlasma.iskonto_orani" type="text" class="form-input"></div>
           </div>
           <div v-if="aktifAnlasma.tip === 'Ürün Bazlı'" class="border-t pt-4">
             <h3 class="font-semibold mb-2">Anlaşma Kalemleri</h3>
-            <div class="grid grid-cols-5 gap-2 items-center mb-4">
-               <div class="col-span-3 relative">
-                 <input type="text" v-model="urunAramaMetni" @input="urunAra" placeholder="Ürün Ara..." class="form-input" />
+            <div class="grid grid-cols-12 gap-2 items-center mb-4">
+               <div class="col-span-6 relative">
+                 <input type="text" v-model="urunAramaMetni" @input="urunAra" placeholder="Ürün Ara (Kod veya Açıklama)..." class="form-input" />
                  <div v-if="urunAramaSonuclari.length > 0" class="absolute bg-white border w-full shadow-lg z-10 rounded-md max-h-48 overflow-y-auto"><ul><li v-for="urun in urunAramaSonuclari" :key="urun.id" @click="urunSec(urun)" class="p-2 hover:bg-gray-100 cursor-pointer">{{ urun.urun_kodu }} - {{ urun.aciklama }}</li></ul></div>
                </div>
-               <div><input type="number" v-model="seciliUrunMiktar" placeholder="Miktar" class="form-input" /></div>
-               <button @click="anlasmaKalemiEkle" type="button" class="btn-secondary">Ekle</button>
+               <div class="col-span-2"><input type="number" v-model="seciliUrunBirimFiyat" placeholder="Birim Fiyat" class="form-input" step="0.01" /></div>
+               <div class="col-span-2"><input type="number" v-model="seciliUrunMiktar" placeholder="Miktar" class="form-input" /></div>
+               <div class="col-span-2"><button @click="anlasmaKalemiEkle" type="button" class="btn-secondary w-full">Ekle</button></div>
             </div>
-            <ul class="space-y-2 mt-4 max-h-48 overflow-y-auto">
-                <li v-for="(kalem, index) in aktifAnlasma.anlasma_kalemleri" :key="index" class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span>{{ kalem.urunler?.aciklama || 'Ürün bilgisi yükleniyor...' }}</span>
-                    <span><strong>Miktar:</strong> {{ kalem.taahhut_edilen_miktar }}</span>
-                    <button @click="anlasmaKalemiSil(index)" type="button" class="text-red-500 hover:text-red-700">Sil</button>
-                </li>
-            </ul>
+            
+            <div class="mt-4 max-h-64 overflow-y-auto border rounded-lg">
+              <table class="min-w-full">
+                <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th class="th-style">Ürün</th>
+                    <th class="th-style text-right">Birim Fiyat</th>
+                    <th class="th-style text-right">Taahhüt Miktarı</th>
+                    <th class="th-style text-center">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white">
+                  <tr v-if="!aktifAnlasma.anlasma_kalemleri || aktifAnlasma.anlasma_kalemleri.length === 0">
+                    <td colspan="4" class="text-center py-4 text-gray-500">Henüz anlaşma kalemi eklenmedi.</td>
+                  </tr>
+                  <tr v-for="(kalem, index) in aktifAnlasma.anlasma_kalemleri" :key="index">
+                      <td class="td-style font-medium text-gray-800">{{ kalem.urunler?.aciklama || 'Ürün bilgisi yükleniyor...' }}</td>
+                      <td class="td-style text-right">{{ (kalem.birim_fiyat || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }) }}</td>
+                      <td class="td-style text-right">{{ kalem.taahhut_edilen_miktar }} adet</td>
+                      <td class="td-style text-center">
+                        <button @click="anlasmaKalemiSil(index)" type="button" class="text-red-500 hover:text-red-700">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                      </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </form>
       </template>
@@ -103,13 +118,11 @@
       </template>
     </BaseModal>
 
-    <!-- Anlaşma Detay Modal -->
     <BaseModal :show="detayModalGoster" @close="detayModalGoster = false" max-width="max-w-4xl">
       <template #header>{{ secilenAnlasmaDetay?.ad || 'Anlaşma Detayı' }}</template>
       <template #body>
         <div v-if="detayYukleniyor" class="text-center py-4">Yükleniyor...</div>
         <div v-else-if="secilenAnlasmaDetay" class="space-y-4">
-          <!-- Anlaşma Genel Bilgileri -->
           <div class="bg-gray-50 p-4 rounded-lg">
             <h3 class="font-semibold mb-2">Anlaşma Bilgileri</h3>
             <div class="grid grid-cols-2 gap-2 text-sm">
@@ -130,7 +143,6 @@
             </div>
           </div>
 
-          <!-- İş Emri Bazlı Kullanım Detayları -->
           <div>
             <h3 class="font-semibold mb-3">İş Emri Bazlı Kullanım Detayları</h3>
             <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
@@ -264,6 +276,7 @@ const urunAramaMetni = ref('');
 const urunAramaSonuclari = ref([]);
 const seciliUrun = ref(null);
 const seciliUrunMiktar = ref(1);
+const seciliUrunBirimFiyat = ref(null);
 const detayModalGoster = ref(false);
 const secilenAnlasmaDetay = ref(null);
 const isEmriDetaylari = ref([]);
@@ -280,10 +293,8 @@ const getAnlasmalar = async () => {
   const { data: anlasmalarData, error: anlasmalarError } = await supabase.from('anlasmalar').select('*, tedarikciler(ad), anlasma_kalemleri(*, urunler(*))');
   if (anlasmalarError) { console.error('Anlaşmalar çekilirken hata:', anlasmalarError); loading.value = false; return; }
   
-  // Tüm anlaşmalar için kullanım bilgilerini direkt is_emri_kalemleri tablosundan hesapla
   const anlasmalarWithKullanim = await Promise.all(anlasmalarData.map(async (anlasma) => {
     if (anlasma.tip === 'Tutar Bazlı') {
-      // Tutar bazlı anlaşmalarda: is_emri_kalemleri tablosundan tüm iş emirlerinden kullanım hesapla
       const { data: kalemlerData } = await supabase
         .from('is_emri_kalemleri')
         .select('miktar, birim_fiyat, is_emirleri!inner(durum)')
@@ -297,7 +308,6 @@ const getAnlasmalar = async () => {
       const kullanimOrani = (anlasma.taahhut_tutari > 0) ? (kullanilanTutar / anlasma.taahhut_tutari) * 100 : 0;
       return { ...anlasma, kullanilan_tutar: kullanilanTutar, kullanim_orani: Math.min(kullanimOrani, 100) };
     } else if (anlasma.tip === 'Ürün Bazlı') {
-      // Ürün bazlı anlaşmalarda: is_emri_kalemleri tablosundan tüm iş emirlerinden kullanım hesapla
       const toplamTaahhutAdet = anlasma.anlasma_kalemleri.reduce((sum, kalem) => sum + kalem.taahhut_edilen_miktar, 0);
       
       const { data: kalemlerData } = await supabase
@@ -333,7 +343,12 @@ onActivated(() => {
 });
 
 const formModaliniAc = (anlasma = null) => {
-  urunAramaMetni.value = ''; urunAramaSonuclari.value = []; seciliUrun.value = null; seciliUrunMiktar.value = 1;
+  urunAramaMetni.value = ''; 
+  urunAramaSonuclari.value = []; 
+  seciliUrun.value = null; 
+  seciliUrunMiktar.value = 1;
+  seciliUrunBirimFiyat.value = null;
+  
   if (anlasma) {
     duzenlemeModu.value = true;
     aktifAnlasma.value = JSON.parse(JSON.stringify(anlasma));
@@ -369,7 +384,8 @@ const formuKaydet = async () => {
       const kalemlerToInsert = anlasma_kalemleri.map(k => ({ 
         anlasma_id: anlasmaId, 
         urun_id: k.urun_id, 
-        taahhut_edilen_miktar: k.taahhut_edilen_miktar 
+        taahhut_edilen_miktar: k.taahhut_edilen_miktar,
+        birim_fiyat: k.birim_fiyat
       }));
       const { error: kalemError } = await supabase.from('anlasma_kalemleri').insert(kalemlerToInsert);
       if (kalemError) throw kalemError;
@@ -387,13 +403,23 @@ const anlasmaSil = async (anlasma) => {
     else await getAnlasmalar();
   }
 };
+// AnlasmalarView.vue içindeki urunAra fonksiyonunu bulun ve güncelleyin
 
 let debounceTimer_urun;
 const urunAra = () => {
   clearTimeout(debounceTimer_urun);
   debounceTimer_urun = setTimeout(async () => {
     if (urunAramaMetni.value.length < 2) { urunAramaSonuclari.value = []; return; }
-    const { data } = await supabase.from('urunler').select('id, urun_kodu, aciklama').or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`).limit(5);
+    
+    // 'son_alis_fiyati' buradan kaldırıldı
+    const { data, error } = await supabase
+      .from('urunler')
+      .select('id, urun_kodu, aciklama') 
+      .or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`)
+      .limit(5);
+
+    if (error) { console.error('Supabase sorgu hatası:', error); }
+    
     urunAramaSonuclari.value = data || [];
   }, 300);
 };
@@ -402,20 +428,36 @@ const urunSec = (urun) => {
   seciliUrun.value = urun;
   urunAramaMetni.value = `${urun.urun_kodu} - ${urun.aciklama}`;
   urunAramaSonuclari.value = [];
+  seciliUrunBirimFiyat.value = null; 
 };
 
 const anlasmaKalemiEkle = () => {
-  if (!seciliUrun.value || !seciliUrunMiktar.value || seciliUrunMiktar.value <= 0) { alert('Lütfen bir ürün seçin ve geçerli bir miktar girin.'); return; }
-  if (!aktifAnlasma.value.anlasma_kalemleri) { aktifAnlasma.value.anlasma_kalemleri = []; }
-  const mevcutKalemIndex = aktifAnlasma.value.anlasma_kalemleri.findIndex(k => k.urun_id === seciliUrun.value.id);
-  if(mevcutKalemIndex > -1) {
-    aktifAnlasma.value.anlasma_kalemleri[mevcutKalemIndex].taahhut_edilen_miktar += seciliUrunMiktar.value;
-  } else {
-    aktifAnlasma.value.anlasma_kalemleri.push({ urun_id: seciliUrun.value.id, urunler: { aciklama: `${seciliUrun.value.urun_kodu} - ${seciliUrun.value.aciklama}` }, taahhut_edilen_miktar: seciliUrunMiktar.value, });
+  if (!seciliUrun.value || !seciliUrunMiktar.value || seciliUrunMiktar.value <= 0 || seciliUrunBirimFiyat.value === null || seciliUrunBirimFiyat.value < 0) { 
+    alert('Lütfen bir ürün seçin ve geçerli bir miktar ve birim fiyat girin.'); 
+    return; 
   }
+
+  if (!aktifAnlasma.value.anlasma_kalemleri) { aktifAnlasma.value.anlasma_kalemleri = []; }
+  
+  const mevcutKalemIndex = aktifAnlasma.value.anlasma_kalemleri.findIndex(k => k.urun_id === seciliUrun.value.id);
+  
+  if(mevcutKalemIndex > -1) {
+    const mevcutKalem = aktifAnlasma.value.anlasma_kalemleri[mevcutKalemIndex];
+    mevcutKalem.taahhut_edilen_miktar += seciliUrunMiktar.value;
+    mevcutKalem.birim_fiyat = seciliUrunBirimFiyat.value;
+  } else {
+    aktifAnlasma.value.anlasma_kalemleri.push({ 
+      urun_id: seciliUrun.value.id, 
+      urunler: { aciklama: `${seciliUrun.value.urun_kodu} - ${seciliUrun.value.aciklama}` }, 
+      taahhut_edilen_miktar: seciliUrunMiktar.value,
+      birim_fiyat: seciliUrunBirimFiyat.value
+    });
+  }
+  
   urunAramaMetni.value = '';
   seciliUrun.value = null;
   seciliUrunMiktar.value = 1;
+  seciliUrunBirimFiyat.value = null;
 };
 
 const anlasmaKalemiSil = (index) => {
@@ -428,7 +470,6 @@ const detayModaliniAc = async (anlasma) => {
   detayYukleniyor.value = true;
   
   try {
-    // Önce genel bilgileri güncelle - tüm iş emirlerinden kullanım hesapla (sadece İptal Edildi hariç)
     if (anlasma.tip === 'Tutar Bazlı') {
       const { data: tumData } = await supabase
         .from('is_emri_kalemleri')
@@ -443,8 +484,6 @@ const detayModaliniAc = async (anlasma) => {
         secilenAnlasmaDetay.value.kullanilan_tutar = toplamTutar;
       }
     } else if (anlasma.tip === 'Ürün Bazlı') {
-      // Ürün bazlı anlaşmalarda: sadece anlaşma kalemlerindeki ürünler için toplam kullanım hesapla
-      // Önce anlaşma kalemlerindeki ürün ID'lerini al
       if (!anlasma.anlasma_kalemleri || anlasma.anlasma_kalemleri.length === 0) {
         secilenAnlasmaDetay.value.toplam_kullanilan_adet = 0;
       } else {
@@ -464,10 +503,8 @@ const detayModaliniAc = async (anlasma) => {
         }
       }
     }
-    // İş emri bazlı kullanım detaylarını çek
+    
     if (anlasma.tip === 'Tutar Bazlı') {
-      // Tutar bazlı anlaşmalarda: is_emri_kalemleri tablosundan anlaşma_id'ye göre çek
-      // Tüm iş emirlerini al (sadece 'İptal Edildi' hariç)
       const { data, error } = await supabase
         .from('is_emri_kalemleri')
         .select(`
@@ -486,7 +523,6 @@ const detayModaliniAc = async (anlasma) => {
       
       if (error) throw error;
       
-      // İş emri bazlı grupla ve toplam tutarı hesapla
       const gruplanmis = {};
       data.forEach(kalem => {
         const isEmriId = kalem.is_emri_id;
@@ -506,18 +542,14 @@ const detayModaliniAc = async (anlasma) => {
         new Date(b.siparis_tarihi) - new Date(a.siparis_tarihi)
       );
     } else if (anlasma.tip === 'Ürün Bazlı') {
-      // Ürün bazlı anlaşmalarda: her ürün kalemi için detay göster
-      // Önce anlaşma kalemlerini al (taahhüt edilen ürünler ve miktarları)
       if (!anlasma.anlasma_kalemleri || anlasma.anlasma_kalemleri.length === 0) {
         isEmriDetaylari.value = [];
         return;
       }
       
-      // Her ürün kalemi için iş emri bazlı kullanım detaylarını çek
       const urunDetaylari = [];
       
       for (const anlasmaKalemi of anlasma.anlasma_kalemleri) {
-        // Bu ürün için iş emri kalemlerini çek (tüm iş emirleri, sadece 'İptal Edildi' hariç)
         const { data, error } = await supabase
           .from('is_emri_kalemleri')
           .select(`
@@ -541,10 +573,8 @@ const detayModaliniAc = async (anlasma) => {
           continue;
         }
         
-        // Bu ürün için toplam kullanılan miktarı hesapla
         const toplamKullanilan = data.reduce((sum, kalem) => sum + Number(kalem.miktar), 0);
         
-        // İş emri bazlı grupla
         const isEmriGruplari = {};
         data.forEach(kalem => {
           const isEmriId = kalem.is_emri_id;
@@ -560,10 +590,8 @@ const detayModaliniAc = async (anlasma) => {
           isEmriGruplari[isEmriId].kullanilan_miktar += Number(kalem.miktar);
         });
         
-        // Ürün bilgilerini al - önce anlasma kaleminden, sonra iş emri kalemlerinden
         let urunBilgisi = anlasmaKalemi.urunler || {};
         
-        // Eğer anlasma kaleminde ürün bilgisi yoksa, iş emri kalemlerinden al
         if ((!urunBilgisi.urun_kodu || !urunBilgisi.aciklama) && data.length > 0 && data[0].urunler) {
           urunBilgisi = {
             urun_kodu: data[0].urunler.urun_kodu || 'Bilinmeyen',
@@ -571,7 +599,6 @@ const detayModaliniAc = async (anlasma) => {
           };
         }
         
-        // Eğer hala yoksa, ürünü direkt çek
         if (!urunBilgisi.urun_kodu || urunBilgisi.urun_kodu === 'Bilinmeyen') {
           const { data: urunData } = await supabase
             .from('urunler')

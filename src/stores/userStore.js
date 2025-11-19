@@ -1,70 +1,143 @@
-// src/stores/userStore.js
-
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../supabase.js'
 
 export const useUserStore = defineStore('user', () => {
+  // Kullanıcı bilgilerini tutacak olan değişken
   const user = ref(null)
-  const profil = ref(null)
+  
+  // Kullanıcının profil bilgileri (rol dahil)
+  const profile = ref(null)
+  
+  // Yükleme durumu
+  const loading = ref(false)
 
+  // Supabase'den mevcut kullanıcıyı ve profil bilgilerini getiren fonksiyon
   const fetchUser = async () => {
-    const { data } = await supabase.auth.getUser()
-    user.value = data.user
-    
-    if (user.value) {
-      await fetchProfil()
-    } else {
-      profil.value = null
+    loading.value = true
+    try {
+      // Kullanıcı auth bilgisini al
+      const { data: userData } = await supabase.auth.getUser()
+      user.value = userData.user
+      
+      // Eğer kullanıcı varsa, profil bilgilerini de çek
+      if (userData.user) {
+        const { data: profileData, error } = await supabase
+          .from('profiller')
+          .select('*')
+          .eq('id', userData.user.id)
+          .single()
+        
+        if (!error && profileData) {
+          profile.value = profileData
+          console.log('Profil yüklendi:', profileData)
+          
+          // Yetkisiz kullanıcı kontrolü
+          if (profileData.rol === 'yetkisiz') {
+            console.warn('Yetkisiz kullanıcı tespit edildi, çıkış yapılıyor...')
+            await logout()
+            return
+          }
+        } else {
+          console.error('Profil bilgisi alınamadı:', error)
+          profile.value = null
+        }
+      } else {
+        profile.value = null
+      }
+    } catch (error) {
+      console.error('Kullanıcı bilgisi alınamadı:', error)
+      user.value = null
+      profile.value = null
+    } finally {
+      loading.value = false
     }
   }
 
-  const fetchProfil = async () => {
+  // Kullanıcı çıkış yapsın
+  const logout = async () => {
+    await supabase.auth.signOut()
+    user.value = null
+    profile.value = null
+  }
+
+  // Profili yeniden yükle (rol güncellendikten sonra)
+  const refreshProfile = async () => {
     if (!user.value) return
     
-    // .single() yerine .maybeSingle() kullanıyoruz.
-    // Bu, sonuç bulunamazsa hata vermez, null döndürür.
-    const { data, error } = await supabase
-      .from('profiller') 
-      .select('*')
-      .eq('id', user.value.id)
-      .maybeSingle() // <-- DEĞİŞİKLİK BURADA
-    
-    if (error) {
-      console.error('Profil çekilirken hata:', error.message)
-      profil.value = null
-    } else {
-      profil.value = data
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiller')
+        .select('*')
+        .eq('id', user.value.id)
+        .single()
+      
+      if (!error && profileData) {
+        profile.value = profileData
+        console.log('Profil yenilendi:', profileData)
+        
+        // Yetkisiz olmuşsa çıkış yap
+        if (profileData.rol === 'yetkisiz') {
+          console.warn('Yetkiniz kaldırıldı, çıkış yapılıyor...')
+          await logout()
+        }
+      } else {
+        console.error('Profil yenileme hatası:', error)
+      }
+    } catch (error) {
+      console.error('Profil yenileme hatası:', error)
     }
   }
 
-  // Geri kalan kod aynı...
-  const rol = computed(() => profil.value?.rol || null)
-  const isYonetici = computed(() => rol.value === 'yonetici')
-  const isMuhasebeci = computed(() => rol.value === 'muhasebeci')
-  const isSatisci = computed(() => rol.value === 'satisci')
+  // Kullanıcının rolünü kontrol eden computed özellikler
+  const isYonetici = computed(() => {
+    const rol = profile.value?.rol
+    console.log('isYonetici kontrol:', rol)
+    return rol === 'yonetici'
+  })
+  
+  const isSatisci = computed(() => profile.value?.rol === 'satisci')
+  const isMuhasebeci = computed(() => profile.value?.rol === 'muhasebeci')
+  const isYetkisiz = computed(() => profile.value?.rol === 'yetkisiz')
+  
+  // Yetkili kullanıcı mı (yetkisiz DEĞİL)
+  const isYetkili = computed(() => {
+    const rol = profile.value?.rol
+    return rol && rol !== 'yetkisiz'
+  })
+  
+  // Kullanıcının tam adı
+  const fullName = computed(() => profile.value?.tam_ad || user.value?.email || 'Kullanıcı')
+  
+  // Kullanıcının rolü (string)
+  const role = computed(() => profile.value?.rol || 'bilinmiyor')
+  
+  // Rol görünen adı (Türkçe)
+  const roleDisplayName = computed(() => {
+    const roleNames = {
+      'yonetici': 'Yönetici',
+      'satisci': 'Satışçı',
+      'muhasebeci': 'Muhasebeci',
+      'yetkisiz': 'Yetkisiz'
+    }
+    return roleNames[profile.value?.rol] || 'Bilinmiyor'
+  })
 
-  const yetkiler = {
-    tahsilatYapabilir: computed(() => isMuhasebeci.value || isYonetici.value),
-    isEmriKalemSilebilir: computed(() => isYonetici.value),
-    isEmriAcabilir: computed(() => true),
-    isEmriDuzenleyebilir: (isEmriKaydedilmis) => {
-      if (!isEmriKaydedilmis) return true
-      return isYonetici.value
-    },
-    isEmriKapatabilir: computed(() => true),
-    raporlariGorebilir: computed(() => isMuhasebeci.value || isYonetici.value),
-  }
-
+  // Kullanıcı bilgilerini dışarıya açıyoruz
   return { 
     user, 
-    profil,
-    rol,
-    isYonetici,
-    isMuhasebeci,
-    isSatisci,
-    yetkiler,
+    profile,
+    loading,
     fetchUser,
-    fetchProfil
+    refreshProfile,
+    logout,
+    isYonetici,
+    isSatisci,
+    isMuhasebeci,
+    isYetkisiz,
+    isYetkili,
+    fullName,
+    role,
+    roleDisplayName
   }
 })

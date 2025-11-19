@@ -24,12 +24,22 @@
         </svg>
       </button>
       <div class="mb-6 flex flex-col items-center">
-        <div class="w-54 h-18 bg-white rounded-lg flex items-center justify-center mb-2">
+        <div class="w-36 h-18 bg-white rounded-lg flex items-center justify-center mb-2">
           <img src="/logo.png" alt="Şirket Logo" class="max-w-full max-h-full object-contain p-2">
         </div>
       </div>
       <div class="text-2xl font-bold mb-8">Stok Takip</div>
       <nav>
+          <!-- YETKİSİZ KULLANICI İÇİN MESAJ -->
+        <div v-if="userStore.isYetkisiz" class="text-center py-8 px-4">
+          <div class="bg-red-900 rounded-lg p-4 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-300 mb-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-red-200 text-sm font-semibold">Erişim Yetkiniz Yok</p>
+            <p class="text-red-300 text-xs mt-2">Sistem yöneticisi ile iletişime geçin</p>
+          </div>
+        </div>
         <ul>
           <li class="mb-4">
             <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600">
