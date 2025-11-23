@@ -75,8 +75,9 @@
                  <input type="text" v-model="urunAramaMetni" @input="urunAra" placeholder="Ürün Ara (Kod veya Açıklama)..." class="form-input" />
                  <div v-if="urunAramaSonuclari.length > 0" class="absolute bg-white border w-full shadow-lg z-10 rounded-md max-h-48 overflow-y-auto"><ul><li v-for="urun in urunAramaSonuclari" :key="urun.id" @click="urunSec(urun)" class="p-2 hover:bg-gray-100 cursor-pointer">{{ urun.urun_kodu }} - {{ urun.aciklama }}</li></ul></div>
                </div>
-               <div class="col-span-2"><input type="number" v-model="seciliUrunBirimFiyat" placeholder="Birim Fiyat" class="form-input" step="0.01" /></div>
                <div class="col-span-2"><input type="number" v-model="seciliUrunMiktar" placeholder="Miktar" class="form-input" /></div>
+               <div class="col-span-2"><input type="number" v-model="seciliUrunBirimFiyat" placeholder="Birim Fiyat" class="form-input" step="0.01" /></div>
+               
                <div class="col-span-2"><button @click="anlasmaKalemiEkle" type="button" class="btn-secondary w-full">Ekle</button></div>
             </div>
             
@@ -85,8 +86,8 @@
                 <thead class="bg-gray-50 sticky top-0">
                   <tr>
                     <th class="th-style">Ürün</th>
-                    <th class="th-style text-right">Birim Fiyat</th>
                     <th class="th-style text-right">Taahhüt Miktarı</th>
+                    <th class="th-style text-right">Birim Fiyat</th>                    
                     <th class="th-style text-center">İşlem</th>
                   </tr>
                 </thead>
@@ -96,8 +97,8 @@
                   </tr>
                   <tr v-for="(kalem, index) in aktifAnlasma.anlasma_kalemleri" :key="index">
                       <td class="td-style font-medium text-gray-800">{{ kalem.urunler?.aciklama || 'Ürün bilgisi yükleniyor...' }}</td>
-                      <td class="td-style text-right">{{ (kalem.birim_fiyat || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }) }}</td>
                       <td class="td-style text-right">{{ kalem.taahhut_edilen_miktar }} adet</td>
+                      <td class="td-style text-right">{{ (kalem.birim_fiyat || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }) }}</td>
                       <td class="td-style text-center">
                         <button @click="anlasmaKalemiSil(index)" type="button" class="text-red-500 hover:text-red-700">
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
