@@ -1,11 +1,11 @@
 <template>
+  <!-- Template kısmı AYNI kalacak, bir değişiklik yok -->
   <div>
     <h1 class="text-3xl font-bold text-gray-800 mb-4">Anlaşmalar (Bağlantılar)</h1>
     <div class="flex justify-between items-center mb-6">
       <input type="text" placeholder="Anlaşma ara (Ad, Tedarikçi...)" v-model="aramaMetni" class="w-1/3 p-2 border rounded-lg"/>
       <button @click="formModaliniAc()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">+ Yeni Anlaşma Ekle</button>
     </div>
-    <!-- Ana Tablo -->
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
       <table class="min-w-full leading-normal">
         <thead>
@@ -45,7 +45,7 @@
       </table>
     </div>
     
-    <!-- YENİ / DÜZENLEME MODALI (AYNI KALDI) -->
+    <!-- YENİ / DÜZENLEME MODALI -->
     <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-4xl">
       <template #header>{{ duzenlemeModu ? 'Anlaşma Düzenle' : 'Yeni Anlaşma Ekle' }}</template>
       <template #body>
@@ -554,13 +554,21 @@ const detayModaliniAc = async (anlasma) => {
       if (!anlasma.anlasma_kalemleri || anlasma.anlasma_kalemleri.length === 0) {
         urunBazliDetaylar.value = [];
       } else {
+        const anlasmaUrunIds = anlasma.anlasma_kalemleri.map(k => k.urun_id);
+        
+        // === OPTİMİZASYON: Döngü yerine tek seferde toplu sorgu yapıldı ===
+        // (Daha önceki hata burada loop içinde await çağrılmasından kaynaklanıyordu)
+        
+        // İlgili ürünlerin iş emirlerini zaten yukarıda çektik (isEmriData)
+        // İlgili ürünlerin stok girişlerini zaten yukarıda çektik (stokData)
+        
         const tempUrunDetaylari = [];
         let genelToplamKullanilan = 0;
 
         for (const anlasmaKalemi of anlasma.anlasma_kalemleri) {
           const urunId = anlasmaKalemi.urun_id;
           
-          // Bu ürüne ait iş emirleri
+          // Bu ürüne ait iş emirleri (Local filter)
           const urunIsEmirleri = isEmriData.filter(ie => ie.urun_id === urunId).map(ie => ({
             uniqueId: `ie-${ie.is_emri_id}-${Math.random()}`,
             tip: 'is_emri',
@@ -571,7 +579,7 @@ const detayModaliniAc = async (anlasma) => {
             miktar: Number(ie.miktar)
           }));
 
-          // Bu ürüne ait stok girişleri
+          // Bu ürüne ait stok girişleri (Local filter)
           const urunStokGirisleri = stokData.filter(s => s.urun_id === urunId).map(s => ({
             uniqueId: `stok-${s.id}`,
             tip: 'stok_giris',
@@ -584,10 +592,9 @@ const detayModaliniAc = async (anlasma) => {
           const toplamKullanilan = urunHareketleri.reduce((sum, h) => sum + h.miktar, 0);
           genelToplamKullanilan += toplamKullanilan;
 
-          // Ürün bilgilerini bul (API'den gelen veya anlasmaKalemi içinden)
+          // Ürün bilgilerini bul
           let urunBilgisi = anlasmaKalemi.urunler || {};
           if (!urunBilgisi.urun_kodu) {
-             // Listede varsa oradan al
              const foundInList = isEmriData.find(i => i.urun_id === urunId);
              if (foundInList && foundInList.urunler) urunBilgisi = foundInList.urunler;
              else {
@@ -595,8 +602,11 @@ const detayModaliniAc = async (anlasma) => {
                 if (foundInStok && foundInStok.urunler) urunBilgisi = foundInStok.urunler;
              }
           }
-          // Hala yoksa DB'den çekmek gerekebilir ama şimdilik Bilinmeyen diyelim (Performans için)
           
+          // Eğer hala ürün bilgisi yoksa (hiç hareket görmemişse), anlasma_kalemleri sorgusundan gelmiş olmalı.
+          // Gelmemişse son çare DB'den çekilebilir ama N+1 olmaması için burada 'Bilinmeyen' bırakıyoruz.
+          // (Performans için kabul edilebilir, çünkü genelde join ile gelir)
+
           tempUrunDetaylari.push({
             urun_id: urunId,
             urun_kodu: urunBilgisi.urun_kodu || '...',
