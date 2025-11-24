@@ -41,7 +41,7 @@
           </div>
         </div>
         <ul>
-          <li class="mb-4">
+          <!--<li class="mb-4">
             <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -50,7 +50,7 @@
                 Ana Sayfa
               </div>
             </RouterLink>
-          </li>
+          </li>-->
           
           <li class="mb-4">
             <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600">

@@ -107,7 +107,7 @@ const router = createRouter({
         },
       ]
     },
-    { path: '/', redirect: '/app/dashboard' }
+    { path: '/', redirect: '/app/is-emirleri' }
   ]
 })
 
