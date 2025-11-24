@@ -125,6 +125,18 @@
             </ul>
           </li>
           
+
+
+          <li class="mb-4">
+            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                </svg>
+                Anlaşmalar
+              </div>
+            </RouterLink>
+          </li>
           <!-- FİNANS / ALACAKLAR (YENİ) -->
           <li v-if="userStore.isYonetici || userStore.isMuhasebeci" class="mb-4">
             <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600">
@@ -137,7 +149,8 @@
               </div>
             </RouterLink>
           </li>
-          <li v-if="userStore.isYonetici" class="mb-2">
+          <!-- YÖNETİM PANELİ - Sadece Yönetici -->
+          <li v-if="userStore.isYonetici" class="mb-4 mt-8 pt-4 border-t border-gray-600">
             <RouterLink to="/app/satisci-performans" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -147,19 +160,7 @@
               </div>
             </RouterLink>
           </li>
-          <li class="mb-4">
-            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
-              <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                </svg>
-                Anlaşmalar
-              </div>
-            </RouterLink>
-          </li>
-
-          <!-- YÖNETİM PANELİ - Sadece Yönetici -->
-          <li v-if="userStore.isYonetici" class="mb-4 mt-8 pt-4 border-t border-gray-600">
+          <li v-if="userStore.isYonetici" class="mb-2">
             <RouterLink to="/app/yonetim" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
