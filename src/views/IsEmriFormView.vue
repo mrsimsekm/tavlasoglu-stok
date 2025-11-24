@@ -121,7 +121,6 @@ const isEmri = ref({
   fatura_no: '',
   is_tamamlandi: false,
   maliyet: 0,
-  // YENİ ALANLAR EKLENDİ
   is_emri_tipi: 'SİPARİŞ',
   sevk_adresi: ''
 });
@@ -210,7 +209,11 @@ const kaydet = async () => {
     }
 
     alert('İş emri başarıyla kaydedildi!');
-    router.push(`/app/is-emirleri/${newIsEmriId}`);
+    
+    // YÖNLENDİRME DEĞİŞİKLİĞİ BURADA
+    // Eskisi: router.push(`/app/is-emirleri/${newIsEmriId}`); (Detay sayfası)
+    // Yenisi: router.push('/app/is-emirleri'); (Liste sayfası)
+    router.push('/app/is-emirleri');
   });
 };
 </script>

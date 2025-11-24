@@ -53,6 +53,7 @@
             <th class="th-style">Ürün Kodu</th>
             <th class="th-style">Ürün Açıklama</th>
             <th class="th-style">Depo</th>
+            <th class="th-style">Anlaşma</th>
             <th @click="siralamaYap('miktar')" class="th-style cursor-pointer hover:bg-gray-200">
               <div class="flex items-center">
                 <span>Miktar</span>
@@ -62,17 +63,16 @@
                 </span>
               </div>
             </th>
-            <th class="th-style">Önceki Stok</th>
-            <th class="th-style">Sonraki Stok</th>
+            <th class="th-style text-right">Tutar</th> <!-- Yeni Kolon -->
             <th class="th-style">Açıklama</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="8" class="text-center py-4">Yükleniyor...</td>
+            <td colspan="9" class="text-center py-4">Yükleniyor...</td>
           </tr>
           <tr v-else-if="stokHareketleri.length === 0">
-            <td colspan="8" class="text-center py-4 text-gray-500">
+            <td colspan="9" class="text-center py-4 text-gray-500">
               {{ filtreler.urunArama || filtreler.depoId || filtreler.baslangicTarihi || filtreler.bitisTarihi 
                 ? 'Filtreye uygun kayıt bulunamadı.' 
                 : 'Henüz stok girişi yapılmamış.' }}
@@ -92,13 +92,14 @@
               <p class="text-gray-900">{{ hareket.depolar?.ad || '-' }}</p>
             </td>
             <td class="td-style">
+              <p class="text-indigo-600 text-sm">{{ hareket.anlasmalar?.ad || '-' }}</p>
+            </td>
+            <td class="td-style">
               <p class="text-green-600 font-bold">+{{ hareket.miktar }}</p>
             </td>
-            <td class="td-style">
-              <p class="text-gray-600">{{ hareket.onceki_miktar || 0 }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-blue-600 font-semibold">{{ hareket.sonraki_miktar || 0 }}</p>
+            <td class="td-style text-right">
+              <p v-if="hareket.tutar > 0" class="text-gray-800 font-mono">{{ formatPara(hareket.tutar) }}</p>
+              <p v-else class="text-gray-400">-</p>
             </td>
             <td class="td-style">
               <p class="text-gray-600 text-sm">{{ hareket.aciklama || '-' }}</p>
@@ -113,12 +114,49 @@
       <template #header>Yeni Stok Girişi</template>
       <template #body>
          <div class="space-y-4">
+            
+            <!-- ANLAŞMA SEÇİMİ -->
+            <div class="bg-blue-50 p-3 rounded border border-blue-100">
+              <label class="flex items-center space-x-2 cursor-pointer mb-2">
+                <input type="checkbox" v-model="anlasmaDahilinde" class="form-checkbox h-4 w-4 text-indigo-600">
+                <span class="text-gray-700 font-medium">Anlaşma Dahilinde mi?</span>
+              </label>
+              
+              <div v-if="anlasmaDahilinde">
+                <label class="label-style">Anlaşma Seçiniz (*)</label>
+                <select v-model="yeniGiris.anlasma_id" @change="anlasmaDegisti" class="form-input">
+                  <option :value="null" disabled>Anlaşma Seçin</option>
+                  <option v-for="anlasma in aktifAnlasmalar" :key="anlasma.id" :value="anlasma.id">
+                    {{ anlasma.ad }} ({{ anlasma.tedarikciler?.ad }} - {{ anlasma.tip }})
+                  </option>
+                </select>
+                
+                <!-- TUTAR BAZLI İSE TUTAR GİRİŞİ -->
+                <div v-if="secilenAnlasmaTipi === 'Tutar Bazlı'" class="mt-3 p-2 bg-white rounded border border-blue-200">
+                  <label class="label-style text-blue-800">Toplam Giriş Tutarı (TL) (*)</label>
+                  <input v-model.number="yeniGiris.tutar" type="number" step="0.01" class="form-input border-blue-300 focus:ring-blue-500" placeholder="0.00">
+                  <p class="text-xs text-blue-600 mt-1">Bu tutar anlaşma kotasından düşülecektir.</p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label class="label-style">Ürün (*)</label>
                <div class="relative mt-1">
-                <input type="text" v-model="urunAramaMetni" @input="urunAra" placeholder="Ürün kodu veya açıklama..." class="form-input" />
+                <input 
+                  type="text" 
+                  v-model="urunAramaMetni" 
+                  @input="urunAra" 
+                  :placeholder="urunAramaPlaceholder" 
+                  class="form-input" 
+                  :disabled="anlasmaDahilinde && !yeniGiris.anlasma_id && secilenAnlasmaTipi === 'Ürün Bazlı'"
+                />
                 <div v-if="urunAramaSonuclari.length > 0" class="absolute mt-1 w-full bg-white border rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
-                  <ul><li v-for="urun in urunAramaSonuclari" :key="urun.id" @click="urunSec(urun)" class="p-2 hover:bg-gray-100 cursor-pointer">{{ urun.urun_kodu }} - {{ urun.aciklama }}</li></ul>
+                  <ul>
+                    <li v-for="urun in urunAramaSonuclari" :key="urun.id" @click="urunSec(urun)" class="p-2 hover:bg-gray-100 cursor-pointer">
+                      <span class="font-bold">{{ urun.urun_kodu }}</span> - {{ urun.aciklama }}
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -160,7 +198,7 @@
 </style>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { supabase } from '../supabase.js';
 import { useUserStore } from '../stores/userStore.js';
 import BaseModal from '../components/BaseModal.vue';
@@ -170,6 +208,9 @@ const formModalGoster = ref(false);
 const loading = ref(false);
 const kayitYapiliyor = ref(false);
 const depolar = ref([]);
+const aktifAnlasmalar = ref([]);
+const anlasmaDahilinde = ref(false);
+
 const urunAramaMetni = ref('');
 const urunAramaSonuclari = ref([]);
 const stokHareketleri = ref([]);
@@ -187,15 +228,55 @@ const filtreler = ref({
 const yeniGiris = ref({
   urun_id: null,
   depo_id: null,
+  anlasma_id: null,
   miktar: 0,
+  tutar: 0, // YENİ: Tutar alanı
   aciklama: ''
 });
 
-const formModaliniAc = () => {
-  yeniGiris.value = { urun_id: null, depo_id: null, miktar: 0, aciklama: '' };
+const secilenAnlasmaTipi = computed(() => {
+  if (!yeniGiris.value.anlasma_id) return null;
+  const anlasma = aktifAnlasmalar.value.find(a => a.id === yeniGiris.value.anlasma_id);
+  return anlasma ? anlasma.tip : null;
+});
+
+const urunAramaPlaceholder = computed(() => {
+  if (anlasmaDahilinde.value && !yeniGiris.value.anlasma_id) {
+    return 'Önce anlaşma seçiniz...';
+  }
+  return 'Ürün kodu veya açıklama...';
+});
+
+const formModaliniAc = async () => {
+  yeniGiris.value = { urun_id: null, depo_id: null, anlasma_id: null, miktar: 0, tutar: 0, aciklama: '' };
+  anlasmaDahilinde.value = false;
   urunAramaMetni.value = '';
   urunAramaSonuclari.value = [];
+  
+  const { data } = await supabase
+    .from('anlasmalar')
+    .select('*, tedarikciler(ad), anlasma_kalemleri(urun_id)')
+    .eq('aktif_mi', true);
+  
+  aktifAnlasmalar.value = data || [];
+  
   formModalGoster.value = true;
+};
+
+// Anlaşma checkbox değişince
+watch(anlasmaDahilinde, (val) => {
+  if (!val) {
+    yeniGiris.value.anlasma_id = null;
+    yeniGiris.value.tutar = 0;
+  }
+  yeniGiris.value.urun_id = null;
+  urunAramaMetni.value = '';
+});
+
+const anlasmaDegisti = () => {
+  yeniGiris.value.urun_id = null;
+  yeniGiris.value.tutar = 0; // Anlaşma değişince tutarı sıfırla
+  urunAramaMetni.value = '';
 };
 
 // Depoları çek
@@ -214,7 +295,8 @@ const hareketleriGetir = async () => {
       .select(`
         *,
         urunler (urun_kodu, aciklama, ana_birim),
-        depolar (ad)
+        depolar (ad),
+        anlasmalar (ad) 
       `)
       .eq('hareket_tipi', 'giris')
       .order(sortBy.value, { ascending: sortDirection.value === 'asc' });
@@ -281,6 +363,33 @@ const filtreleriTemizle = () => {
 // Ürün arama mantığı
 let debounceTimer;
 const urunAra = () => {
+  yeniGiris.value.urun_id = null;
+
+  // Anlaşma seçili ve ürün bazlı ise, ürün listesini kısıtla
+  if (anlasmaDahilinde.value && yeniGiris.value.anlasma_id) {
+    const secilenAnlasma = aktifAnlasmalar.value.find(a => a.id === yeniGiris.value.anlasma_id);
+    if (secilenAnlasma && secilenAnlasma.tip === 'Ürün Bazlı') {
+      const anlasmaUrunIds = secilenAnlasma.anlasma_kalemleri.map(k => k.urun_id);
+      
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        if (urunAramaMetni.value.length < 2) { 
+          urunAramaSonuclari.value = []; 
+          return; 
+        }
+        const { data } = await supabase
+          .from('urunler')
+          .select('id, urun_kodu, aciklama')
+          .in('id', anlasmaUrunIds) // KISITLAMA
+          .or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`)
+          .limit(10);
+        urunAramaSonuclari.value = data || [];
+      }, 300);
+      return;
+    }
+  }
+
+  // Normal arama
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     if (urunAramaMetni.value.length < 2) { 
@@ -304,33 +413,67 @@ const urunSec = (urun) => {
 
 // Kaydetme mantığı
 const stokGirisiKaydet = async () => {
-  const { urun_id, depo_id, miktar, aciklama } = yeniGiris.value;
+  const { urun_id, depo_id, miktar, aciklama, anlasma_id, tutar } = yeniGiris.value;
 
   if (!urun_id || !depo_id || !miktar || miktar <= 0) {
-    alert('Lütfen tüm zorunlu alanları doldurun ve miktar 0\'dan büyük olsun.');
+    alert('Lütfen listeden geçerli bir ürün seçin, depoyu belirtin ve miktarı girin.');
     return;
+  }
+
+  if (anlasmaDahilinde.value) {
+    if (!anlasma_id) {
+      alert('Lütfen bir anlaşma seçin.');
+      return;
+    }
+    // Tutar bazlı ise tutar zorunlu
+    if (secilenAnlasmaTipi.value === 'Tutar Bazlı' && (!tutar || tutar <= 0)) {
+      alert('Tutar bazlı anlaşma seçildiğinde geçerli bir tutar girilmelidir.');
+      return;
+    }
   }
 
   try {
     kayitYapiliyor.value = true;
     
-    const { data, error } = await supabase.rpc('stok_arttir', {
-      p_urun_id: urun_id,
-      p_depo_id: depo_id,
-      p_miktar: miktar,
-      p_aciklama: aciklama || null,
-      p_kullanici_id: userStore.user?.id || null
-    });
+    const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
+        urun_id: urun_id,
+        depo_id: depo_id,
+        hareket_tipi: 'giris',
+        miktar: miktar,
+        aciklama: aciklama || null,
+        kullanici_id: userStore.user?.id || null,
+        anlasma_id: anlasmaDahilinde.value ? anlasma_id : null,
+        tutar: (anlasmaDahilinde.value && secilenAnlasmaTipi.value === 'Tutar Bazlı') ? tutar : 0 // TUTAR KAYDI
+    }]);
 
-    if (error) throw error;
-    
-    if (data && !data.success) {
-      throw new Error(data.message || 'Stok girişi başarısız');
+    if (hareketError) throw hareketError;
+
+    // Stok seviyesini güncelle
+    const { data: mevcutStok, error: stokGetirError } = await supabase
+      .from('stok_seviyeleri')
+      .select('*')
+      .eq('urun_id', urun_id)
+      .eq('depo_id', depo_id)
+      .single();
+
+    if (stokGetirError && stokGetirError.code !== 'PGRST116') throw stokGetirError;
+
+    if (mevcutStok) {
+      const { error: updateError } = await supabase
+        .from('stok_seviyeleri')
+        .update({ miktar: mevcutStok.miktar + miktar })
+        .eq('id', mevcutStok.id);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('stok_seviyeleri')
+        .insert([{ urun_id, depo_id, miktar }]);
+      if (insertError) throw insertError;
     }
 
     alert('Stok girişi başarıyla yapıldı!');
     formModalGoster.value = false;
-    await hareketleriGetir(); // Listeyi yenile
+    await hareketleriGetir(); 
   } catch (err) {
     console.error("Stok girişi hatası:", err);
     alert('Hata: ' + err.message);
@@ -339,16 +482,11 @@ const stokGirisiKaydet = async () => {
   }
 };
 
-// Tarih formatlama
 const formatTarih = (tarih) => {
   if (!tarih) return '-';
   const date = new Date(tarih);
-  return date.toLocaleString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  return date.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+
+const formatPara = (val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val || 0);
 </script>

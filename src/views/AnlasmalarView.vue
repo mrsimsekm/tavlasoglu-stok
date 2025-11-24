@@ -5,6 +5,7 @@
       <input type="text" placeholder="Anlaşma ara (Ad, Tedarikçi...)" v-model="aramaMetni" class="w-1/3 p-2 border rounded-lg"/>
       <button @click="formModaliniAc()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">+ Yeni Anlaşma Ekle</button>
     </div>
+    <!-- Ana Tablo -->
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
       <table class="min-w-full leading-normal">
         <thead>
@@ -44,6 +45,7 @@
       </table>
     </div>
     
+    <!-- YENİ / DÜZENLEME MODALI (AYNI KALDI) -->
     <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-4xl">
       <template #header>{{ duzenlemeModu ? 'Anlaşma Düzenle' : 'Yeni Anlaşma Ekle' }}</template>
       <template #body>
@@ -119,126 +121,151 @@
       </template>
     </BaseModal>
 
+    <!-- DETAY MODAL -->
     <BaseModal :show="detayModalGoster" @close="detayModalGoster = false" max-width="max-w-4xl">
       <template #header>{{ secilenAnlasmaDetay?.ad || 'Anlaşma Detayı' }}</template>
       <template #body>
-        <div v-if="detayYukleniyor" class="text-center py-4">Yükleniyor...</div>
-        <div v-else-if="secilenAnlasmaDetay" class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <h3 class="font-semibold mb-2">Anlaşma Bilgileri</h3>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div><span class="font-medium">Tedarikçi:</span> {{ secilenAnlasmaDetay.tedarikciler?.ad || '-' }}</div>
-              <div><span class="font-medium">Tip:</span> {{ secilenAnlasmaDetay.tip }}</div>
-              <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
-                <span class="font-medium">Taahhüt Tutarı:</span> {{ (secilenAnlasmaDetay.taahhut_tutari || 0).toLocaleString('tr-TR') }} TL
-              </div>
-              <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
-                <span class="font-medium">Kullanılan Tutar:</span> {{ (secilenAnlasmaDetay.kullanilan_tutar || 0).toLocaleString('tr-TR') }} TL
-              </div>
-              <div v-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
-                <span class="font-medium">Taahhüt Edilen:</span> {{ secilenAnlasmaDetay.toplam_taahhut_adet || 0 }} adet
-              </div>
-              <div v-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
-                <span class="font-medium">Kullanılan:</span> {{ secilenAnlasmaDetay.toplam_kullanilan_adet || 0 }} adet
+        <div class="max-h-[70vh] overflow-y-auto px-1">
+          
+          <div v-if="detayYukleniyor" class="text-center py-4">Yükleniyor...</div>
+          <div v-else-if="secilenAnlasmaDetay" class="space-y-4">
+            
+            <!-- ANLAŞMA BİLGİLERİ -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <h3 class="font-semibold mb-2">Anlaşma Bilgileri</h3>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div><span class="font-medium">Tedarikçi:</span> {{ secilenAnlasmaDetay.tedarikciler?.ad || '-' }}</div>
+                <div><span class="font-medium">Tip:</span> {{ secilenAnlasmaDetay.tip }}</div>
+                <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
+                  <span class="font-medium">Taahhüt Tutarı:</span> {{ (secilenAnlasmaDetay.taahhut_tutari || 0).toLocaleString('tr-TR') }} TL
+                </div>
+                <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
+                  <span class="font-medium">Kullanılan Tutar:</span> {{ (secilenAnlasmaDetay.kullanilan_tutar || 0).toLocaleString('tr-TR') }} TL
+                </div>
+                <div v-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
+                  <span class="font-medium">Taahhüt Edilen:</span> {{ secilenAnlasmaDetay.toplam_taahhut_adet || 0 }} adet
+                </div>
+                <div v-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
+                  <span class="font-medium">Kullanılan:</span> {{ secilenAnlasmaDetay.toplam_kullanilan_adet || 0 }} adet
+                </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <h3 class="font-semibold mb-3">İş Emri Bazlı Kullanım Detayları</h3>
-            <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
-              <div v-if="isEmriDetaylari.length === 0" class="text-center py-4 text-gray-500">
-                Bu anlaşma henüz hiçbir iş emrinde kullanılmamış.
-              </div>
-              <div v-else class="overflow-x-auto max-h-96 overflow-y-auto">
-                <table class="min-w-full leading-normal">
-                  <thead>
-                    <tr>
-                      <th class="th-style">İş Emri No</th>
-                      <th class="th-style">Sipariş Tarihi</th>
-                      <th class="th-style">Müşteri</th>
-                      <th class="th-style text-right">Kullanılan Tutar</th>
-                      <th class="th-style">Durum</th>
-                      <th class="th-style text-center">İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="detay in isEmriDetaylari" :key="detay.is_emri_id">
-                      <td class="td-style">#{{ detay.is_emri_id.substring(0, 8) }}</td>
-                      <td class="td-style">{{ new Date(detay.siparis_tarihi).toLocaleDateString('tr-TR') }}</td>
-                      <td class="td-style">{{ detay.musteri_unvan }}</td>
-                      <td class="td-style text-right font-semibold">
-                        {{ Number(detay.kullanilan_tutar).toLocaleString('tr-TR') }} TL
-                      </td>
-                      <td class="td-style">
-                        <span class="px-2 py-1 text-xs rounded-full" :class="detay.durum === 'Açık' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'">
-                          {{ detay.durum }}
-                        </span>
-                      </td>
-                      <td class="td-style text-center">
-                        <RouterLink :to="`/app/is-emirleri/${detay.is_emri_id}`" class="text-blue-500 hover:text-blue-700 font-semibold">
-                          Görüntüle
-                        </RouterLink>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div v-else-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
-              <div v-if="isEmriDetaylari.length === 0" class="text-center py-4 text-gray-500">
-                Bu anlaşmada ürün kalemi bulunmamaktadır.
-              </div>
-              <div v-else class="space-y-6">
-                <div v-for="urunDetay in isEmriDetaylari" :key="urunDetay.urun_id" class="border rounded-lg p-4 bg-gray-50">
-                  <div class="mb-3 pb-2 border-b">
-                    <h4 class="font-semibold text-gray-800">{{ urunDetay.urun_kodu }} - {{ urunDetay.urun_aciklama }}</h4>
-                    <div class="flex gap-4 text-sm text-gray-600 mt-1">
-                      <span><strong>Taahhüt Edilen:</strong> {{ urunDetay.taahhut_edilen_miktar }} adet</span>
-                      <span><strong>Kullanılan:</strong> {{ urunDetay.toplam_kullanilan }} adet</span>
-                      <span><strong>Kalan:</strong> {{ Math.max(0, urunDetay.taahhut_edilen_miktar - urunDetay.toplam_kullanilan) }} adet</span>
-                    </div>
-                  </div>
-                  <div v-if="urunDetay.is_emri_detaylari.length === 0" class="text-center py-2 text-gray-500 text-sm">
-                    Bu ürün henüz hiçbir iş emrinde kullanılmamış.
-                  </div>
-                  <div v-else class="overflow-x-auto">
-                    <table class="min-w-full leading-normal text-sm">
-                      <thead>
-                        <tr>
-                          <th class="th-style text-xs">İş Emri No</th>
-                          <th class="th-style text-xs">Sipariş Tarihi</th>
-                          <th class="th-style text-xs">Müşteri</th>
-                          <th class="th-style text-xs text-right">Kullanılan Miktar</th>
-                          <th class="th-style text-xs">Durum</th>
-                          <th class="th-style text-xs text-center">İşlem</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="isEmriDetay in urunDetay.is_emri_detaylari" :key="`${urunDetay.urun_id}-${isEmriDetay.is_emri_id}`">
-                          <td class="td-style text-xs">#{{ isEmriDetay.is_emri_id.substring(0, 8) }}</td>
-                          <td class="td-style text-xs">{{ new Date(isEmriDetay.siparis_tarihi).toLocaleDateString('tr-TR') }}</td>
-                          <td class="td-style text-xs">{{ isEmriDetay.musteri_unvan }}</td>
-                          <td class="td-style text-xs text-right font-semibold">
-                            {{ isEmriDetay.kullanilan_miktar }} adet
-                          </td>
-                          <td class="td-style text-xs">
-                            <span class="px-2 py-1 text-xs rounded-full" :class="isEmriDetay.durum === 'Açık' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'">
-                              {{ isEmriDetay.durum }}
-                            </span>
-                          </td>
-                          <td class="td-style text-xs text-center">
-                            <RouterLink :to="`/app/is-emirleri/${isEmriDetay.is_emri_id}`" class="text-blue-500 hover:text-blue-700 font-semibold">
-                              Görüntüle
+            <div>
+              <h3 class="font-semibold mb-3 mt-4">Kullanım Detayları</h3>
+              
+              <!-- TUTAR BAZLI ANLAŞMA DETAYI (KARIŞIK LİSTE) -->
+              <div v-if="secilenAnlasmaDetay.tip === 'Tutar Bazlı'">
+                <div v-if="karisikHareketler.length === 0" class="text-center py-4 text-gray-500">
+                  Bu anlaşma henüz hiçbir iş emrinde veya stok girişinde kullanılmamış.
+                </div>
+                <div v-else class="overflow-x-auto">
+                  <table class="min-w-full leading-normal">
+                    <thead>
+                      <tr>
+                        <th class="th-style">Tarih</th>
+                        <th class="th-style">İşlem Türü</th>
+                        <th class="th-style">Detay (İş Emri / Depo)</th>
+                        <th class="th-style text-right">Tutar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="hareket in karisikHareketler" :key="hareket.uniqueId">
+                        <td class="td-style">{{ new Date(hareket.tarih).toLocaleDateString('tr-TR') }}</td>
+                        <td class="td-style">
+                          <span v-if="hareket.tip === 'is_emri'" class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">İş Emri</span>
+                          <span v-else class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Stok Girişi</span>
+                        </td>
+                        <td class="td-style">
+                          <span v-if="hareket.tip === 'is_emri'">
+                            <RouterLink :to="`/app/is-emirleri/${hareket.detayId}`" class="text-blue-600 hover:underline">
+                              #{{ hareket.detayNo }} - {{ hareket.musteri }}
                             </RouterLink>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                          </span>
+                          <span v-else>
+                            {{ hareket.depo }} ({{ hareket.aciklama || 'Stok Girişi' }})
+                          </span>
+                        </td>
+                        <td class="td-style text-right font-mono">
+                          {{ formatPara(hareket.tutar) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- ÜRÜN BAZLI ANLAŞMA DETAYI (AKORDİYON YAPISI - KARIŞIK LİSTE) -->
+              <div v-else-if="secilenAnlasmaDetay.tip === 'Ürün Bazlı'">
+                <div v-if="urunBazliDetaylar.length === 0" class="text-center py-4 text-gray-500">
+                  Bu anlaşmada ürün kalemi bulunmamaktadır.
+                </div>
+                <div v-else class="space-y-4">
+                  
+                  <div v-for="urunDetay in urunBazliDetaylar" :key="urunDetay.urun_id" class="border rounded-lg bg-white overflow-hidden shadow-sm">
+                    
+                    <!-- AKORDİYON BAŞLIĞI -->
+                    <div 
+                      @click="toggleUrunDetay(urunDetay.urun_id)"
+                      class="p-4 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors flex justify-between items-center"
+                    >
+                      <div class="flex-1">
+                         <h4 class="font-semibold text-gray-800">{{ urunDetay.urun_kodu }} - {{ urunDetay.urun_aciklama }}</h4>
+                         <div class="text-sm text-gray-600 mt-1 flex gap-4">
+                           <span>Kullanılan: <span class="font-bold text-indigo-700">{{ urunDetay.toplam_kullanilan }}</span> / {{ urunDetay.taahhut_edilen_miktar }} adet</span>
+                         </div>
+                      </div>
+                      <div class="text-gray-500">
+                         <svg v-if="expandedUrunler[urunDetay.urun_id]" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" /></svg>
+                         <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                      </div>
+                    </div>
+
+                    <!-- AKORDİYON İÇERİĞİ -->
+                    <div v-show="expandedUrunler[urunDetay.urun_id]" class="p-4 bg-gray-50 border-t">
+                      <div v-if="urunDetay.hareketler.length === 0" class="text-center py-2 text-gray-500 text-sm">
+                        Bu ürün henüz hiçbir iş emrinde veya stok girişinde kullanılmamış.
+                      </div>
+                      <div v-else class="overflow-x-auto">
+                        <table class="min-w-full leading-normal text-sm">
+                          <thead>
+                            <tr>
+                              <th class="th-style text-xs">Tarih</th>
+                              <th class="th-style text-xs">İşlem Türü</th>
+                              <th class="th-style text-xs">Detay</th>
+                              <th class="th-style text-xs text-right">Miktar</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="hareket in urunDetay.hareketler" :key="hareket.uniqueId">
+                              <td class="td-style text-xs">{{ new Date(hareket.tarih).toLocaleDateString('tr-TR') }}</td>
+                              <td class="td-style text-xs">
+                                <span v-if="hareket.tip === 'is_emri'" class="px-2 py-1 rounded-full bg-blue-100 text-blue-800">İş Emri</span>
+                                <span v-else class="px-2 py-1 rounded-full bg-green-100 text-green-800">Stok Girişi</span>
+                              </td>
+                              <td class="td-style text-xs">
+                                <span v-if="hareket.tip === 'is_emri'">
+                                  <RouterLink :to="`/app/is-emirleri/${hareket.detayId}`" class="text-blue-600 hover:underline">
+                                    #{{ hareket.detayNo }} - {{ hareket.musteri }}
+                                  </RouterLink>
+                                </span>
+                                <span v-else>
+                                  {{ hareket.depo }}
+                                </span>
+                              </td>
+                              <td class="td-style text-xs text-right font-bold">
+                                {{ hareket.miktar }}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </template>
@@ -280,14 +307,28 @@ const seciliUrunMiktar = ref(1);
 const seciliUrunBirimFiyat = ref(null);
 const detayModalGoster = ref(false);
 const secilenAnlasmaDetay = ref(null);
-const isEmriDetaylari = ref([]);
 const detayYukleniyor = ref(false);
+
+// GÖSTERİM İÇİN YENİ DEĞİŞKENLER
+const karisikHareketler = ref([]); // Tutar bazlı için tek liste
+const urunBazliDetaylar = ref([]); // Ürün bazlı için (Ürün -> Hareketler Listesi)
+const expandedUrunler = ref({});
+
+const toggleUrunDetay = (urunId) => {
+  if (expandedUrunler.value[urunId]) {
+    delete expandedUrunler.value[urunId];
+  } else {
+    expandedUrunler.value[urunId] = true;
+  }
+};
 
 const filtrelenmisAnlasmalar = computed(() => {
   if (!aramaMetni.value) return tumAnlasmalar.value;
   const arama = aramaMetni.value.toLowerCase();
   return tumAnlasmalar.value.filter(anlasma => anlasma.ad.toLowerCase().includes(arama) || (anlasma.tedarikciler && anlasma.tedarikciler.ad.toLowerCase().includes(arama)));
 });
+
+const formatPara = (val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val || 0);
 
 const getAnlasmalar = async () => {
   loading.value = true;
@@ -302,9 +343,19 @@ const getAnlasmalar = async () => {
         .eq('anlasma_id', anlasma.id)
         .not('is_emirleri.durum', 'eq', 'İptal Edildi');
       
-      const kullanilanTutar = kalemlerData?.reduce((sum, kalem) => 
+      const isEmriTutari = kalemlerData?.reduce((sum, kalem) => 
         sum + (Number(kalem.miktar) * Number(kalem.birim_fiyat)), 0
       ) || 0;
+
+      const { data: stokData } = await supabase
+        .from('stok_hareketleri')
+        .select('tutar')
+        .eq('anlasma_id', anlasma.id)
+        .eq('hareket_tipi', 'giris');
+      
+      const stokTutari = stokData?.reduce((sum, stok) => sum + (Number(stok.tutar) || 0), 0) || 0;
+
+      const kullanilanTutar = isEmriTutari + stokTutari;
       
       const kullanimOrani = (anlasma.taahhut_tutari > 0) ? (kullanilanTutar / anlasma.taahhut_tutari) * 100 : 0;
       return { ...anlasma, kullanilan_tutar: kullanilanTutar, kullanim_orani: Math.min(kullanimOrani, 100) };
@@ -317,7 +368,17 @@ const getAnlasmalar = async () => {
         .eq('anlasma_id', anlasma.id)
         .not('is_emirleri.durum', 'eq', 'İptal Edildi');
       
-      const toplamKullanilanAdet = kalemlerData?.reduce((sum, kalem) => sum + Number(kalem.miktar), 0) || 0;
+      const isEmriMiktari = kalemlerData?.reduce((sum, kalem) => sum + Number(kalem.miktar), 0) || 0;
+
+      const { data: stokData } = await supabase
+        .from('stok_hareketleri')
+        .select('miktar')
+        .eq('anlasma_id', anlasma.id)
+        .eq('hareket_tipi', 'giris');
+      
+      const stokMiktari = stokData?.reduce((sum, stok) => sum + Number(stok.miktar), 0) || 0;
+      
+      const toplamKullanilanAdet = isEmriMiktari + stokMiktari;
       
       const kullanimOrani = (toplamTaahhutAdet > 0) ? (toplamKullanilanAdet / toplamTaahhutAdet) * 100 : 0;
       return { ...anlasma, toplam_taahhut_adet: toplamTaahhutAdet, toplam_kullanilan_adet: toplamKullanilanAdet, kullanim_orani: Math.min(kullanimOrani, 100) };
@@ -349,26 +410,15 @@ const formModaliniAc = (anlasma = null) => {
   seciliUrun.value = null; 
   seciliUrunMiktar.value = 1;
   seciliUrunBirimFiyat.value = null;
-  
-  if (anlasma) {
-    duzenlemeModu.value = true;
-    aktifAnlasma.value = JSON.parse(JSON.stringify(anlasma));
-  } else {
-    duzenlemeModu.value = false;
-    aktifAnlasma.value = { ad: '', tedarikci_id: null, aktif_mi: true, tip: 'Tutar Bazlı', anlasma_kalemleri: [] };
-  }
+  if (anlasma) { duzenlemeModu.value = true; aktifAnlasma.value = JSON.parse(JSON.stringify(anlasma)); } 
+  else { duzenlemeModu.value = false; aktifAnlasma.value = { ad: '', tedarikci_id: null, aktif_mi: true, tip: 'Tutar Bazlı', anlasma_kalemleri: [] }; }
   formModalGoster.value = true;
 };
 
 const formuKaydet = async () => {
-  if (!aktifAnlasma.value.ad || !aktifAnlasma.value.tedarikci_id) { 
-    alert('Anlaşma Adı ve Tedarikçi alanları zorunludur.'); 
-    return; 
-  }
-  
+  if (!aktifAnlasma.value.ad || !aktifAnlasma.value.tedarikci_id) { alert('Anlaşma Adı ve Tedarikçi alanları zorunludur.'); return; }
   await withLoading(async () => {
     const { tedarikciler, kullanilan_tutar, kullanim_orani, toplam_taahhut_adet, toplam_kullanilan_adet, anlasma_kalemleri, ...anlasmaVerisi } = aktifAnlasma.value;
-    
     let anlasmaId;
     if (duzenlemeModu.value) {
       const { data, error } = await supabase.from('anlasmalar').update(anlasmaVerisi).match({ id: anlasmaVerisi.id }).select('id').single();
@@ -380,18 +430,11 @@ const formuKaydet = async () => {
       if (error) throw error;
       anlasmaId = data.id;
     }
-    
     if (aktifAnlasma.value.tip === 'Ürün Bazlı' && anlasma_kalemleri?.length > 0) {
-      const kalemlerToInsert = anlasma_kalemleri.map(k => ({ 
-        anlasma_id: anlasmaId, 
-        urun_id: k.urun_id, 
-        taahhut_edilen_miktar: k.taahhut_edilen_miktar,
-        birim_fiyat: k.birim_fiyat
-      }));
+      const kalemlerToInsert = anlasma_kalemleri.map(k => ({ anlasma_id: anlasmaId, urun_id: k.urun_id, taahhut_edilen_miktar: k.taahhut_edilen_miktar, birim_fiyat: k.birim_fiyat }));
       const { error: kalemError } = await supabase.from('anlasma_kalemleri').insert(kalemlerToInsert);
       if (kalemError) throw kalemError;
     }
-    
     await getAnlasmalar();
     formModalGoster.value = false;
   });
@@ -404,232 +447,173 @@ const anlasmaSil = async (anlasma) => {
     else await getAnlasmalar();
   }
 };
-// AnlasmalarView.vue içindeki urunAra fonksiyonunu bulun ve güncelleyin
 
 let debounceTimer_urun;
 const urunAra = () => {
   clearTimeout(debounceTimer_urun);
   debounceTimer_urun = setTimeout(async () => {
     if (urunAramaMetni.value.length < 2) { urunAramaSonuclari.value = []; return; }
-    
-    // 'son_alis_fiyati' buradan kaldırıldı
-    const { data, error } = await supabase
-      .from('urunler')
-      .select('id, urun_kodu, aciklama') 
-      .or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`)
-      .limit(5);
-
+    const { data, error } = await supabase.from('urunler').select('id, urun_kodu, aciklama').or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`).limit(5);
     if (error) { console.error('Supabase sorgu hatası:', error); }
-    
     urunAramaSonuclari.value = data || [];
   }, 300);
 };
-
-const urunSec = (urun) => {
-  seciliUrun.value = urun;
-  urunAramaMetni.value = `${urun.urun_kodu} - ${urun.aciklama}`;
-  urunAramaSonuclari.value = [];
-  seciliUrunBirimFiyat.value = null; 
-};
-
+const urunSec = (urun) => { seciliUrun.value = urun; urunAramaMetni.value = `${urun.urun_kodu} - ${urun.aciklama}`; urunAramaSonuclari.value = []; seciliUrunBirimFiyat.value = null; };
 const anlasmaKalemiEkle = () => {
-  if (!seciliUrun.value || !seciliUrunMiktar.value || seciliUrunMiktar.value <= 0 || seciliUrunBirimFiyat.value === null || seciliUrunBirimFiyat.value < 0) { 
-    alert('Lütfen bir ürün seçin ve geçerli bir miktar ve birim fiyat girin.'); 
-    return; 
-  }
-
+  if (!seciliUrun.value || !seciliUrunMiktar.value || seciliUrunMiktar.value <= 0 || seciliUrunBirimFiyat.value === null || seciliUrunBirimFiyat.value < 0) { alert('Lütfen bir ürün seçin ve geçerli bir miktar ve birim fiyat girin.'); return; }
   if (!aktifAnlasma.value.anlasma_kalemleri) { aktifAnlasma.value.anlasma_kalemleri = []; }
-  
   const mevcutKalemIndex = aktifAnlasma.value.anlasma_kalemleri.findIndex(k => k.urun_id === seciliUrun.value.id);
-  
   if(mevcutKalemIndex > -1) {
     const mevcutKalem = aktifAnlasma.value.anlasma_kalemleri[mevcutKalemIndex];
     mevcutKalem.taahhut_edilen_miktar += seciliUrunMiktar.value;
     mevcutKalem.birim_fiyat = seciliUrunBirimFiyat.value;
   } else {
-    aktifAnlasma.value.anlasma_kalemleri.push({ 
-      urun_id: seciliUrun.value.id, 
-      urunler: { aciklama: `${seciliUrun.value.urun_kodu} - ${seciliUrun.value.aciklama}` }, 
-      taahhut_edilen_miktar: seciliUrunMiktar.value,
-      birim_fiyat: seciliUrunBirimFiyat.value
-    });
+    aktifAnlasma.value.anlasma_kalemleri.push({ urun_id: seciliUrun.value.id, urunler: { aciklama: `${seciliUrun.value.urun_kodu} - ${seciliUrun.value.aciklama}` }, taahhut_edilen_miktar: seciliUrunMiktar.value, birim_fiyat: seciliUrunBirimFiyat.value });
   }
-  
-  urunAramaMetni.value = '';
-  seciliUrun.value = null;
-  seciliUrunMiktar.value = 1;
-  seciliUrunBirimFiyat.value = null;
+  urunAramaMetni.value = ''; seciliUrun.value = null; seciliUrunMiktar.value = 1; seciliUrunBirimFiyat.value = null;
 };
+const anlasmaKalemiSil = (index) => { aktifAnlasma.value.anlasma_kalemleri.splice(index, 1); };
 
-const anlasmaKalemiSil = (index) => {
-  aktifAnlasma.value.anlasma_kalemleri.splice(index, 1);
-};
-
+// --- YENİ DETAY MANTIĞI (TAB YOK, KARIŞIK LİSTE) ---
 const detayModaliniAc = async (anlasma) => {
   secilenAnlasmaDetay.value = anlasma;
   detayModalGoster.value = true;
   detayYukleniyor.value = true;
+  expandedUrunler.value = {}; 
+  karisikHareketler.value = [];
+  urunBazliDetaylar.value = [];
   
   try {
-    if (anlasma.tip === 'Tutar Bazlı') {
-      const { data: tumData } = await supabase
-        .from('is_emri_kalemleri')
-        .select('miktar, birim_fiyat, is_emirleri!inner(durum)')
-        .eq('anlasma_id', anlasma.id)
-        .not('is_emirleri.durum', 'eq', 'İptal Edildi');
-      
-      if (tumData) {
-        const toplamTutar = tumData.reduce((sum, kalem) => 
-          sum + (Number(kalem.miktar) * Number(kalem.birim_fiyat)), 0
-        );
-        secilenAnlasmaDetay.value.kullanilan_tutar = toplamTutar;
-      }
-    } else if (anlasma.tip === 'Ürün Bazlı') {
-      if (!anlasma.anlasma_kalemleri || anlasma.anlasma_kalemleri.length === 0) {
-        secilenAnlasmaDetay.value.toplam_kullanilan_adet = 0;
-      } else {
-        const anlasmaUrunIds = anlasma.anlasma_kalemleri.map(k => k.urun_id);
-        const { data: tumData } = await supabase
-          .from('is_emri_kalemleri')
-          .select('miktar, is_emirleri!inner(durum)')
-          .eq('anlasma_id', anlasma.id)
-          .in('urun_id', anlasmaUrunIds)
-          .not('is_emirleri.durum', 'eq', 'İptal Edildi');
-        
-        if (tumData) {
-          const toplamMiktar = tumData.reduce((sum, kalem) => sum + Number(kalem.miktar), 0);
-          secilenAnlasmaDetay.value.toplam_kullanilan_adet = toplamMiktar;
-        } else {
-          secilenAnlasmaDetay.value.toplam_kullanilan_adet = 0;
-        }
-      }
-    }
+    // === ORTAK VERİLERİ ÇEKME (İş Emirleri ve Stok Girişleri) ===
     
+    // 1. İş Emirleri
+    const { data: isEmriData, error: isEmriError } = await supabase
+      .from('is_emri_kalemleri')
+      .select(`
+        is_emri_id, miktar, birim_fiyat, urun_id,
+        is_emirleri!inner(id, siparis_tarihi, durum, numara, musteriler!inner(unvan)),
+        urunler(urun_kodu, aciklama)
+      `)
+      .eq('anlasma_id', anlasma.id)
+      .not('is_emirleri.durum', 'eq', 'İptal Edildi');
+    
+    if (isEmriError) throw isEmriError;
+
+    // 2. Stok Girişleri
+    const { data: stokData, error: stokError } = await supabase
+      .from('stok_hareketleri')
+      .select(`
+        *,
+        urunler ( urun_kodu, aciklama ),
+        depolar ( ad )
+      `)
+      .eq('anlasma_id', anlasma.id)
+      .eq('hareket_tipi', 'giris');
+    
+    if (stokError) throw stokError;
+
+    // === VERİLERİ İŞLEME ===
+
     if (anlasma.tip === 'Tutar Bazlı') {
-      const { data, error } = await supabase
-        .from('is_emri_kalemleri')
-        .select(`
-          is_emri_id,
-          miktar,
-          birim_fiyat,
-          is_emirleri!inner(
-            id,
-            siparis_tarihi,
-            durum,
-            musteriler!inner(unvan)
-          )
-        `)
-        .eq('anlasma_id', anlasma.id)
-        .not('is_emirleri.durum', 'eq', 'İptal Edildi');
-      
-      if (error) throw error;
-      
-      const gruplanmis = {};
-      data.forEach(kalem => {
-        const isEmriId = kalem.is_emri_id;
-        if (!gruplanmis[isEmriId]) {
-          gruplanmis[isEmriId] = {
-            is_emri_id: isEmriId,
-            siparis_tarihi: kalem.is_emirleri.siparis_tarihi,
-            durum: kalem.is_emirleri.durum,
-            musteri_unvan: kalem.is_emirleri.musteriler.unvan,
-            kullanilan_tutar: 0
-          };
-        }
-        gruplanmis[isEmriId].kullanilan_tutar += Number(kalem.miktar) * Number(kalem.birim_fiyat);
+      const tumHareketler = [];
+
+      // İş Emirlerini Ekle
+      isEmriData.forEach(item => {
+        tumHareketler.push({
+          uniqueId: `ie-${item.is_emri_id}-${Math.random()}`, // Unique key
+          tip: 'is_emri',
+          tarih: item.is_emirleri.siparis_tarihi,
+          detayId: item.is_emri_id,
+          detayNo: item.is_emirleri.numara || 'N/A',
+          musteri: item.is_emirleri.musteriler.unvan,
+          tutar: Number(item.miktar) * Number(item.birim_fiyat)
+        });
       });
-      
-      isEmriDetaylari.value = Object.values(gruplanmis).sort((a, b) => 
-        new Date(b.siparis_tarihi) - new Date(a.siparis_tarihi)
-      );
+
+      // Stok Girişlerini Ekle
+      stokData.forEach(item => {
+        tumHareketler.push({
+          uniqueId: `stok-${item.id}`,
+          tip: 'stok_giris',
+          tarih: item.olusturulma_tarihi,
+          depo: item.depolar?.ad,
+          aciklama: item.aciklama,
+          tutar: Number(item.tutar) || 0
+        });
+      });
+
+      // Tarihe göre sırala (Yeniden eskiye)
+      karisikHareketler.value = tumHareketler.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+
+      // Toplam kullanım güncelle
+      const toplamTutar = tumHareketler.reduce((sum, h) => sum + h.tutar, 0);
+      secilenAnlasmaDetay.value.kullanilan_tutar = toplamTutar;
+
     } else if (anlasma.tip === 'Ürün Bazlı') {
+      // Anlaşmadaki ürünlerin listesini hazırla
       if (!anlasma.anlasma_kalemleri || anlasma.anlasma_kalemleri.length === 0) {
-        isEmriDetaylari.value = [];
-        return;
-      }
-      
-      const urunDetaylari = [];
-      
-      for (const anlasmaKalemi of anlasma.anlasma_kalemleri) {
-        const { data, error } = await supabase
-          .from('is_emri_kalemleri')
-          .select(`
-            is_emri_id,
-            miktar,
-            urun_id,
-            is_emirleri!inner(
-              id,
-              siparis_tarihi,
-              durum,
-              musteriler!inner(unvan)
-            ),
-            urunler!inner(urun_kodu, aciklama)
-          `)
-          .eq('anlasma_id', anlasma.id)
-          .eq('urun_id', anlasmaKalemi.urun_id)
-          .not('is_emirleri.durum', 'eq', 'İptal Edildi');
-        
-        if (error) {
-          console.error('Ürün detayları çekilirken hata:', error);
-          continue;
-        }
-        
-        const toplamKullanilan = data.reduce((sum, kalem) => sum + Number(kalem.miktar), 0);
-        
-        const isEmriGruplari = {};
-        data.forEach(kalem => {
-          const isEmriId = kalem.is_emri_id;
-          if (!isEmriGruplari[isEmriId]) {
-            isEmriGruplari[isEmriId] = {
-              is_emri_id: isEmriId,
-              siparis_tarihi: kalem.is_emirleri.siparis_tarihi,
-              durum: kalem.is_emirleri.durum,
-              musteri_unvan: kalem.is_emirleri.musteriler.unvan,
-              kullanilan_miktar: 0
-            };
-          }
-          isEmriGruplari[isEmriId].kullanilan_miktar += Number(kalem.miktar);
-        });
-        
-        let urunBilgisi = anlasmaKalemi.urunler || {};
-        
-        if ((!urunBilgisi.urun_kodu || !urunBilgisi.aciklama) && data.length > 0 && data[0].urunler) {
-          urunBilgisi = {
-            urun_kodu: data[0].urunler.urun_kodu || 'Bilinmeyen',
-            aciklama: data[0].urunler.aciklama || 'Bilinmeyen'
-          };
-        }
-        
-        if (!urunBilgisi.urun_kodu || urunBilgisi.urun_kodu === 'Bilinmeyen') {
-          const { data: urunData } = await supabase
-            .from('urunler')
-            .select('urun_kodu, aciklama')
-            .eq('id', anlasmaKalemi.urun_id)
-            .single();
+        urunBazliDetaylar.value = [];
+      } else {
+        const tempUrunDetaylari = [];
+        let genelToplamKullanilan = 0;
+
+        for (const anlasmaKalemi of anlasma.anlasma_kalemleri) {
+          const urunId = anlasmaKalemi.urun_id;
           
-          if (urunData) {
-            urunBilgisi = urunData;
+          // Bu ürüne ait iş emirleri
+          const urunIsEmirleri = isEmriData.filter(ie => ie.urun_id === urunId).map(ie => ({
+            uniqueId: `ie-${ie.is_emri_id}-${Math.random()}`,
+            tip: 'is_emri',
+            tarih: ie.is_emirleri.siparis_tarihi,
+            detayId: ie.is_emri_id,
+            detayNo: ie.is_emirleri.numara || 'N/A',
+            musteri: ie.is_emirleri.musteriler.unvan,
+            miktar: Number(ie.miktar)
+          }));
+
+          // Bu ürüne ait stok girişleri
+          const urunStokGirisleri = stokData.filter(s => s.urun_id === urunId).map(s => ({
+            uniqueId: `stok-${s.id}`,
+            tip: 'stok_giris',
+            tarih: s.olusturulma_tarihi,
+            depo: s.depolar?.ad,
+            miktar: Number(s.miktar)
+          }));
+
+          const urunHareketleri = [...urunIsEmirleri, ...urunStokGirisleri].sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+          const toplamKullanilan = urunHareketleri.reduce((sum, h) => sum + h.miktar, 0);
+          genelToplamKullanilan += toplamKullanilan;
+
+          // Ürün bilgilerini bul (API'den gelen veya anlasmaKalemi içinden)
+          let urunBilgisi = anlasmaKalemi.urunler || {};
+          if (!urunBilgisi.urun_kodu) {
+             // Listede varsa oradan al
+             const foundInList = isEmriData.find(i => i.urun_id === urunId);
+             if (foundInList && foundInList.urunler) urunBilgisi = foundInList.urunler;
+             else {
+                const foundInStok = stokData.find(s => s.urun_id === urunId);
+                if (foundInStok && foundInStok.urunler) urunBilgisi = foundInStok.urunler;
+             }
           }
+          // Hala yoksa DB'den çekmek gerekebilir ama şimdilik Bilinmeyen diyelim (Performans için)
+          
+          tempUrunDetaylari.push({
+            urun_id: urunId,
+            urun_kodu: urunBilgisi.urun_kodu || '...',
+            urun_aciklama: urunBilgisi.aciklama || '...',
+            taahhut_edilen_miktar: anlasmaKalemi.taahhut_edilen_miktar,
+            toplam_kullanilan: toplamKullanilan,
+            hareketler: urunHareketleri
+          });
         }
-        
-        urunDetaylari.push({
-          urun_id: anlasmaKalemi.urun_id,
-          urun_kodu: urunBilgisi.urun_kodu || 'Bilinmeyen',
-          urun_aciklama: urunBilgisi.aciklama || 'Bilinmeyen',
-          taahhut_edilen_miktar: anlasmaKalemi.taahhut_edilen_miktar,
-          toplam_kullanilan: toplamKullanilan,
-          is_emri_detaylari: Object.values(isEmriGruplari).sort((a, b) => 
-            new Date(b.siparis_tarihi) - new Date(a.siparis_tarihi)
-          )
-        });
+        urunBazliDetaylar.value = tempUrunDetaylari;
+        secilenAnlasmaDetay.value.toplam_kullanilan_adet = genelToplamKullanilan;
       }
-      
-      isEmriDetaylari.value = urunDetaylari;
     }
+
   } catch (err) {
-    console.error('İş emri detayları çekilirken hata:', err);
+    console.error('Detay hatası:', err);
     alert('Hata: ' + err.message);
-    isEmriDetaylari.value = [];
   } finally {
     detayYukleniyor.value = false;
   }

@@ -64,7 +64,10 @@
               <p class="text-xs text-gray-500">{{ alacak.musteriler?.musteri_kodu || '-' }}</p>
             </td>
             <td class="td-style">
-              <p class="text-blue-600 font-mono">{{ alacak.is_emri_id?.slice(0, 8) || '-' }}</p>
+              <!-- DÜZELTME: UUID yerine İş Emri Numarası Gösteriliyor -->
+              <p class="text-blue-600 font-mono font-bold">
+                {{ alacak.is_emirleri?.numara || 'N/A' }}
+              </p>
             </td>
             <td class="td-style">
               <p class="text-gray-900 font-semibold">{{ formatParaBirimi(alacak.tutar) }}</p>
@@ -221,11 +224,9 @@ import BaseModal from '../components/BaseModal.vue';
 import { useLoading } from '../composables/useLoading.js';
 
 const { isLoading: tahsilatYapiliyor, withLoading } = useLoading();
+const { isLoading: loadingOdemeler, withLoading: odemelerWithLoading } = useLoading();
 const userStore = useUserStore();
 const loading = ref(false);
-//const tahsilatYapiliyor = ref(false);
-//const loadingOdemeler = ref(false);
-const { isLoading: loadingOdemeler, withLoading: odemelerWithLoading } = useLoading(); // ✅
 const alacaklar = ref([]);
 const odemeler = ref([]);
 const tahsilatModalGoster = ref(false);
@@ -251,8 +252,9 @@ const alacaklariGetir = async () => {
       .from('alacaklar')
       .select(`
         *,
-        musteriler (musteri_kodu, unvan, telefon)
-      `)
+        musteriler (musteri_kodu, unvan, telefon),
+        is_emirleri ( numara ) 
+      `) // DÜZELTME: is_emirleri tablosundan 'numara' sütununu çekiyoruz
       .order('olusturulma_tarihi', { ascending: false });
 
     if (filtreler.value.durum) {
@@ -300,7 +302,6 @@ const tahsilatModaliniAc = (alacak) => {
 };
 
 // Tahsilat yap
-
 const tahsilatYap = async () => {
   if (!tahsilatForm.value.tutar || tahsilatForm.value.tutar <= 0) {
     alert('Lütfen geçerli bir tutar giriniz.');
@@ -339,7 +340,6 @@ const tahsilatYap = async () => {
 };
 
 // Ödemeleri gör
-
 const odemeleriniGor = async (alacak) => {
   aktifAlacak.value = alacak;
   odemelerModalGoster.value = true;

@@ -14,6 +14,8 @@ import StokGirisView from '../views/StokGirisView.vue'
 import YonetimPaneliView from '../views/YonetimPaneliView.vue'
 import DepoStoklariView from '../views/DepoStoklariView.vue'
 import YetkisizView from '../views/YetkisizView.vue'
+import AlacaklarView from '../views/AlacaklarView.vue' 
+import SatisciPerformansView from '../views/SatisciPerformansView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -73,6 +75,15 @@ const router = createRouter({
           name: 'is-emri-detay', 
           component: IsEmriDetayView 
         },
+        // 2. ROTA EKLENDİ
+        {
+          path: 'alacaklar',
+          name: 'alacaklar',
+          component: AlacaklarView,
+          meta: {
+            roles: ['yonetici', 'muhasebeci']
+          }
+        },
         { 
           path: 'yonetim', 
           name: 'yonetim-paneli', 
@@ -85,7 +96,15 @@ const router = createRouter({
           path: 'stok/depolar', 
           name: 'depo-stoklari', 
           component: DepoStoklariView 
-        }
+        },
+        {
+          path: 'satisci-performans',
+          name: 'satisci-performans',
+          component: SatisciPerformansView,
+          meta: {
+            roles: ['yonetici'] // Sadece yetkililer görsün
+          }
+        },
       ]
     },
     { path: '/', redirect: '/app/dashboard' }

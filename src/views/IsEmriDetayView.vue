@@ -101,7 +101,7 @@
       
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Kalemler</h2></div>
-        <IsEmriKalemEkle v-if="isEditing" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :initialKalemler="isEmri.is_emri_kalemleri" :kaydedilmis-is-emri="true" @kalemler-guncellendi="handleKalemlerGuncellendi"/>
+        <IsEmriKalemEkle v-if="isEditing" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :initialKalemler="guncelKalemler" :kaydedilmis-is-emri="true" @kalemler-guncellendi="handleKalemlerGuncellendi"/>
         <div v-else class="overflow-x-auto">
           <table class="min-w-full leading-normal">
             <thead><tr><th class="th-style">Açıklama</th><th class="th-style">Kaynak</th><th class="th-style">Anlaşma</th><th class="th-style">Miktar</th><th class="th-style" style="text-align: right;">Birim Fiyat</th><th class="th-style" style="text-align: right;">Toplam</th></tr></thead>
@@ -356,17 +356,25 @@ const guncelle = async () => {
     await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
 
     if (guncelKalemler.value.length > 0) {
-      const kalemlerToInsert = guncelKalemler.value.map(k => {
-        const { id, created_at, depolar, tedarikciler, anlasmalar, ...rest } = k;
-        rest.is_emri_id = isEmriId;
-        return rest;
-      });
-      await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+      const kalemlerToInsert = guncelKalemler.value.map(k => ({
+        is_emri_id: isEmriId,
+        // WHITELIST YÖNTEMİ: Sadece veritabanı alanlarını açıkça seçiyoruz.
+        // Bu sayede UI'dan gelen 'urunler' gibi ekstra objeler hataya neden olmaz.
+        urun_id: k.urun_id || null,
+        aciklama: k.aciklama,
+        miktar: k.miktar,
+        birim_fiyat: k.birim_fiyat,
+        kaynak_depo_id: k.kaynak_depo_id || null,
+        kaynak_tedarikci_id: k.kaynak_tedarikci_id || null,
+        anlasma_id: k.anlasma_id || null
+      }));
+      
+      const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+      if (insertError) throw insertError;
     }
 
     alert('İş emri başarıyla güncellendi!');
-    isEditing.value = false;
-    await getGerekliVeriler();
+    router.push('/app/is-emirleri');
   });
 };
 

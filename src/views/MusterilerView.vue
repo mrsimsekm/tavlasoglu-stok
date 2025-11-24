@@ -121,8 +121,9 @@ const formModaliniAc = (musteri = null) => {
 };
 
 const formuKaydet = async () => {
-  if (!aktifMusteri.value.unvan || !aktifMusteri.value.musteri_kodu) {
-    alert('Ünvan ve Müşteri Kodu alanları zorunludur.');
+  // DÜZELTME: Müşteri kodu kontrolü kaldırıldı, sadece Unvan zorunlu.
+  if (!aktifMusteri.value.unvan) {
+    alert('Ünvan alanı zorunludur.');
     return;
   }
   

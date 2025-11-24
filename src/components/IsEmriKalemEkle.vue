@@ -26,6 +26,8 @@
         </div>
         <input v-else v-model="yeniKalem.aciklama" type="text" placeholder="Örn: Montaj Bedeli" class="form-input mt-1" />
       </div>
+      
+      <!-- KAYNAK SEÇİMİ -->
       <div class="col-span-12 md:col-span-2">
         <label class="label-style">Kaynak</label>
         <select v-model="secilenKaynak" class="form-input mt-1" :disabled="yeniKalemTipi === 'hizmet'" :class="{ 'bg-gray-100': yeniKalemTipi === 'hizmet' }">
@@ -34,13 +36,21 @@
           <optgroup label="Tedarikçiler"><option v-for="tedarikci in props.tedarikciler" :key="tedarikci.id" :value="{ tip: 'tedarikci', id: tedarikci.id, ad: tedarikci.ad }">{{ tedarikci.ad }}</option></optgroup>
         </select>
       </div>
+
+      <!-- ANLAŞMA SEÇİMİ (DÜZENLENDİ) -->
       <div class="col-span-12 md:col-span-2">
         <label class="label-style">Anlaşma</label>
-        <select v-model="yeniKalem.anlasma_id" class="form-input mt-1" :disabled="yeniKalemTipi === 'hizmet'" :class="{ 'bg-gray-100': yeniKalemTipi === 'hizmet' }">
+        <select 
+          v-model="yeniKalem.anlasma_id" 
+          class="form-input mt-1" 
+          :disabled="yeniKalemTipi === 'hizmet' || (secilenKaynak && secilenKaynak.tip === 'depo')" 
+          :class="{ 'bg-gray-100': yeniKalemTipi === 'hizmet' || (secilenKaynak && secilenKaynak.tip === 'depo') }"
+        >
           <option :value="null">Anlaşma Dışı</option>
           <option v-for="anlasma in props.anlasmalar" :key="anlasma.id" :value="anlasma.id">{{ anlasma.ad }}</option>
         </select>
       </div>
+
       <div class="col-span-4 md:col-span-1">
         <label class="label-style">Miktar</label>
         <p v-if="stokYetersiz" class="text-xs text-red-500 mb-1">⚠️ Yetersiz Stok: {{ mevcutStok }}</p>
@@ -66,7 +76,14 @@
           <tbody>
             <tr v-if="kalemler.length === 0"><td colspan="7" class="text-center py-4 text-gray-500">Henüz malzeme veya hizmet eklenmedi.</td></tr>
             <tr v-for="(kalem, index) in kalemler" :key="index">
-              <td class="td-style">{{ kalem.aciklama }}</td><td class="td-style text-right" style="text-align: center;">{{ kalem.kaynak_adi }}</td><td class="td-style text-right" style="text-align: center;">{{ anlasmaAdiBul(kalem.anlasma_id) }}</td><td class="td-style text-center">{{ kalem.miktar }}</td><td class="td-style text-center">{{ kalem.birim_fiyat.toFixed(2) }} TL</td><td class="td-style text-center font-semibold">{{ (kalem.miktar * kalem.birim_fiyat).toFixed(2) }} TL</td>
+              <td class="td-style">{{ kalem.aciklama }}</td>
+              <td class="td-style text-right" style="text-align: center;">
+                {{ kalem.kaynak_adi || getKaynakAdi(kalem) }}
+              </td>
+              <td class="td-style text-right" style="text-align: center;">{{ anlasmaAdiBul(kalem.anlasma_id) }}</td>
+              <td class="td-style text-center">{{ kalem.miktar }}</td>
+              <td class="td-style text-center">{{ Number(kalem.birim_fiyat).toFixed(2) }} TL</td>
+              <td class="td-style text-center font-semibold">{{ (kalem.miktar * kalem.birim_fiyat).toFixed(2) }} TL</td>
               <td class="td-style text-center"><button @click="kalemSil(index)" class="text-red-500 hover:text-red-700"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button></td>
             </tr>
           </tbody>
@@ -82,7 +99,7 @@
 .td-style { @apply px-5 py-5 border-b border-gray-200 bg-white text-sm; }
 </style>
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { supabase } from '../supabase.js';
 const props = defineProps({
   initialKalemler: Array,
@@ -92,7 +109,7 @@ const props = defineProps({
   varsayilanAnlasma: Object,
 });
 const emit = defineEmits(['kalemler-guncellendi']);
-const kalemler = ref([...(props.initialKalemler || [])]);
+const kalemler = ref([]);
 const yeniKalem = ref({});
 const secilenKaynak = ref(null);
 const yeniKalemTipi = ref('malzeme');
@@ -100,13 +117,33 @@ const urunAramaMetni = ref('');
 const urunAramaSonuclari = ref([]);
 const mevcutStok = ref(Infinity);
 const stokYetersiz = computed(() => yeniKalem.value.miktar > mevcutStok.value);
+
 const bosKalemOlustur = () => ({ urun_id: null, aciklama: '', miktar: 1, birim_fiyat: 0, kaynak_depo_id: null, kaynak_tedarikci_id: null, kaynak_adi: '', anlasma_id: props.varsayilanAnlasma?.id || null });
-yeniKalem.value = bosKalemOlustur();
+
+onMounted(() => {
+  if (props.initialKalemler) {
+    kalemler.value = [...props.initialKalemler];
+  }
+  yeniKalem.value = bosKalemOlustur();
+});
+
 const anlasmaAdiBul = (anlasmaId) => {
   if (!anlasmaId || !props.anlasmalar) return 'Anlaşma Dışı';
   const anlasma = props.anlasmalar.find(a => a.id === anlasmaId);
   return anlasma ? anlasma.ad : 'Bilinmeyen';
 };
+
+const getKaynakAdi = (kalem) => {
+  if (kalem.kaynak_depo_id) {
+    const depo = props.depolar.find(d => d.id === kalem.kaynak_depo_id);
+    return depo ? depo.ad : 'Bilinmeyen Depo';
+  } else if (kalem.kaynak_tedarikci_id) {
+    const tedarikci = props.tedarikciler.find(t => t.id === kalem.kaynak_tedarikci_id);
+    return tedarikci ? tedarikci.ad : 'Bilinmeyen Tedarikçi';
+  }
+  return 'Hizmet';
+};
+
 const secilenAnlasmaTipi = computed(() => {
     const anlasmaId = yeniKalem.value.anlasma_id;
     if (!anlasmaId || !props.anlasmalar) return null;
@@ -114,37 +151,19 @@ const secilenAnlasmaTipi = computed(() => {
     return secilenAnlasma?.tip || null;
 });
 
-// Ürün bazlı anlaşmada anlaşma seçilmeden ürün aramayı engelle
 const urunBazliAnlasmaVeAnlasmaYok = computed(() => {
-  // Eğer varsayılan anlaşma ürün bazlı ise
   if (props.varsayilanAnlasma && props.varsayilanAnlasma.tip === 'Ürün Bazlı') {
-    // Ve kalem seviyesinde anlaşma seçilmemişse (veya anlaşma dışı seçilmişse)
-    if (!yeniKalem.value.anlasma_id) {
-      return true;
-    }
+    if (!yeniKalem.value.anlasma_id) return true;
   }
-  
-  // Eğer kalem seviyesinde anlaşma seçilmişse ve tip Ürün Bazlı ise
-  // (Bu durumda zaten anlasma_id var olmalı, ama yine de kontrol edelim)
   if (secilenAnlasmaTipi.value === 'Ürün Bazlı') {
-    // Eğer anlaşma ID yoksa (edge case - anlaşma dışı seçilmiş olabilir)
-    if (!yeniKalem.value.anlasma_id) {
-      return true;
-    }
+    if (!yeniKalem.value.anlasma_id) return true;
   }
-  
   return false;
 });
 
 const filtrelenmisUrunAramaSonuclari = computed(() => {
-  // Eğer ürün bazlı anlaşma varsa ama anlaşma seçilmemişse boş döndür
-  if (urunBazliAnlasmaVeAnlasmaYok.value) {
-    return [];
-  }
-  
-  if (secilenAnlasmaTipi.value !== 'Ürün Bazlı') {
-    return urunAramaSonuclari.value;
-  }
+  if (urunBazliAnlasmaVeAnlasmaYok.value) return [];
+  if (secilenAnlasmaTipi.value !== 'Ürün Bazlı') return urunAramaSonuclari.value;
   
   const secilenAnlasma = props.anlasmalar.find(a => a.id === yeniKalem.value.anlasma_id);
   if (!secilenAnlasma || !secilenAnlasma.anlasma_kalemleri) return [];
@@ -153,41 +172,31 @@ const filtrelenmisUrunAramaSonuclari = computed(() => {
     secilenAnlasma.anlasma_kalemleri.some(kalem => kalem.urun_id === urun.id)
   );
 });
+
 let debounceTimer;
 const urunAra = () => {
-  // Ürün bazlı anlaşmada anlaşma seçilmeden arama yapma
   if (urunBazliAnlasmaVeAnlasmaYok.value) {
     urunAramaSonuclari.value = [];
     return;
   }
-  
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     if (urunAramaMetni.value.length < 2) { urunAramaSonuclari.value = []; return; }
     
-    // Eğer ürün bazlı anlaşma seçilmişse, direkt anlaşmadan ürünleri çek
     if (secilenAnlasmaTipi.value === 'Ürün Bazlı' && yeniKalem.value.anlasma_id) {
       const secilenAnlasma = props.anlasmalar.find(a => a.id === yeniKalem.value.anlasma_id);
       if (secilenAnlasma && secilenAnlasma.anlasma_kalemleri) {
-        // Anlaşmadaki ürün ID'lerini al
         const anlasmaUrunIds = secilenAnlasma.anlasma_kalemleri.map(k => k.urun_id);
-        // Arama metnine göre filtrele
-        const { data } = await supabase
-          .from('urunler')
-          .select('id, urun_kodu, aciklama')
-          .in('id', anlasmaUrunIds)
-          .or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`)
-          .limit(10);
+        const { data } = await supabase.from('urunler').select('id, urun_kodu, aciklama').in('id', anlasmaUrunIds).or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`).limit(10);
         urunAramaSonuclari.value = data || [];
         return;
       }
     }
-    
-    // Normal arama (tutar bazlı veya anlaşma yok)
     const { data } = await supabase.from('urunler').select('id, urun_kodu, aciklama').or(`urun_kodu.ilike.%${urunAramaMetni.value}%,aciklama.ilike.%${urunAramaMetni.value}%`).limit(10);
     urunAramaSonuclari.value = data || [];
   }, 300);
 };
+
 const stokKontrolEt = async () => {
   if (!yeniKalem.value.urun_id || !secilenKaynak.value || secilenKaynak.value.tip !== 'depo') { mevcutStok.value = Infinity; return; }
   try {
@@ -196,6 +205,7 @@ const stokKontrolEt = async () => {
     mevcutStok.value = (data.miktar || 0) - (data.rezerve_miktar || 0);
   } catch (err) { mevcutStok.value = 0; }
 };
+
 const urunSec = (urun) => {
   yeniKalem.value.urun_id = urun.id;
   yeniKalem.value.aciklama = `${urun.urun_kodu} - ${urun.aciklama}`;
@@ -203,50 +213,63 @@ const urunSec = (urun) => {
   urunAramaSonuclari.value = [];
   stokKontrolEt();
 };
+
 const kalemEkle = () => {
-  // Ürün bazlı anlaşma kontrolü
   if (yeniKalemTipi.value === 'malzeme' && secilenAnlasmaTipi.value === 'Ürün Bazlı') {
-    if (!yeniKalem.value.anlasma_id) {
-      alert('Ürün bazlı anlaşma seçildiğinde, malzeme eklerken bir anlaşma seçmelisiniz.');
-      return;
-    }
-    
-    // Seçilen ürünün bu anlaşmada olup olmadığını kontrol et
+    if (!yeniKalem.value.anlasma_id) { alert('Ürün bazlı anlaşma seçildiğinde, malzeme eklerken bir anlaşma seçmelisiniz.'); return; }
     if (yeniKalem.value.urun_id) {
       const secilenAnlasma = props.anlasmalar.find(a => a.id === yeniKalem.value.anlasma_id);
       if (secilenAnlasma && secilenAnlasma.anlasma_kalemleri) {
         const urunAnlasmadaVar = secilenAnlasma.anlasma_kalemleri.some(kalem => kalem.urun_id === yeniKalem.value.urun_id);
-        if (!urunAnlasmadaVar) {
-          alert('Seçilen ürün bu anlaşmada bulunmamaktadır. Lütfen anlaşmada olan bir ürün seçin.');
-          return;
-        }
+        if (!urunAnlasmadaVar) { alert('Seçilen ürün bu anlaşmada bulunmamaktadır. Lütfen anlaşmada olan bir ürün seçin.'); return; }
       }
     }
   }
   
   if (yeniKalemTipi.value === 'malzeme' && secilenKaynak.value?.tip === 'depo' && yeniKalem.value.miktar > mevcutStok.value) { alert(`Yetersiz stok! Bu ürün için seçilen depoda sadece ${mevcutStok.value} adet sevkedilebilir stok bulunmaktadır.`); return; }
   if (!yeniKalem.value.aciklama || yeniKalem.value.miktar <= 0) { alert('Lütfen açıklama ve miktar alanlarını doğru girin.'); return; }
+  
   if (yeniKalemTipi.value === 'malzeme') {
     if (!secilenKaynak.value) { alert('Malzeme için bir kaynak seçin.'); return; }
-    if(secilenKaynak.value.tip === 'depo') { yeniKalem.value.kaynak_depo_id = secilenKaynak.value.id; yeniKalem.value.kaynak_tedarikci_id = null; yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; } 
-    else { yeniKalem.value.kaynak_depo_id = null; yeniKalem.value.kaynak_tedarikci_id = secilenKaynak.value.id; yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; }
-  } else { yeniKalem.value.kaynak_depo_id = null; yeniKalem.value.kaynak_tedarikci_id = null; yeniKalem.value.anlasma_id = null; yeniKalem.value.kaynak_adi = 'Hizmet'; }
+    if(secilenKaynak.value.tip === 'depo') { 
+      yeniKalem.value.kaynak_depo_id = secilenKaynak.value.id; 
+      yeniKalem.value.kaynak_tedarikci_id = null; 
+      yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
+      // DEPO SEÇİLDİYSE ANLAŞMAYI NULL YAP
+      yeniKalem.value.anlasma_id = null;
+    } 
+    else { 
+      yeniKalem.value.kaynak_depo_id = null; 
+      yeniKalem.value.kaynak_tedarikci_id = secilenKaynak.value.id; 
+      yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
+    }
+  } else { 
+    yeniKalem.value.kaynak_depo_id = null; 
+    yeniKalem.value.kaynak_tedarikci_id = null; 
+    yeniKalem.value.anlasma_id = null; 
+    yeniKalem.value.kaynak_adi = 'Hizmet'; 
+  }
+  
   kalemler.value.push({ ...yeniKalem.value });
   yeniKalem.value = bosKalemOlustur();
   urunAramaMetni.value = '';
   secilenKaynak.value = null;
   mevcutStok.value = Infinity;
 };
+
 const kalemSil = (index) => { kalemler.value.splice(index, 1); };
+
 watch(() => props.varsayilanAnlasma, (newAnlasma) => { 
-  yeniKalem.value.anlasma_id = newAnlasma?.id || null; 
-  // Eğer varsayılan anlaşma ürün bazlı ise ve ürün seçilmişse, arama sonuçlarını temizle
+  // Depo seçili değilse varsayılan anlaşmayı uygula
+  if (!secilenKaynak.value || secilenKaynak.value.tip !== 'depo') {
+    yeniKalem.value.anlasma_id = newAnlasma?.id || null; 
+  }
+  
   if (newAnlasma && newAnlasma.tip === 'Ürün Bazlı' && yeniKalem.value.urun_id) {
     const secilenAnlasma = props.anlasmalar.find(a => a.id === newAnlasma.id);
     if (secilenAnlasma && secilenAnlasma.anlasma_kalemleri) {
       const urunAnlasmadaVar = secilenAnlasma.anlasma_kalemleri.some(kalem => kalem.urun_id === yeniKalem.value.urun_id);
       if (!urunAnlasmadaVar) {
-        // Ürün bu anlaşmada yoksa, seçimi temizle
         yeniKalem.value.urun_id = null;
         yeniKalem.value.aciklama = '';
         urunAramaMetni.value = '';
@@ -255,6 +278,7 @@ watch(() => props.varsayilanAnlasma, (newAnlasma) => {
     }
   }
 });
+
 watch(yeniKalemTipi, (newValue) => {
   yeniKalem.value = bosKalemOlustur();
   urunAramaMetni.value = '';
@@ -262,14 +286,13 @@ watch(yeniKalemTipi, (newValue) => {
   mevcutStok.value = Infinity;
   if (newValue === 'hizmet') { secilenKaynak.value = null; yeniKalem.value.anlasma_id = null; }
 });
+
 watch(() => yeniKalem.value.anlasma_id, (newAnlasmaId) => {
-  // Anlaşma değiştiğinde, eğer ürün bazlı anlaşma ise ve seçili ürün bu anlaşmada yoksa temizle
   if (newAnlasmaId && yeniKalem.value.urun_id) {
     const secilenAnlasma = props.anlasmalar.find(a => a.id === newAnlasmaId);
     if (secilenAnlasma && secilenAnlasma.tip === 'Ürün Bazlı' && secilenAnlasma.anlasma_kalemleri) {
       const urunAnlasmadaVar = secilenAnlasma.anlasma_kalemleri.some(kalem => kalem.urun_id === yeniKalem.value.urun_id);
       if (!urunAnlasmadaVar) {
-        // Ürün bu anlaşmada yoksa, seçimi temizle
         yeniKalem.value.urun_id = null;
         yeniKalem.value.aciklama = '';
         urunAramaMetni.value = '';
@@ -278,6 +301,14 @@ watch(() => yeniKalem.value.anlasma_id, (newAnlasmaId) => {
     }
   }
 });
+
+// Kaynak değiştiğinde (watch eklendi)
+watch(secilenKaynak, (newKaynak) => {
+  stokKontrolEt();
+  if (newKaynak && newKaynak.tip === 'depo') {
+    yeniKalem.value.anlasma_id = null; // Depo seçilince anlaşmayı temizle
+  }
+});
+
 watch(kalemler, (yeniListe) => { emit('kalemler-guncellendi', yeniListe); }, { deep: true });
-watch(secilenKaynak, () => { stokKontrolEt(); });
 </script>

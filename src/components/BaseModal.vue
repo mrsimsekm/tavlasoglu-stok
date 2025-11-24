@@ -1,5 +1,6 @@
 <template>
-  <div v-if="show" @click.self="$emit('close')" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
+  <!-- @click.self kaldırıldı: Artık arka plana basınca kapanmayacak -->
+  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
     <div :class="['bg-white rounded-lg shadow-xl w-full mx-4 transform transition-all', maxWidth]">
       <!-- Başlık Bölümü -->
       <div class="flex justify-between items-center p-4 border-b">
