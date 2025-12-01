@@ -17,14 +17,14 @@
         <div>
           <label class="label-style">Depo</label>
           <select v-model="filtreler.depoId" class="form-input">
-            <option :value="null">Tüm Depolar</option>
+            <option :value="null">Tüm Depolar (Grup Görünümü)</option>
             <option v-for="depo in depolar" :key="depo.id" :value="depo.id">
               {{ depo.ad }}
             </option>
           </select>
         </div>
         <div>
-          <label class="label-style">Stok Durumu</label>
+          <label class="label-style">Stok Durumu (Genel)</label>
           <select v-model="filtreler.stokDurumu" class="form-input">
             <option value="tumu">Tümü</option>
             <option value="var">Stokta Var</option>
@@ -37,63 +37,148 @@
 
     <!-- STOK LİSTESİ -->
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-      <table class="min-w-full leading-normal">
+      <table class="min-w-full leading-normal table-fixed">
         <thead>
           <tr>
-            <th class="th-style">Ürün Kodu</th>
-            <th class="th-style">Açıklama</th>
-            <th class="th-style text-right" style="width: 130px;">Depo</th>
-            <th class="th-style text-right" style="width: 150px;">Toplam Miktar</th>
-            <th class="th-style text-right" style="width: 100px;">Rezerve</th>
-            <th class="th-style text-right" style="width: 100px;">Mevcut</th>
-            <!--<th class="th-style">Durum</th>-->
+            <!-- Kolon genişliklerini buradan kontrol ediyoruz, alt satırlar buna uyacak -->
+            <th class="th-style w-12 text-center"></th> <!-- Ok simgesi için dar alan -->
+            <th class="th-style w-32">Ürün Kodu</th>
+            <th class="th-style w-auto">Açıklama</th> <!-- Esnek genişlik -->
+            <th class="th-style w-40 text-right">
+              {{ filtreler.depoId ? 'Depo' : 'Depo Sayısı' }}
+            </th>
+            <th class="th-style w-32 text-right">Toplam Miktar</th>
+            <th class="th-style w-24 text-right">Rezerve</th>
+            <th class="th-style w-24 text-right">Mevcut</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
             <td colspan="7" class="text-center py-4">Yükleniyor...</td>
           </tr>
-          <tr v-else-if="filtrelenmisStoklar.length === 0">
+          <tr v-else-if="urunBazliStoklar.length === 0 && !loading">
             <td colspan="7" class="text-center py-4 text-gray-500">
               Arama kriterlerine uygun stok bulunamadı.
             </td>
           </tr>
-          <tr v-else v-for="stok in filtrelenmisStoklar" :key="stok.id" class="hover:bg-gray-50">
-            <td class="td-style">
-              <p class="font-semibold text-gray-900">{{ stok.urunler?.urun_kodu || '-' }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-gray-700">{{ stok.urunler?.aciklama || '-' }}</p>
-              <p class="text-xs text-gray-500">{{ stok.urunler?.ana_birim || '' }}</p>
-            </td>
-            <td class="td-style">
-              <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                {{ stok.depolar?.ad || '-' }}
-              </span>
-            </td>
-            <td class="td-style text-center">
-              <p class="font-semibold text-gray-900">{{ stok.miktar || 0 }}</p>
-            </td>
-            <td class="td-style text-center">
-              <p class="text-orange-600">{{ stok.rezerve_miktar || 0 }}</p>
-            </td>
-            <td class="td-style text-center">
-              <p class="font-bold" :class="getMevcutRenk(stok.miktar - stok.rezerve_miktar)">
-                {{ (stok.miktar || 0) - (stok.rezerve_miktar || 0) }}
-              </p>
-            </td>
-            <!--<td class="td-style">
-              <span :class="getDurumBadge(stok.miktar - stok.rezerve_miktar)">
-                {{ getDurumMetni(stok.miktar - stok.rezerve_miktar) }}
-              </span>
-            </td>-->
-          </tr>
+          
+          <!-- Grup Döngüsü -->
+          <template v-else v-for="urunStok in urunBazliStoklar" :key="urunStok.urun_id">
+            
+            <!-- 1. ANA SATIR (GRUP BAŞLIĞI) -->
+            <tr 
+              class="hover:bg-gray-100 transition duration-150 border-b border-gray-200 h-16"
+              :class="{'cursor-pointer': !filtreler.depoId, 'bg-gray-50': acikDegil.has(urunStok.urun_id) && !filtreler.depoId}"
+              @click="!filtreler.depoId && toggleAciklama(urunStok.urun_id)"
+            >
+              <!-- Kolon 1: Toggle Icon -->
+              <td class="px-2 py-4 text-center">
+                <div v-if="urunStok.detaylar && urunStok.detaylar.length > 0 && !filtreler.depoId"
+                     class="flex items-center justify-center h-full">
+                  <svg 
+                    class="w-5 h-5 text-gray-500 transition-transform duration-200" 
+                    :class="{'rotate-90': acikDegil.has(urunStok.urun_id)}" 
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </td>
+
+              <!-- Kolon 2: Ürün Kodu -->
+              <td class="px-5 py-4">
+                <p class="font-bold text-gray-900">{{ urunStok.urun_kodu }}</p>
+              </td>
+
+              <!-- Kolon 3: Açıklama -->
+              <td class="px-5 py-4">
+                <p class="text-gray-800 font-medium truncate">{{ urunStok.aciklama }}</p>
+                <p class="text-xs text-gray-500">{{ urunStok.ana_birim }}</p>
+              </td>
+
+              <!-- Kolon 4: Depo Bilgisi -->
+              <td class="px-5 py-4 text-right">
+                <span v-if="!filtreler.depoId" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  {{ urunStok.detaylar.length }} Depo
+                </span>
+                <span v-else class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                  {{ urunStok.detaylar[0]?.depo_ad || '-' }}
+                </span>
+              </td>
+
+              <!-- Kolon 5: Toplam Miktar -->
+              <td class="px-5 py-4 text-right">
+                <p class="font-semibold text-gray-900">{{ urunStok.toplam_miktar }}</p>
+              </td>
+
+              <!-- Kolon 6: Rezerve -->
+              <td class="px-5 py-4 text-right">
+                <p class="text-orange-600 font-medium">{{ urunStok.toplam_rezerve }}</p>
+              </td>
+
+              <!-- Kolon 7: Mevcut -->
+              <td class="px-5 py-4 text-right">
+                <p class="font-bold text-lg" :class="getMevcutRenk(urunStok.toplam_mevcut)">
+                  {{ urunStok.toplam_mevcut }}
+                </p>
+              </td>
+            </tr>
+
+            <!-- 2. DETAY SATIRLARI (Doğrudan tablonun parçası, iç içe tablo değil) -->
+            <!-- Sadece depo filtresi yoksa ve akordiyon açıksa göster -->
+            <template v-if="!filtreler.depoId && acikDegil.has(urunStok.urun_id)">
+              <tr 
+                v-for="(detay, index) in urunStok.detaylar" 
+                :key="detay.depo_id" 
+                class="bg-gray-50 hover:bg-gray-100 border-gray-100"
+                :class="{'border-b': index === urunStok.detaylar.length - 1}"
+              >
+                <!-- Kolon 1: Boş (Hizalama için) -->
+                <td class="px-2 py-3"></td>
+
+                <!-- Kolon 2: Boş (Hizalama için) -->
+                <td class="px-5 py-3"></td>
+
+                <!-- Kolon 3: "Depo Detayı" Görseli (Açıklama kolonunun altına gelir) -->
+                <td class="px-5 py-3 text-right">
+                  <div class="flex items-center justify-end text-xs text-gray-400 select-none">
+                    <svg class="w-4 h-4 mr-2 rotate-90 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                    </svg>
+                    <span>Depo Detayı:</span>
+                  </div>
+                </td>
+
+                <!-- Kolon 4: Depo Adı (Ana tablodaki Depo kolonunun tam altına) -->
+                <td class="px-5 py-3 text-right">
+                  <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
+                    {{ detay.depo_ad }}
+                  </span>
+                </td>
+
+                <!-- Kolon 5: Miktar (Ana tablodaki Miktar kolonunun tam altına) -->
+                <td class="px-5 py-3 text-right text-sm text-gray-600 font-mono">
+                  {{ detay.miktar || 0 }}
+                </td>
+
+                <!-- Kolon 6: Rezerve (Ana tablodaki Rezerve kolonunun tam altına) -->
+                <td class="px-5 py-3 text-right text-sm text-orange-600 font-mono">
+                  {{ detay.rezerve_miktar || 0 }}
+                </td>
+
+                <!-- Kolon 7: Mevcut (Ana tablodaki Mevcut kolonunun tam altına) -->
+                <td class="px-5 py-3 text-right text-sm font-bold font-mono" :class="getMevcutRenk(detay.mevcut)">
+                  {{ detay.mevcut }}
+                </td>
+              </tr>
+            </template>
+
+          </template>
         </tbody>
       </table>
     </div>
 
     <!-- ÖZET KARTLARI -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+    <div v-if="!filtreler.depoId" class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
       <div class="bg-white p-4 rounded-lg shadow-md">
         <p class="text-sm text-gray-600">Toplam Ürün Çeşidi</p>
         <p class="text-2xl font-bold text-blue-600">{{ toplamUrunSayisi }}</p>
@@ -115,123 +200,189 @@
 </template>
 
 <style scoped>
-.th-style { @apply px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider; }
-.td-style { @apply px-5 py-5 border-b border-gray-200 bg-white text-sm; }
+/* Header stilleri */
+.th-style { 
+  @apply px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0; 
+}
+
+/* Genel input stilleri */
 .label-style { @apply block text-sm font-medium text-gray-700 mb-1; }
 .form-input { @apply block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500; }
 </style>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { supabase } from '../supabase.js';
+import { ref, onMounted, computed, watch } from 'vue';
+import { supabase } from '../supabase.js'; 
 
 const loading = ref(false);
 const stokSeviyeleri = ref([]);
 const depolar = ref([]);
+const acikDegil = ref(new Set()); 
 
 const filtreler = ref({
   urunArama: '',
-  depoId: null,
+  depoId: null, 
   stokDurumu: 'tumu'
 });
 
-// Depoları ve stok seviyelerini getir
+// --- VERİ ÇEKME ---
 const verileriGetir = async () => {
   loading.value = true;
   try {
-    const [depolarRes, stokRes] = await Promise.all([
-      supabase.from('depolar').select('*').order('ad'),
-      supabase.from('stok_seviyeleri').select(`
+    const { data: depolarData, error: depoError } = await supabase.from('depolar').select('*').order('ad');
+    if (depoError) throw depoError;
+    depolar.value = depolarData || [];
+
+    const { data: stokResData, error: stokError } = await supabase
+      .from('stok_seviyeleri')
+      .select(`
         *,
         urunler (urun_kodu, aciklama, ana_birim),
         depolar (ad)
-      `).order('miktar', { ascending: false })
-    ]);
+      `)
+      .order('miktar', { ascending: false });
 
-    if (depolarRes.error) throw depolarRes.error;
-    if (stokRes.error) throw stokRes.error;
+    if (stokError) throw stokError;
+    
+    stokSeviyeleri.value = stokResData || [];
+    groupStoklarByUrun();
 
-    depolar.value = depolarRes.data || [];
-    stokSeviyeleri.value = stokRes.data || [];
   } catch (error) {
     console.error('Veriler çekilirken hata:', error);
-    alert('Hata: ' + error.message);
+    alert('Hata: ' + (error.message || 'Bilinmeyen bir hata oluştu.'));
   } finally {
     loading.value = false;
   }
 };
 
-// Filtrelenmiş stoklar
-const filtrelenmisStoklar = computed(() => {
-  let sonuc = stokSeviyeleri.value;
+// --- GRUPLAMA ---
+const urunBazliStoklar = ref([]);
 
-  // Ürün arama
-  if (filtreler.value.urunArama) {
-    const arama = filtreler.value.urunArama.toLowerCase();
-    sonuc = sonuc.filter(s => 
-      s.urunler?.urun_kodu?.toLowerCase().includes(arama) ||
-      s.urunler?.aciklama?.toLowerCase().includes(arama)
-    );
-  }
+const groupStoklarByUrun = () => {
+    if (stokSeviyeleri.value.length === 0) {
+        urunBazliStoklar.value = [];
+        return;
+    }
 
-  // Depo filtresi
-  if (filtreler.value.depoId) {
-    sonuc = sonuc.filter(s => s.depo_id === filtreler.value.depoId);
-  }
+    const groupedMap = new Map();
 
-  // Stok durumu filtresi
-  if (filtreler.value.stokDurumu !== 'tumu') {
-    sonuc = sonuc.filter(s => {
-      const mevcut = (s.miktar || 0) - (s.rezerve_miktar || 0);
-      switch (filtreler.value.stokDurumu) {
-        case 'var': return mevcut > 0;
-        case 'yok': return mevcut <= 0;
-        case 'dusuk': return mevcut > 0 && mevcut <= 10;
-        default: return true;
-      }
+    stokSeviyeleri.value.forEach(stokKayit => {
+        const urunId = stokKayit.urun_id;
+        const mevcut = (stokKayit.miktar || 0) - (stokKayit.rezerve_miktar || 0);
+        const depoAd = stokKayit.depolar?.ad || 'Bilinmeyen Depo';
+
+        if (!groupedMap.has(urunId)) {
+            groupedMap.set(urunId, {
+                urun_id: urunId,
+                urun_kodu: stokKayit.urunler?.urun_kodu || '-',
+                aciklama: stokKayit.urunler?.aciklama || '-',
+                ana_birim: stokKayit.urunler?.ana_birim || '',
+                toplam_miktar: 0,
+                toplam_rezerve: 0,
+                toplam_mevcut: 0,
+                detaylar: [] 
+            });
+        }
+
+        const currentUrun = groupedMap.get(urunId);
+
+        currentUrun.toplam_miktar += stokKayit.miktar || 0;
+        currentUrun.toplam_rezerve += stokKayit.rezerve_miktar || 0;
+        currentUrun.toplam_mevcut += mevcut;
+        
+        currentUrun.detaylar.push({
+            depo_id: stokKayit.depo_id,
+            depo_ad: depoAd,
+            miktar: stokKayit.miktar || 0,
+            rezerve_miktar: stokKayit.rezerve_miktar || 0,
+            mevcut: mevcut
+        });
     });
-  }
 
-  return sonuc;
+    let result = Array.from(groupedMap.values());
+    urunBazliStoklar.value = applyFilters(result);
+};
+
+// --- FİLTRELEME ---
+const applyFilters = (data) => {
+    let sonuc = [...data];
+
+    if (filtreler.value.urunArama) {
+        const arama = filtreler.value.urunArama.toLowerCase();
+        sonuc = sonuc.filter(s => 
+            s.urun_kodu?.toLowerCase().includes(arama) ||
+            s.aciklama?.toLowerCase().includes(arama)
+        );
+    }
+
+    if (filtreler.value.depoId) {
+        sonuc = sonuc.map(urun => {
+            const filteredDetails = urun.detaylar.filter(detay => detay.depo_id === filtreler.value.depoId);
+            const toplamMiktar = filteredDetails.reduce((sum, d) => sum + d.miktar, 0);
+            const toplamRezerve = filteredDetails.reduce((sum, d) => sum + d.rezerve_miktar, 0);
+            const toplamMevcut = filteredDetails.reduce((sum, d) => sum + d.mevcut, 0);
+            
+            return {
+                ...urun,
+                toplam_miktar: toplamMiktar,
+                toplam_rezerve: toplamRezerve,
+                toplam_mevcut: toplamMevcut,
+                detaylar: filteredDetails, 
+            };
+        }).filter(urun => urun.detaylar.length > 0); 
+    }
+
+    if (filtreler.value.stokDurumu !== 'tumu') {
+        sonuc = sonuc.filter(s => {
+            const mevcut = s.toplam_mevcut;
+            switch (filtreler.value.stokDurumu) {
+                case 'var': return mevcut > 0;
+                case 'yok': return mevcut <= 0;
+                case 'dusuk': return mevcut > 0 && mevcut <= 10;
+                default: return true;
+            }
+        });
+    }
+    
+    return sonuc;
+};
+
+// --- İZLEYİCİLER ---
+watch([() => filtreler.value.depoId, () => filtreler.value.stokDurumu], () => {
+    if (stokSeviyeleri.value.length > 0) {
+        groupStoklarByUrun();
+    }
+    if (filtreler.value.depoId !== null) {
+        acikDegil.value.clear();
+    }
+}, { deep: true });
+
+watch(() => filtreler.value.urunArama, () => {
+    if (stokSeviyeleri.value.length > 0) {
+        groupStoklarByUrun();
+    }
 });
 
-// Özet istatistikler
-const toplamUrunSayisi = computed(() => {
-  const uniqueUrunler = new Set(filtrelenmisStoklar.value.map(s => s.urun_id));
-  return uniqueUrunler.size;
-});
+const toggleAciklama = (urunId) => {
+    if (filtreler.value.depoId) return;
+    
+    if (acikDegil.value.has(urunId)) {
+        acikDegil.value.delete(urunId);
+    } else {
+        acikDegil.value.add(urunId);
+    }
+};
 
-const toplamStok = computed(() => {
-  return filtrelenmisStoklar.value.reduce((sum, s) => sum + (s.miktar || 0), 0);
-});
+// --- HESAPLAMALAR ---
+const toplamUrunSayisi = computed(() => urunBazliStoklar.value.length);
+const toplamStok = computed(() => urunBazliStoklar.value.reduce((sum, s) => sum + s.toplam_miktar, 0));
+const toplamRezerve = computed(() => urunBazliStoklar.value.reduce((sum, s) => sum + s.toplam_rezerve, 0));
+const toplamMevcut = computed(() => urunBazliStoklar.value.reduce((sum, s) => sum + s.toplam_mevcut, 0));
 
-const toplamRezerve = computed(() => {
-  return filtrelenmisStoklar.value.reduce((sum, s) => sum + (s.rezerve_miktar || 0), 0);
-});
-
-const toplamMevcut = computed(() => {
-  return filtrelenmisStoklar.value.reduce((sum, s) => {
-    return sum + ((s.miktar || 0) - (s.rezerve_miktar || 0));
-  }, 0);
-});
-
-// Yardımcı fonksiyonlar
 const getMevcutRenk = (mevcut) => {
   if (mevcut <= 0) return 'text-red-600';
   if (mevcut <= 10) return 'text-orange-600';
   return 'text-green-600';
-};
-
-const getDurumBadge = (mevcut) => {
-  if (mevcut <= 0) return 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
-  if (mevcut <= 10) return 'px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800';
-  return 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-800';
-};
-
-const getDurumMetni = (mevcut) => {
-  if (mevcut <= 0) return 'Stokta Yok';
-  if (mevcut <= 10) return 'Düşük Stok';
-  return 'Yeterli';
 };
 
 onMounted(() => {

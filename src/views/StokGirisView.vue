@@ -2,7 +2,7 @@
   <div>
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-gray-800">Stok Girişleri</h1>
-      <button @click="formModaliniAc()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">
+      <button @click="formModaliniAc()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow transition duration-150">
         + Yeni Stok Girişi
       </button>
     </div>
@@ -12,7 +12,7 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label class="label-style">Ürün Ara</label>
-          <input v-model="filtreler.urunArama" type="text" placeholder="Ürün kodu veya açıklama..." class="form-input">
+          <input v-model="filtreler.urunArama" type="text" placeholder="Ürün kodu, açıklama..." class="form-input">
         </div>
         <div>
           <label class="label-style">Depo</label>
@@ -36,87 +36,121 @@
       </div>
     </div>
     
-    <!-- STOK HAREKETLERİ LİSTESİ -->
+    <!-- STOK GİRİŞ FİŞLERİ LİSTESİ -->
     <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-      <table class="min-w-full leading-normal">
+      <table class="min-w-full leading-normal table-fixed">
         <thead>
           <tr>
-            <th @click="siralamaYap('olusturulma_tarihi')" class="th-style cursor-pointer hover:bg-gray-200">
-              <div class="flex items-center">
-                <span>Tarih</span>
-                <span v-if="sortBy === 'olusturulma_tarihi'" class="ml-2">
-                  <svg v-if="sortDirection === 'desc'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                </span>
-              </div>
-            </th>
-            <th class="th-style">Ürün Kodu</th>
-            <th class="th-style">Ürün Açıklama</th>
-            <th class="th-style">Depo</th>
-            <th class="th-style">Anlaşma</th>
-            <th @click="siralamaYap('miktar')" class="th-style cursor-pointer hover:bg-gray-200">
-              <div class="flex items-center">
-                <span>Miktar</span>
-                <span v-if="sortBy === 'miktar'" class="ml-2">
-                  <svg v-if="sortDirection === 'desc'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-                </span>
-              </div>
-            </th>
-            <th class="th-style text-right">Tutar</th>
-            <th class="th-style">Açıklama</th>
+            <th class="th-style w-10 text-center"></th>
+            <th class="th-style w-40">Tarih</th>
+            <th class="th-style w-32">İşlem ID</th>
+            <th class="th-style w-auto">Depo & Anlaşma</th>
+            <th class="th-style w-24 text-center">Kalem</th>
+            <th class="th-style w-32 text-right">Top. Miktar</th>
+            <th class="th-style w-32 text-right">Top. Tutar</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="9" class="text-center py-4">Yükleniyor...</td>
+            <td colspan="7" class="text-center py-4">Yükleniyor...</td>
           </tr>
-          <tr v-else-if="stokHareketleri.length === 0">
-            <td colspan="9" class="text-center py-4 text-gray-500">
-              {{ filtreler.urunArama || filtreler.depoId || filtreler.baslangicTarihi || filtreler.bitisTarihi 
-                ? 'Filtreye uygun kayıt bulunamadı.' 
-                : 'Henüz stok girişi yapılmamış.' }}
+          <tr v-else-if="gruplanmisHareketler.length === 0">
+            <td colspan="7" class="text-center py-4 text-gray-500">
+              Kayıt bulunamadı.
             </td>
           </tr>
-          <tr v-else v-for="hareket in stokHareketleri" :key="hareket.id" class="hover:bg-gray-50">
-            <td class="td-style">
-              <p class="text-gray-900 whitespace-no-wrap">{{ formatTarih(hareket.olusturulma_tarihi) }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-gray-900 font-semibold">{{ hareket.urunler?.urun_kodu || '-' }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-gray-700">{{ hareket.urunler?.aciklama || '-' }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-gray-900">{{ hareket.depolar?.ad || '-' }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-indigo-600 text-sm">{{ hareket.anlasmalar?.ad || '-' }}</p>
-            </td>
-            <td class="td-style">
-              <p class="text-green-600 font-bold">+{{ hareket.miktar }}</p>
-            </td>
-            <td class="td-style text-right">
-              <p v-if="hareket.tutar > 0" class="text-gray-800 font-mono">{{ formatPara(hareket.tutar) }}</p>
-              <p v-else class="text-gray-400">-</p>
-            </td>
-            <td class="td-style">
-              <p class="text-gray-600 text-sm">{{ hareket.aciklama || '-' }}</p>
-            </td>
-          </tr>
+          <template v-else v-for="grup in gruplanmisHareketler" :key="grup.id">
+            <tr 
+              class="hover:bg-gray-100 transition duration-150 border-b border-gray-200 cursor-pointer h-14"
+              :class="{'bg-indigo-50': acikGruplar.has(grup.id)}"
+              @click="toggleGrup(grup.id)"
+            >
+              <td class="px-2 py-3 text-center">
+                <svg 
+                  class="w-5 h-5 text-gray-500 transition-transform duration-200" 
+                  :class="{'rotate-90': acikGruplar.has(grup.id)}" 
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </td>
+              <td class="px-5 py-3">
+                <p class="text-gray-900 font-semibold">{{ formatTarih(grup.tarih) }}</p>
+              </td>
+              <td class="px-5 py-3">
+                <span class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded border">
+                  #{{ grup.id.slice(0, 8).toUpperCase() }}
+                </span>
+              </td>
+              <td class="px-5 py-3">
+                <div class="flex flex-col">
+                  <span class="text-gray-900 font-medium">{{ grup.depo_ad }}</span>
+                  <span v-if="grup.anlasma_ad" class="text-xs text-indigo-600 font-medium">
+                    {{ grup.anlasma_ad }}
+                  </span>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ grup.detaylar.length }}
+                </span>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <p class="text-gray-900 font-bold">{{ grup.toplam_miktar }}</p>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <p class="text-gray-700 font-mono">{{ formatPara(grup.toplam_tutar) }}</p>
+              </td>
+            </tr>
+            <template v-if="acikGruplar.has(grup.id)">
+               <tr class="bg-gray-50 border-b border-gray-200">
+                  <td colspan="7" class="p-0">
+                    <table class="w-full">
+                      <thead>
+                        <tr class="text-xs text-gray-500 bg-gray-100 border-b border-gray-200">
+                          <th class="pl-16 py-2 text-left w-1/4">Ürün Kodu</th>
+                          <th class="py-2 text-left w-1/3">Açıklama</th>
+                          <th class="py-2 text-right pr-10">Miktar</th>
+                          <th class="py-2 text-right pr-10">Birim Fiyat</th>
+                          <th class="py-2 text-right pr-6">Tutar</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="detay in grup.detaylar" :key="detay.id" class="hover:bg-gray-100 border-b border-gray-100 last:border-0">
+                          <td class="pl-16 py-2 text-sm font-medium text-gray-800">
+                            {{ detay.urunler?.urun_kodu }}
+                          </td>
+                          <td class="py-2 text-sm text-gray-600">
+                            <div>{{ detay.urunler?.aciklama }}</div>
+                            <div v-if="detay.aciklama" class="text-xs text-gray-400 italic">{{ detay.aciklama }}</div>
+                          </td>
+                          <td class="py-2 pr-10 text-right text-sm font-bold text-gray-900">
+                            {{ detay.miktar }} <span class="text-xs font-normal text-gray-500">{{ detay.urunler?.ana_birim }}</span>
+                          </td>
+                          <td class="py-2 pr-10 text-right text-sm text-gray-600 font-mono">
+                             {{ detay.tutar && detay.miktar ? formatPara(detay.tutar / detay.miktar) : '-' }}
+                          </td>
+                          <td class="py-2 pr-6 text-right text-sm font-medium text-gray-800 font-mono">
+                            {{ formatPara(detay.tutar) }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+               </tr>
+            </template>
+          </template>
         </tbody>
       </table>
     </div>
 
-    <!-- YENİ STOK GİRİŞİ MODAL'I (Toplu Ekleme Yapısı) -->
-    <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-4xl">
+    <!-- YENİ STOK GİRİŞİ MODAL'I -->
+    <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-5xl">
       <template #header>Yeni Stok Girişi (Toplu)</template>
       <template #body>
-         <div class="space-y-6">
+         <div class="space-y-4">
             
-            <!-- 1. GENEL BİLGİLER (Tüm kalemler için ortak) -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 1. GENEL BİLGİLER -->
+            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="label-style">Hangi Depoya Giriş Yapılacak? (*)</label>
                 <select v-model="genelBilgiler.depo_id" class="form-input bg-white">
@@ -139,10 +173,18 @@
               </div>
             </div>
 
-            <!-- 2. KALEM EKLEME ALANI -->
-            <div class="border-t pt-4">
-              <h3 class="text-sm font-bold text-gray-700 mb-2">Listeye Ürün Ekle</h3>
-              <div class="flex flex-col md:flex-row gap-2 items-end bg-blue-50 p-3 rounded-lg border border-blue-100">
+            <!-- 2. KALEM EKLEME / DÜZENLEME ALANI -->
+            <div class="border-t pt-2">
+              <div class="flex justify-between items-center mb-1">
+                <h3 class="text-sm font-bold text-gray-700">
+                  {{ duzenlemeModu ? 'Satırı Düzenle' : 'Listeye Ürün Ekle' }}
+                </h3>
+                <button v-if="duzenlemeModu" @click="temizleAktifSatir" class="text-xs text-red-600 hover:text-red-800 underline">
+                  Düzenlemeyi İptal Et
+                </button>
+              </div>
+
+              <div class="flex flex-col md:flex-row gap-2 items-end bg-blue-50 p-3 rounded-lg border border-blue-100 transition-colors duration-300" :class="{'bg-orange-50 border-orange-200': duzenlemeModu}">
                 <!-- Ürün Arama -->
                 <div class="w-full md:w-4/12 relative">
                   <label class="text-xs font-medium text-gray-500 mb-1 block">Ürün (*)</label>
@@ -169,7 +211,7 @@
                   <input v-model.number="aktifSatir.miktar" type="number" min="1" class="form-input text-right" placeholder="0">
                 </div>
 
-                <!-- Tutar (Opsiyonel veya Anlaşmaya bağlı) -->
+                <!-- Tutar -->
                 <div class="w-full md:w-2/12">
                   <label class="text-xs font-medium text-gray-500 mb-1 block">Top. Tutar (TL)</label>
                   <input v-model.number="aktifSatir.tutar" type="number" min="0" step="0.01" class="form-input text-right" placeholder="0.00">
@@ -181,50 +223,71 @@
                   <input v-model="aktifSatir.aciklama" type="text" class="form-input" placeholder="Not...">
                 </div>
 
-                <!-- Ekle Butonu -->
+                <!-- Ekle / Güncelle Butonu -->
                 <div class="w-full md:w-1/12">
-                  <button @click="satirEkle" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded h-[42px] flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                  <button 
+                    @click="satirIslemi" 
+                    class="w-full font-bold py-2 rounded h-[42px] flex items-center justify-center transition-colors"
+                    :class="duzenlemeModu ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'"
+                  >
+                     <span v-if="duzenlemeModu">OK</span>
+                     <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- 3. EKLENEN LİSTE -->
-            <div v-if="girisListesi.length > 0" class="border rounded-lg overflow-hidden">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Ürün</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">Miktar</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">Tutar</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Açıklama</th>
-                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">Sil</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="(item, index) in girisListesi" :key="index">
-                    <td class="px-4 py-2 text-sm text-gray-900">{{ item.urun_adi }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900 text-right font-bold">{{ item.miktar }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-900 text-right">{{ formatPara(item.tutar) }}</td>
-                    <td class="px-4 py-2 text-sm text-gray-500">{{ item.aciklama || '-' }}</td>
-                    <td class="px-4 py-2 text-center">
-                      <button @click="satirSil(index)" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot class="bg-gray-50">
-                  <tr>
-                    <td class="px-4 py-2 text-sm font-bold text-gray-700">TOPLAM</td>
-                    <td class="px-4 py-2 text-right text-sm font-bold text-gray-900">{{ toplamMiktar }}</td>
-                    <td class="px-4 py-2 text-right text-sm font-bold text-gray-900">{{ formatPara(toplamTutar) }}</td>
-                    <td colspan="2"></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <div v-else class="text-center py-6 bg-gray-50 border border-dashed rounded text-gray-400 text-sm">
-              Henüz ürün eklenmedi.
+            <!-- 3. EKLENEN LİSTE (SCROLL FIX & DÜZENLEME) -->
+            <div class="border rounded-lg overflow-hidden flex flex-col">
+               <!-- Başlık -->
+               <div class="bg-gray-100 border-b px-4 py-2 grid grid-cols-12 gap-2 text-xs font-medium text-gray-500">
+                  <div class="col-span-4">Ürün</div>
+                  <div class="col-span-2 text-right">Miktar</div>
+                  <div class="col-span-2 text-right">Tutar</div>
+                  <div class="col-span-3">Açıklama</div>
+                  <div class="col-span-1 text-center">İşlem</div>
+               </div>
+               
+               <!-- Scroll Edilebilir İçerik (Max Height) -->
+               <div class="overflow-y-auto max-h-[250px] bg-white">
+                  <div v-if="girisListesi.length === 0" class="text-center py-8 text-gray-400 text-sm">
+                    Henüz ürün eklenmedi.
+                  </div>
+                  <div 
+                    v-else 
+                    v-for="(item, index) in girisListesi" 
+                    :key="index"
+                    class="border-b last:border-0 hover:bg-gray-50 px-4 py-2 grid grid-cols-12 gap-2 text-sm items-center transition duration-150"
+                    :class="{'bg-orange-50': duzenlenenIndex === index}"
+                  >
+                      <div class="col-span-4 font-medium text-gray-900 truncate" :title="item.urun_adi">{{ item.urun_adi }}</div>
+                      <div class="col-span-2 text-right font-bold">{{ item.miktar }}</div>
+                      <div class="col-span-2 text-right text-gray-600">{{ formatPara(item.tutar) }}</div>
+                      <div class="col-span-3 text-gray-500 truncate" :title="item.aciklama">{{ item.aciklama || '-' }}</div>
+                      
+                      <!-- İşlemler -->
+                      <div class="col-span-1 flex justify-center space-x-2">
+                         <button @click="satirDuzenle(index)" class="text-orange-500 hover:text-orange-700 p-1" title="Düzenle">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                         </button>
+                         <button @click="satirSil(index)" class="text-red-500 hover:text-red-700 p-1" title="Sil">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                         </button>
+                      </div>
+                  </div>
+               </div>
+
+               <!-- Toplam Footer -->
+               <div class="bg-gray-50 border-t px-4 py-2 grid grid-cols-12 gap-2 text-sm font-bold text-gray-800">
+                  <div class="col-span-4">TOPLAM</div>
+                  <div class="col-span-2 text-right">{{ toplamMiktar }}</div>
+                  <div class="col-span-2 text-right">{{ formatPara(toplamTutar) }}</div>
+                  <div class="col-span-4"></div>
+               </div>
             </div>
 
          </div>
@@ -241,12 +304,18 @@
 </template>
 
 <style scoped>
-.th-style { @apply px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider; }
+.th-style { @apply px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0; }
 .td-style { @apply px-5 py-5 border-b border-gray-200 bg-white text-sm; }
 .label-style { @apply block text-sm font-medium text-gray-700 mb-1; }
 .form-input { @apply block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm; }
 .btn-primary { @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 disabled:cursor-not-allowed; }
 .btn-secondary { @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded; }
+
+/* Modal içindeki scrollbar'ı özelleştirme (Opsiyonel) */
+.overflow-y-auto::-webkit-scrollbar { width: 6px; }
+.overflow-y-auto::-webkit-scrollbar-track { background: #f1f1f1; }
+.overflow-y-auto::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+.overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #555; }
 </style>
 
 <script setup>
@@ -265,10 +334,8 @@ const anlasmaDahilinde = ref(false);
 
 const urunAramaMetni = ref('');
 const urunAramaSonuclari = ref([]);
-const stokHareketleri = ref([]);
-
-const sortBy = ref('olusturulma_tarihi');
-const sortDirection = ref('desc');
+const hamStokHareketleri = ref([]); 
+const acikGruplar = ref(new Set()); 
 
 // Filtreler
 const filtreler = ref({
@@ -278,7 +345,7 @@ const filtreler = ref({
   bitisTarihi: ''
 });
 
-// YENİ YAPI: Genel Bilgiler + Liste
+// Modal Verileri
 const genelBilgiler = ref({
   depo_id: null,
   anlasma_id: null
@@ -293,6 +360,10 @@ const aktifSatir = ref({
 });
 
 const girisListesi = ref([]);
+const duzenlenenIndex = ref(null); // Düzenleme modu için state
+
+// Computed
+const duzenlemeModu = computed(() => duzenlenenIndex.value !== null);
 
 const toplamMiktar = computed(() => girisListesi.value.reduce((sum, item) => sum + item.miktar, 0));
 const toplamTutar = computed(() => girisListesi.value.reduce((sum, item) => sum + (item.tutar || 0), 0));
@@ -309,6 +380,51 @@ const urunAramaPlaceholder = computed(() => {
   }
   return 'Ürün kodu veya açıklama...';
 });
+
+// --- GRUPLAMA MANTIĞI ---
+const gruplanmisHareketler = computed(() => {
+  if (hamStokHareketleri.value.length === 0) return [];
+
+  const map = new Map();
+
+  hamStokHareketleri.value.forEach(hareket => {
+    let key;
+    if (hareket.grup_id) {
+      key = hareket.grup_id;
+    } else {
+      const timeKey = new Date(hareket.olusturulma_tarihi).getTime(); 
+      key = `${timeKey}-${hareket.depo_id}-${hareket.anlasma_id || 'null'}`;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, {
+        id: key, 
+        tarih: hareket.olusturulma_tarihi,
+        depo_ad: hareket.depolar?.ad || 'Bilinmeyen Depo',
+        anlasma_ad: hareket.anlasmalar?.ad || null,
+        toplam_miktar: 0,
+        toplam_tutar: 0,
+        detaylar: []
+      });
+    }
+
+    const grup = map.get(key);
+    grup.detaylar.push(hareket);
+    grup.toplam_miktar += hareket.miktar;
+    grup.toplam_tutar += (hareket.tutar || 0);
+  });
+
+  return Array.from(map.values()).sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+});
+
+// --- UI FONKSİYONLARI ---
+const toggleGrup = (grupId) => {
+  if (acikGruplar.value.has(grupId)) {
+    acikGruplar.value.delete(grupId);
+  } else {
+    acikGruplar.value.add(grupId);
+  }
+};
 
 const formModaliniAc = async () => {
   genelBilgiler.value = { depo_id: null, anlasma_id: null };
@@ -329,19 +445,8 @@ const temizleAktifSatir = () => {
   aktifSatir.value = { urun_id: null, urun_adi: '', miktar: '', tutar: '', aciklama: '' };
   urunAramaMetni.value = '';
   urunAramaSonuclari.value = [];
+  duzenlenenIndex.value = null; // Düzenleme modundan çık
 };
-
-// Anlaşma checkbox değişince
-watch(anlasmaDahilinde, (val) => {
-  if (!val) {
-    genelBilgiler.value.anlasma_id = null;
-  }
-  temizleAktifSatir();
-});
-
-watch(() => genelBilgiler.value.anlasma_id, () => {
-  temizleAktifSatir(); // Anlaşma değişince ürün aramayı sıfırla (kısıtlamalar değiştiği için)
-});
 
 // Depoları çek
 onMounted(async () => {
@@ -350,9 +455,10 @@ onMounted(async () => {
   await hareketleriGetir();
 });
 
-// Stok hareketlerini getir (Liste Görünümü İçin)
+// Stok hareketlerini getir
 const hareketleriGetir = async () => {
   loading.value = true;
+  acikGruplar.value.clear(); 
   try {
     let query = supabase
       .from('stok_hareketleri')
@@ -363,7 +469,7 @@ const hareketleriGetir = async () => {
         anlasmalar (ad) 
       `)
       .eq('hareket_tipi', 'giris')
-      .order(sortBy.value, { ascending: sortDirection.value === 'asc' });
+      .order('olusturulma_tarihi', { ascending: false }); 
 
     if (filtreler.value.depoId) query = query.eq('depo_id', filtreler.value.depoId);
     if (filtreler.value.baslangicTarihi) query = query.gte('olusturulma_tarihi', filtreler.value.baslangicTarihi);
@@ -376,15 +482,17 @@ const hareketleriGetir = async () => {
     const { data, error } = await query;
     if (error) throw error;
     
+    let filteredData = data || [];
     if (filtreler.value.urunArama) {
       const arama = filtreler.value.urunArama.toLowerCase();
-      stokHareketleri.value = (data || []).filter(h => 
+      filteredData = filteredData.filter(h => 
         h.urunler?.urun_kodu?.toLowerCase().includes(arama) || 
         h.urunler?.aciklama?.toLowerCase().includes(arama)
       );
-    } else {
-      stokHareketleri.value = data || [];
     }
+    
+    hamStokHareketleri.value = filteredData;
+
   } catch (error) {
     console.error('Stok hareketleri çekilirken hata:', error.message);
     alert('Hata: ' + error.message);
@@ -393,26 +501,14 @@ const hareketleriGetir = async () => {
   }
 };
 
-const siralamaYap = (kolon) => {
-  if (sortBy.value === kolon) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortBy.value = kolon;
-    sortDirection.value = 'desc';
-  }
-  hareketleriGetir();
-};
-
 const filtreleriTemizle = () => {
   filtreler.value = { urunArama: '', depoId: null, baslangicTarihi: '', bitisTarihi: '' };
   hareketleriGetir();
 };
 
-// Ürün arama
 let debounceTimer;
 const urunAra = () => {
   aktifSatir.value.urun_id = null;
-
   if (anlasmaDahilinde.value && genelBilgiler.value.anlasma_id) {
     const secilenAnlasma = aktifAnlasmalar.value.find(a => a.id === genelBilgiler.value.anlasma_id);
     if (secilenAnlasma && secilenAnlasma.tip === 'Ürün Bazlı') {
@@ -443,20 +539,37 @@ const urunSec = (urun) => {
   urunAramaSonuclari.value = [];
 };
 
-// Satır Ekle / Sil
-const satirEkle = () => {
+// --- SATIR İŞLEMLERİ (EKLE / GÜNCELLE / SİL) ---
+const satirIslemi = () => {
   if (!aktifSatir.value.urun_id) { alert("Lütfen bir ürün seçin."); return; }
   if (!aktifSatir.value.miktar || aktifSatir.value.miktar <= 0) { alert("Geçerli bir miktar girin."); return; }
 
-  girisListesi.value.push({ ...aktifSatir.value });
+  if (duzenlemeModu.value) {
+    // Güncelleme İşlemi
+    girisListesi.value[duzenlenenIndex.value] = { ...aktifSatir.value };
+  } else {
+    // Ekleme İşlemi (Unshift ile en başa ekle)
+    girisListesi.value.unshift({ ...aktifSatir.value });
+  }
+
   temizleAktifSatir();
 };
 
+const satirDuzenle = (index) => {
+  const item = girisListesi.value[index];
+  aktifSatir.value = { ...item };
+  urunAramaMetni.value = item.urun_adi; // Arama kutusuna ismi geri yaz
+  duzenlenenIndex.value = index;
+};
+
 const satirSil = (index) => {
+  if (duzenlenenIndex.value === index) {
+    temizleAktifSatir();
+  }
   girisListesi.value.splice(index, 1);
 };
 
-// TOPLU KAYDET
+// --- TOPLU KAYDET ---
 const topluKaydet = async () => {
   if (!genelBilgiler.value.depo_id) { alert('Lütfen bir depo seçin.'); return; }
   if (anlasmaDahilinde.value && !genelBilgiler.value.anlasma_id) { alert('Lütfen bir anlaşma seçin.'); return; }
@@ -465,7 +578,9 @@ const topluKaydet = async () => {
   try {
     kayitYapiliyor.value = true;
     
-    // Tüm satırları tek tek işle (Supabase transaction desteği olmadığı için loop daha güvenli)
+    const grupId = self.crypto.randomUUID(); 
+    const islemZamani = new Date().toISOString(); 
+
     for (const satir of girisListesi.value) {
       const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
           urun_id: satir.urun_id,
@@ -475,12 +590,13 @@ const topluKaydet = async () => {
           aciklama: satir.aciklama || null,
           kullanici_id: userStore.user?.id || null,
           anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
-          tutar: satir.tutar || 0
+          tutar: satir.tutar || 0,
+          olusturulma_tarihi: islemZamani, 
+          grup_id: grupId 
       }]);
 
       if (hareketError) throw hareketError;
 
-      // Stok seviyesini güncelle
       const { data: mevcutStok } = await supabase
         .from('stok_seviyeleri')
         .select('*')
@@ -495,9 +611,10 @@ const topluKaydet = async () => {
       }
     }
 
-    alert('Tüm stok girişleri başarıyla kaydedildi!');
+    alert('Stok girişi başarıyla kaydedildi!');
     formModalGoster.value = false;
     await hareketleriGetir(); 
+
   } catch (err) {
     console.error("Stok girişi hatası:", err);
     alert('Hata: ' + err.message);
@@ -512,4 +629,13 @@ const formatTarih = (tarih) => {
 };
 
 const formatPara = (val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val || 0);
+
+watch(anlasmaDahilinde, (val) => {
+  if (!val) genelBilgiler.value.anlasma_id = null;
+  temizleAktifSatir();
+});
+
+watch(() => genelBilgiler.value.anlasma_id, () => {
+  temizleAktifSatir();
+});
 </script>

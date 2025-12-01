@@ -1,23 +1,29 @@
 <template>
   <div>
+    <!-- HEADER -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-3xl font-bold text-gray-800">İş Emri Detayı <span v-if="isEditing" class="text-yellow-500 text-xl">(Düzenleme Modu)</span></h1>
+        <h1 class="text-3xl font-bold text-gray-800">
+          İş Emri Detayı <span v-if="isEditing" class="text-yellow-500 text-xl">(Düzenleme Modu)</span>
+        </h1>
         <p v-if="isEmri" class="text-sm text-gray-500 mt-1">
           İş Emri No: <span class="font-mono font-semibold text-indigo-600">{{ isEmri.numara || 'N/A' }}</span>
         </p>
       </div>
       <div class="flex items-center space-x-4">
-            <button
-              v-if="isEmri && !isEditing"
-              @click="yazdirModaliniAc"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
-              </svg>
-              Yazdır
-            </button>
+        <!-- Yazdır Butonu -->
+        <button
+          v-if="isEmri && !isEditing"
+          @click="yazdirModaliniAc"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+          </svg>
+          Yazdır
+        </button>
+
+        <!-- Düzenle / Kaydet / İptal -->
         <div v-if="isEmri && isEmri.durum === 'Açık'">
           <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary bg-yellow-500 hover:bg-yellow-600 text-white">Düzenle</button>
           <div v-else>
@@ -28,6 +34,7 @@
           </div>
         </div>
 
+        <!-- İş Emrini Kapat -->
         <button
           v-if="isEmri && isEmri.durum === 'Açık'"
           @click="kapanisModaliniAc"
@@ -43,11 +50,18 @@
       </div>
     </div>
 
+    <!-- LOADING & ERROR -->
     <div v-if="loading" class="text-center p-6">Yükleniyor...</div>
     <div v-else-if="error" class="bg-red-100 p-4 rounded-md text-red-700">Hata: {{ error }}</div>
+    
+    <!-- İÇERİK -->
     <div v-else-if="isEmri" class="space-y-6">
+      
+      <!-- 1. GENEL BİLGİLER -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Genel Bilgiler</h2>
+        
+        <!-- Görüntüleme -->
         <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div><p class="label-style">Müşteri</p><p class="font-semibold">{{ isEmri.musteriler.unvan }}</p></div>
           <div>
@@ -59,6 +73,8 @@
           <div><p class="label-style">Sipariş Tarihi</p><p class="font-semibold">{{ new Date(isEmri.siparis_tarihi).toLocaleDateString('tr-TR') }}</p></div>
           <div><p class="label-style">Durum</p><p class="font-semibold px-2 py-1 inline-block rounded" :class="getDurumRenk(isEmri.durum)">{{ isEmri.durum }}</p></div>
         </div>
+
+        <!-- Düzenleme -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <p class="label-style">Müşteri</p>
@@ -74,31 +90,50 @@
         </div>
       </div>
 
+      <!-- 2. İŞ EMRİ DETAYLARI (SEVK ADRESİ BURAYA TAŞINDI) -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">İş Emri Detayları</h2>
-        <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div><p class="label-style">Satışçı</p><p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p></div>
-          <div><p class="label-style">Fatura No</p><p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p></div>
-          <div><p class="label-style">Maliyet</p><p class="font-semibold text-orange-600">{{ formatParaBirimi(isEmri.maliyet || 0) }}</p></div>
-          <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
+        
+        <!-- Görüntüleme Modu -->
+        <div v-if="!isEditing">
+          <!-- Üst Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div><p class="label-style">Satışçı</p><p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p></div>
+            <div><p class="label-style">Fatura No</p><p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p></div>
+            <div><p class="label-style">Maliyet</p><p class="font-semibold text-orange-600">{{ formatParaBirimi(isEmri.maliyet || 0) }}</p></div>
+            <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
+          </div>
+          
+          <!-- Sevk Adresi Satırı (Görüntüleme) -->
+          <div class="border-t border-gray-100 pt-3 mt-2">
+            <p class="label-style mb-1">Sevk Adresi</p>
+            <p v-if="isEmri.sevk_adresi" class="text-gray-800 whitespace-pre-wrap font-medium">{{ isEmri.sevk_adresi }}</p>
+            <p v-else class="text-gray-400 italic text-sm">Sevk adresi belirtilmemiş.</p>
+          </div>
         </div>
+
+        <!-- Düzenleme Modu -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="label-style">Satışçı</label><select v-model="duzenlemeFormu.satisci_id" class="form-input"><option :value="null">Satışçı Seçin</option><option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option></select></div>
+          <div>
+            <label class="label-style">Satışçı</label>
+            <select v-model="duzenlemeFormu.satisci_id" class="form-input">
+              <option :value="null">Satışçı Seçin</option>
+              <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
+            </select>
+          </div>
           <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
           <div><label class="label-style">Maliyet</label><input v-model.number="duzenlemeFormu.maliyet" type="number" step="0.01" class="form-input" placeholder="0.00"></div>
-          <div class="flex items-center"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
+          <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
+          
+          <!-- Sevk Adresi Input (Düzenleme - Tam Genişlik) -->
+          <div class="md:col-span-2">
+            <label class="label-style">Sevk Adresi</label>
+            <textarea v-model="duzenlemeFormu.sevk_adresi" rows="3" class="form-input" placeholder="Teslimat adresi..."></textarea>
+          </div>
         </div>
       </div>
       
-      <div v-if="isEmri.sevk_adresi || isEditing" class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Sevk Adresi</h2>
-        <p v-if="!isEditing && isEmri.sevk_adresi" class="text-gray-700 whitespace-pre-wrap">{{ isEmri.sevk_adresi }}</p>
-        <p v-if="!isEditing && !isEmri.sevk_adresi" class="text-gray-400 italic">Sevk adresi belirtilmemiş.</p>
-        <div v-else>
-          <textarea v-model="duzenlemeFormu.sevk_adresi" rows="3" class="form-input" placeholder="Teslimat adresi..."></textarea>
-        </div>
-      </div>
-      
+      <!-- 3. KALEMLER -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Kalemler</h2></div>
         <IsEmriKalemEkle v-if="isEditing" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :initialKalemler="guncelKalemler" :kaydedilmis-is-emri="true" @kalemler-guncellendi="handleKalemlerGuncellendi"/>
@@ -113,15 +148,17 @@
         </div>
       </div>
 
+      <!-- 4. NOTLAR -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Notlar</h2><button v-if="!notDuzenleniyor" @click="notDuzenlemeyeBasla" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">{{ isEmri.notlar ? 'Düzenle' : '+ Not Ekle' }}</button></div>
-        <div v-if="!notDuzenleniyor" class="min-h-[100px]"><p v-if="isEmri.notlar" class="text-gray-700 whitespace-pre-wrap">{{ isEmri.notlar }}</p><p v-else class="text-gray-400 italic">Henüz not eklenmemiş.</p></div>
+        <div v-if="!notDuzenleniyor" class="min-h-[60px]"><p v-if="isEmri.notlar" class="text-gray-700 whitespace-pre-wrap">{{ isEmri.notlar }}</p><p v-else class="text-gray-400 italic">Henüz not eklenmemiş.</p></div>
         <div v-else>
           <textarea v-model="notIcerigi" rows="6" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="İş emri ile ilgili notlarınızı buraya yazabilirsiniz..."></textarea>
           <div class="flex justify-end mt-3 space-x-2"><button @click="notDuzenlemeIptal" class="btn-secondary">İptal</button><button @click="notuKaydet" :disabled="notKayitYapiliyor" class="btn-primary">{{ notKayitYapiliyor ? 'Kaydediliyor...' : 'Kaydet' }}</button></div>
         </div>
       </div>
 
+      <!-- 5. TOPLAMLAR -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-end items-center text-xl space-x-8 font-semibold">
           <span>Genel Toplam: <span class="text-blue-600">{{ formatParaBirimi(toplamTutar) }}</span></span>
@@ -132,12 +169,16 @@
       </div>
     </div>
 
+    <!-- MODALLAR -->
     <IsEmriKapanisModal :show="kapanisModalGoster" :is-emri="isEmri" @close="kapanisModalGoster = false" @success="kapanisBasarili"/>
     
     <BaseModal :show="yazdirModalGoster" @close="yazdirModalGoster = false">
       <template #header>İş Emri Yazdır</template>
-      <template #body><div class="space-y-4"><p class="text-gray-700">İş emri yazdırma seçenekleri:</p><div class="border rounded-lg p-4 bg-gray-50"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="yazdirFiyatGoster" class="h-5 w-5 text-indigo-600 rounded border-gray-300"><span class="ml-3 text-sm font-medium text-gray-700">Fiyat bilgilerini dahil et</span></label><p class="text-xs text-gray-500 mt-2 ml-8">İşaretlenirse birim fiyat ve toplam tutarlar yazdırılan belgede görünür</p></div><div class="bg-blue-50 p-3 rounded-lg"><p class="text-sm text-blue-800"><strong>İş Emri No:</strong> {{ isEmri?.numara || 'N/A' }}</p><p class="text-sm text-blue-800"><strong>Müşteri:</strong> {{ isEmri?.musteriler?.unvan || '-' }}</p></div></div></template>
-      <template #footer><button @click="yazdirModalGoster = false" class="btn-secondary">İptal</button><button @click="isEmriYazdir" class="btn-primary ml-2">Yazdır</button></template>
+      <template #body><div class="space-y-4"><p class="text-gray-700">İş emri yazdırma seçenekleri:</p><div class="border rounded-lg p-4 bg-gray-50"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="yazdirFiyatGoster" class="h-5 w-5 text-indigo-600 rounded border-gray-300"><span class="ml-3 text-sm font-medium text-gray-700">Fiyat bilgilerini dahil et</span></label><p class="text-xs text-gray-500 mt-2 ml-8">İşaretlenirse birim fiyat ve toplam tutarlar belgede görünür</p></div><div class="bg-blue-50 p-3 rounded-lg"><p class="text-sm text-blue-800"><strong>İş Emri No:</strong> {{ isEmri?.numara || 'N/A' }}</p><p class="text-sm text-blue-800"><strong>Müşteri:</strong> {{ isEmri?.musteriler?.unvan || '-' }}</p></div></div></template>
+      <template #footer>
+        <button @click="yazdirModalGoster = false" class="btn-secondary">İptal</button>
+        <button @click="isEmriYazdir" class="btn-primary ml-2">Yazdır</button>
+      </template>
     </BaseModal> 
     
     <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false">
@@ -261,34 +302,172 @@ const tahsilatEkle = async () => {
 };
 
 const yazdirModaliniAc = () => {
-  yazdirFiyatGoster.value = false;
+  yazdirFiyatGoster.value = true; 
   yazdirModalGoster.value = true;
 };
 
 const isEmriYazdir = () => {
   const yazdirIcerik = olusturYazdirIcerik();
-  const yazdirPencere = window.open('', '_blank', 'width=800,height=600');
+  const yazdirPencere = window.open('', '_blank', 'width=900,height=700');
   yazdirPencere.document.write(yazdirIcerik);
   yazdirPencere.document.close();
   yazdirPencere.focus();
   setTimeout(() => {
     yazdirPencere.print();
     yazdirModalGoster.value = false;
-  }, 250);
+  }, 500); 
 };
 
+// --- YAZDIRMA ŞABLONU ---
 const olusturYazdirIcerik = () => {
-  const kalemlerHTML = isEmri.value.is_emri_kalemleri.map(kalem => `
+  const logoUrl = window.location.origin + '/logo11.png';
+  const tarih = new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR');
+  const musteri = isEmri.value.musteriler || {};
+  const satisci = isEmri.value.satiscilar?.ad_soyad || 'Belirtilmemiş';
+  
+  const getKaynakAdi = (kalem) => {
+    if (kalem.depolar && kalem.depolar.ad) return kalem.depolar.ad;
+    if (kalem.tedarikciler && kalem.tedarikciler.ad) return kalem.tedarikciler.ad;
+    return 'Hizmet';
+  };
+
+  const kalemlerHTML = isEmri.value.is_emri_kalemleri.map((kalem, index) => `
     <tr>
-      <td style="border: 1px solid #ddd; padding: 8px;">${kalem.aciklama}</td>
-      <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${kalem.miktar}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee;">${getKaynakAdi(kalem)}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
       ${yazdirFiyatGoster.value ? `
-        <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatParaBirimi(kalem.birim_fiyat)}</td>
-        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">${formatParaBirimi(kalem.miktar * kalem.birim_fiyat)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatParaBirimi(kalem.birim_fiyat)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatParaBirimi(kalem.miktar * kalem.birim_fiyat)}</td>
       ` : ''}
     </tr>
   `).join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>İş Emri - ${isEmri.value.numara || 'N/A'}</title><style>body { font-family: Arial, sans-serif; margin: 20px; } .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; } .info-section { margin-bottom: 20px; } .info-row { display: flex; justify-content: space-between; margin: 5px 0; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th { background-color: #f0f0f0; border: 1px solid #ddd; padding: 10px; text-align: left; } td { border: 1px solid #ddd; padding: 8px; } .total-section { margin-top: 20px; text-align: right; font-size: 18px; font-weight: bold; } @media print { body { margin: 0; } button { display: none; } }</style></head><body><div class="header"><h1>İŞ EMRİ</h1><p>İş Emri No: <strong>${isEmri.value.numara || 'N/A'}</strong></p></div><div class="info-section"><div class="info-row"><span><strong>Müşteri:</strong> ${isEmri.value.musteriler?.unvan || '-'}</span><span><strong>Tarih:</strong> ${new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR')}</span></div><div class="info-row"><span><strong>Durum:</strong> ${isEmri.value.durum}</span></div></div><table><thead><tr><th>Açıklama</th><th style="width: 100px; text-align: center;">Miktar</th>${yazdirFiyatGoster.value ? `<th style="width: 120px; text-align: right;">Birim Fiyat</th><th style="width: 120px; text-align: right;">Toplam</th>` : ''}</tr></thead><tbody>${kalemlerHTML}</tbody></table>${yazdirFiyatGoster.value ? `<div class="total-section">Genel Toplam: ${formatParaBirimi(toplamTutar.value)}</div>` : ''}${isEmri.value.notlar ? `<div style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-left: 4px solid #333;"><strong>Notlar:</strong><br>${isEmri.value.notlar.replace(/\n/g, '<br>')}</div>` : ''}</body></html>`;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <title>İş Emri - ${isEmri.value.numara || 'N/A'}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @page { 
+          margin: 1cm; 
+          size: A4;
+        }
+        body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0; font-size: 12px; }
+        .container { max-width: 210mm; margin: 0 auto; background: white; }
+        
+        .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; border-bottom: 2px solid #f3f4f6; padding-bottom: 20px; }
+        .logo-area img { height: 100px; object-fit: contain; }
+        .company-details { text-align: right; font-size: 11px; color: #555; }
+        .company-name { font-size: 16px; font-weight: bold; color: #111; margin-bottom: 5px; }
+
+        .info-grid { display: flex; justify-content: space-between; margin-bottom: 40px; }
+        .info-box { width: 48%; }
+        .box-title { font-size: 13px; font-weight: bold; color: #4f46e5; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .label { font-weight: 600; color: #6b7280; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f9fafb; color: #374151; font-weight: 600; text-align: left; padding: 10px; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; }
+        
+        .totals-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+        .totals-box { width: 250px; }
+        .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .total-row.final { border-top: 2px solid #333; border-bottom: none; font-size: 14px; font-weight: bold; color: #111; margin-top: 5px; padding-top: 10px; }
+
+        .notes-section { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin-bottom: 30px; border-left: 4px solid #d1d5db; }
+        .terms-section { font-size: 10px; color: #6b7280; text-align: justify; margin-bottom: 50px; border-top: 1px solid #eee; padding-top: 10px; }
+
+        @media print {
+          body { padding: 0; }
+          .container { width: 100%; max-width: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo-area">
+            <img src="${logoUrl}" alt="Logo">
+          </div>
+          <div class="company-details">
+            <div>Lalapaşa Mahallesi</div>
+            <div>Samih Kobal Caddesi No:19</div>
+            <div> Yakutiye / Erzurum</div>
+            <div>Tel: 0442 238 83 83</div>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="box-title">Müşteri Bilgileri</div>
+            <div class="info-row"><span class="label">Unvan:</span> <span>${musteri.unvan || '-'}</span></div>
+            <div class="info-row"><span class="label">İlgili Kişi:</span> <span>${musteri.ilgili_kisi || '-'}</span></div>
+            <div class="info-row"><span class="label">Vergi Dairesi:</span> <span>${musteri.vergi_dairesi || '-'}</span></div>
+            <div class="info-row"><span class="label">Vergi No:</span> <span>${musteri.vergi_no || '-'}</span></div>
+            <div class="info-row"><span class="label">Telefon:</span> <span>${musteri.telefon || '-'}</span></div>
+            <div class="info-row"><span class="label">Adres:</span> <span>${musteri.adres || '-'}</span></div>
+          </div>
+          <div class="info-box">
+            <div class="box-title">İş Emri Detayları</div>
+            <div class="info-row"><span class="label">İş Emri No:</span> <span style="font-weight:bold; color:#4f46e5;">${isEmri.value.numara || 'N/A'}</span></div>
+            <div class="info-row"><span class="label">Tarih:</span> <span>${tarih}</span></div>
+            <div class="info-row"><span class="label">Satış Temsilcisi:</span> <span>${satisci}</span></div>
+            <div class="info-row"><span class="label">Sevk Adresi:</span> <span>${isEmri.value.sevk_adresi || 'Müşteri Adresi'}</span></div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 20px; text-align: center;">#</th>
+              <th style="width: 480px;">Açıklama / Ürün / Hizmet</th>
+              <th style="width: 70px;">Kaynak / Depo</th>
+              <th style="width: 60px; text-align: center;">Miktar</th>
+              ${yazdirFiyatGoster.value ? `
+                <th style="width: 80px; text-align: right;">Birim Fiyat</th>
+                <th style="width: 100px; text-align: right;">Toplam</th>
+              ` : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${kalemlerHTML}
+          </tbody>
+        </table>
+
+        ${yazdirFiyatGoster.value ? `
+        <div class="totals-section">
+          <div class="totals-box">
+            <div class="total-row final">
+              <span>GENEL TOPLAM</span>
+              <span>${formatParaBirimi(toplamTutar.value)}</span>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${isEmri.value.notlar ? `
+        <div class="notes-section">
+          <div style="font-weight: bold; margin-bottom: 5px; font-size: 11px;">NOTLAR:</div>
+          <div>${isEmri.value.notlar.replace(/\n/g, '<br>')}</div>
+        </div>
+        ` : ''}
+
+        <div class="terms-section">
+          <strong>GENEL ŞARTLAR:</strong><br>
+          1. Buraya eklemek .<br>
+          2. İstediğin bir .<br>
+          3. Şey varsa.<br>
+          4. İletişim adresimi biliyorsun.
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
 };
 
 const formatParaBirimi = (tutar) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(tutar || 0);
@@ -358,8 +537,6 @@ const guncelle = async () => {
     if (guncelKalemler.value.length > 0) {
       const kalemlerToInsert = guncelKalemler.value.map(k => ({
         is_emri_id: isEmriId,
-        // WHITELIST YÖNTEMİ: Sadece veritabanı alanlarını açıkça seçiyoruz.
-        // Bu sayede UI'dan gelen 'urunler' gibi ekstra objeler hataya neden olmaz.
         urun_id: k.urun_id || null,
         aciklama: k.aciklama,
         miktar: k.miktar,

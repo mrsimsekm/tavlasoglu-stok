@@ -36,7 +36,7 @@
           </button>
         </div>
       </div>
-      <p class="text-xs text-gray-500 mt-2 ml-1 italic">* Sadece "Kapandı" durumundaki ve "Tamamlandı" işaretli iş emirleri hesaplanır.</p>
+      <p class="text-xs text-gray-500 mt-2 ml-1 italic">* Sadece "Kapalı" durumundaki ve "Tamamlandı" işaretli iş emirleri hesaplanır.</p>
     </div>
 
     <!-- GENEL ÖZET KARTLARI -->
@@ -234,7 +234,7 @@ const raporuGetir = async () => {
     const { data: isEmirleri, error: ieError } = await supabase
       .from('is_emirleri')
       .select('id, satisci_id, numara, siparis_tarihi, toplam_tutar, maliyet, musteriler(unvan)')
-      .eq('durum', 'Kapandı')
+      .eq('durum', 'Kapalı')
       .eq('is_tamamlandi', true)
       .gte('siparis_tarihi', baslangicTarihi.value)
       .lte('siparis_tarihi', bitisTarihi.value);

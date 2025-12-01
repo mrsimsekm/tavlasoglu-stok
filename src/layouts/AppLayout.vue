@@ -10,7 +10,7 @@
     <!-- SIDEBAR -->
     <aside 
       :class="[
-        'w-64 flex-shrink-0 bg-gray-800 text-white p-4 fixed lg:relative h-full z-30 transition-transform duration-300',
+        'w-64 flex-shrink-0 bg-gray-800 text-white p-4 fixed lg:relative h-screen z-30 transition-transform duration-300 overflow-y-auto scrollbar-hide',
         sidebarAcik ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       ]"
     >
@@ -23,13 +23,16 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+      
       <div class="mb-6 flex flex-col items-center">
         <div class="w-36 h-18 bg-white rounded-lg flex items-center justify-center mb-2">
           <img src="/logo.png" alt="Şirket Logo" class="max-w-full max-h-full object-contain p-2">
         </div>
       </div>
+      
       <div class="text-2xl font-bold mb-8">Stok Takip</div>
-      <nav>
+      
+      <nav class="pb-20"> <!-- Alt boşluk eklendi ki çıkış butonu içeriği kapatmasın -->
           <!-- YETKİSİZ KULLANICI İÇİN MESAJ -->
         <div v-if="userStore.isYetkisiz" class="text-center py-8 px-4">
           <div class="bg-red-900 rounded-lg p-4 mb-4">
@@ -41,7 +44,7 @@
           </div>
         </div>
         <ul>
-          <!--<li class="mb-4">
+          <li class="mb-4">
             <RouterLink to="/app/dashboard" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -50,7 +53,7 @@
                 Ana Sayfa
               </div>
             </RouterLink>
-          </li>-->
+          </li>
           
           <li class="mb-4">
             <RouterLink to="/app/musteriler" class="link-style" active-class="bg-gray-600">
@@ -124,20 +127,24 @@
               </li>
             </ul>
           </li>
-          
 
-
+          <!-- PROFORMALAR (YENİ EKLENDİ) -->
           <li class="mb-4">
-            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
+            <RouterLink to="/app/proformalar" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
+                <!-- Belge İkonu -->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                  <path d="M8 11a1 1 0 100 2h4a1 1 0 100-2H8z" />
+                  <path d="M8 14a1 1 0 100 2h2a1 1 0 100-2H8z" />
+                  <path d="M8 8a1 1 0 100 2h4a1 1 0 100-2H8z" />
                 </svg>
-                Anlaşmalar
+                Proformalar
               </div>
             </RouterLink>
           </li>
-          <!-- FİNANS / ALACAKLAR (YENİ) -->
+          
+          <!-- FİNANS / ALACAKLAR -->
           <li v-if="userStore.isYonetici || userStore.isMuhasebeci" class="mb-4">
             <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
@@ -149,6 +156,18 @@
               </div>
             </RouterLink>
           </li>
+
+          <li class="mb-4">
+            <RouterLink to="/app/anlasmalar" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                </svg>
+                Anlaşmalar
+              </div>
+            </RouterLink>
+          </li>
+
           <!-- YÖNETİM PANELİ - Sadece Yönetici -->
           <li v-if="userStore.isYonetici" class="mb-4 mt-8 pt-4 border-t border-gray-600">
             <RouterLink to="/app/satisci-performans" class="link-style" active-class="bg-gray-600">
@@ -160,7 +179,7 @@
               </div>
             </RouterLink>
           </li>
-          <li v-if="userStore.isYonetici" class="mb-2">
+          <li v-if="userStore.isYonetici" class="mb-4">
             <RouterLink to="/app/yonetim" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -173,7 +192,8 @@
         </ul>
       </nav>
       
-      <div class="absolute bottom-4">
+      <!-- Sticky Footer (Çıkış Butonu) -->
+      <div class="sticky bottom-0 bg-gray-800 pt-4 pb-4 mt-auto">
         <button @click="handleLogout" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-56">
           Çıkış Yap
         </button>
@@ -210,15 +230,23 @@
 .link-style-sub { 
   @apply p-1 block rounded text-sm text-gray-300 hover:bg-gray-700 hover:text-white; 
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 </style>
 
 <script setup>
 import { ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/userStore.js'; // Store import edildi
+import { useUserStore } from '@/stores/userStore.js'; 
 
 const router = useRouter()
-const userStore = useUserStore(); // Store kullanımı
+const userStore = useUserStore(); 
 
 const stokMenuAcik = ref(false)
 const isEmriMenuAcik = ref(false)
@@ -234,14 +262,10 @@ const toggleIsEmriMenu = () => {
 
 const handleLogout = async () => {
   try {
-    // 1. Önce store'daki logout fonksiyonunu çağır (User state'ini null yapar)
     await userStore.logout(); 
-    
-    // 2. Ardından güvenli bir şekilde login sayfasına yönlendir
     router.replace({ name: 'login' });
   } catch (error) {
     console.error("Çıkış hatası:", error);
-    // Hata olsa bile login sayfasına zorla
     router.replace({ name: 'login' });
   }
 }

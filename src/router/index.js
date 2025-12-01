@@ -105,6 +105,21 @@ const router = createRouter({
             roles: ['yonetici'] // Sadece yetkililer görsün
           }
         },
+        {
+          path: '/app/proformalar',
+          name: 'proformalar',
+          component: () => import('../views/ProformalarView.vue')
+        },
+        {
+          path: '/app/proformalar/yeni',
+          name: 'yeni-proforma',
+          component: () => import('../views/ProformaFormView.vue')
+        },
+        {
+          path: '/app/proformalar/:id',
+          name: 'proforma-detay',
+          component: () => import('../views/ProformaDetayView.vue')
+        }
       ]
     },
     { path: '/', redirect: '/app/is-emirleri' }

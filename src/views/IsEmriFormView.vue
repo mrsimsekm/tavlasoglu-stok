@@ -27,48 +27,64 @@
           </div>
         </div>
 
-        <!-- İŞ EMRİ DETAYLARI (YENİ ALANLAR EKLENDİ) -->
+        <!-- İŞ EMRİ DETAYLARI (DÜZENLENDİ) -->
         <div class="border-b pb-6">
           <h2 class="text-xl font-semibold mb-4 text-gray-700">İş Emri Detayları</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- İş Emri Tipi -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            
+            <!-- SATIR 1 -->
+            
+            <!-- 1. İş Emri Tipi -->
             <div>
               <label class="block text-sm font-medium text-gray-700">İş Emri Tipi (*)</label>
-              <select v-model="isEmri.is_emri_tipi" required class="mt-1 block w-full p-2 border rounded-md bg-white">
+              <select v-model="isEmri.is_emri_tipi" required class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px]">
                 <option value="SİPARİŞ">Sipariş</option>
                 <option value="ARIZA">Arıza / Servis</option>
               </select>
             </div>
-            <!-- Satışçı -->
+
+            <!-- 2. Satışçı -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Satışçı</label>
-              <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white">
+              <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px]">
                 <option :value="null">Satışçı Seçin</option>
                 <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
               </select>
             </div>
-            <!-- Fatura No -->
+
+            <!-- 3. Fatura No -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Fatura No</label>
-              <input v-model="isEmri.fatura_no" type="text" class="mt-1 block w-full p-2 border rounded-md" placeholder="Fatura numarası girin">
+              <input v-model="isEmri.fatura_no" type="text" class="mt-1 block w-full p-2 border rounded-md h-[42px]" placeholder="Fatura numarası">
             </div>
-            <!-- Maliyet -->
+
+            <!-- SATIR 2 -->
+
+            <!-- 4. Maliyet -->
             <div>
               <label class="block text-sm font-medium text-gray-700">Maliyet</label>
-              <input v-model.number="isEmri.maliyet" type="number" step="0.01" class="mt-1 block w-full p-2 border rounded-md" placeholder="0.00">
+              <input v-model.number="isEmri.maliyet" type="number" step="0.01" class="mt-1 block w-full p-2 border rounded-md h-[42px]" placeholder="0.00">
             </div>
-            <!-- İş Tamamlandı -->
-            <div class="flex items-end">
-              <label class="flex items-center cursor-pointer">
+
+            <!-- 5. İş Tamamlandı Checkbox -->
+            <div class="flex items-center h-[70px]"> <!-- Yükseklik hizalaması için -->
+              <label class="flex items-center cursor-pointer mt-5">
                 <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
                 <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
               </label>
             </div>
-            <!-- Sevk Adresi -->
-            <div class="md:col-span-3">
+
+            <!-- 6. Sevk Adresi -->
+            <div>
               <label class="block text-sm font-medium text-gray-700">Sevk Adresi</label>
-              <textarea v-model="isEmri.sevk_adresi" rows="3" class="mt-1 block w-full p-2 border rounded-md" placeholder="Ürünlerin veya hizmetin teslim edileceği adres. Boş bırakılırsa müşterinin kayıtlı adresi varsayılır."></textarea>
+              <textarea 
+                v-model="isEmri.sevk_adresi" 
+                rows="1" 
+                class="mt-1 block w-full p-2 border rounded-md min-h-[42px] max-h-[120px]" 
+                placeholder="Teslimat adresi..."
+              ></textarea>
             </div>
+
           </div>
         </div>
 
@@ -209,10 +225,6 @@ const kaydet = async () => {
     }
 
     alert('İş emri başarıyla kaydedildi!');
-    
-    // YÖNLENDİRME DEĞİŞİKLİĞİ BURADA
-    // Eskisi: router.push(`/app/is-emirleri/${newIsEmriId}`); (Detay sayfası)
-    // Yenisi: router.push('/app/is-emirleri'); (Liste sayfası)
     router.push('/app/is-emirleri');
   });
 };
