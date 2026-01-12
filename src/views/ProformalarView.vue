@@ -58,7 +58,7 @@
             <td class="td-style text-right">
               <div class="flex justify-end items-center space-x-2">
                 
-                <!-- DETAY / DÜZENLE BUTONU -->
+                <!-- DETAY BUTONU -->
                 <button @click="router.push(`/app/proformalar/${proforma.id}`)" class="text-indigo-600 hover:text-indigo-900 p-1" title="Detay & Düzenle">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -73,10 +73,11 @@
                   </svg>
                 </button>
 
-                <!-- DÖNÜŞTÜR BUTONU -->
+                <!-- DÖNÜŞTÜR BUTONU (GÜNCELLENDİ) -->
+                <!-- Artık direkt çevirmiyor, Detay sayfasına 'modalı aç' parametresi ile gönderiyor -->
                 <button 
                   v-if="proforma.durum !== 'Dönüştürüldü'"
-                  @click="isEmrineDonustur(proforma)" 
+                  @click="detayaGitVeDonustur(proforma)" 
                   class="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded border border-green-300 transition whitespace-nowrap"
                   title="İş Emrine Dönüştür"
                 >
@@ -133,19 +134,19 @@ const filtrelenmisProformalar = computed(() => {
   });
 });
 
+// --- YENİ FONKSİYON: DETAYA GİT ---
+const detayaGitVeDonustur = (proforma) => {
+  // Kullanıcıyı detay sayfasına, URL'de "?otomatikDonustur=true" parametresiyle gönderiyoruz
+  router.push({
+    path: `/app/proformalar/${proforma.id}`,
+    query: { otomatikDonustur: 'true' }
+  });
+};
+
 // --- YAZDIRMA FONKSİYONU ---
 const yazdirProforma = async (proforma) => {
   try {
-    const { data: kalemler, error } = await supabase
-      .from('proforma_kalemleri')
-      .select(`
-        *, 
-        depolar(ad), 
-        tedarikciler(ad),
-        anlasmalar(ad)
-      `)
-      .eq('proforma_id', proforma.id);
-
+    const { data: kalemler, error } = await supabase.from('proforma_kalemleri').select(`*, depolar(ad), tedarikciler(ad), anlasmalar(ad)`).eq('proforma_id', proforma.id);
     if (error) throw error;
 
     const logoUrl = window.location.origin + '/logo11.png';
@@ -154,13 +155,9 @@ const yazdirProforma = async (proforma) => {
     const musteri = proforma.musteriler || {};
 
     const kalemlerHTML = kalemler.map((kalem, index) => {
-      // Kaynak Adı Bulma (Depo > Tedarikçi > Hizmet)
       let kaynakAdi = 'Hizmet/Diğer';
       if (kalem.depolar) kaynakAdi = kalem.depolar.ad;
       else if (kalem.tedarikciler) kaynakAdi = kalem.tedarikciler.ad;
-      
-      const anlasmaAdi = kalem.anlasmalar ? kalem.anlasmalar.ad : '-';
-
       return `
         <tr>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
@@ -210,9 +207,7 @@ const yazdirProforma = async (proforma) => {
                 <div>Tel: 0442 238 83 83</div>
             </div>
           </div>
-
           <div class="doc-title">PROFORMA FATURA</div>
-
           <div class="info-grid">
             <div class="info-box">
               <div class="box-title">SAYIN / MÜŞTERİ</div>
@@ -229,7 +224,6 @@ const yazdirProforma = async (proforma) => {
               <div class="row"><span>Geçerlilik Tarihi:</span> <span style="color:red">${gecerlilik}</span></div>
             </div>
           </div>
-
           <table>
             <thead>
               <tr>
@@ -245,16 +239,13 @@ const yazdirProforma = async (proforma) => {
               ${kalemlerHTML}
             </tbody>
           </table>
-
           <div class="totals">
             <div class="total-row">
               <span>GENEL TOPLAM</span>
               <span>${formatPara(proforma.toplam_tutar)}</span>
             </div>
           </div>
-
           ${proforma.notlar ? `<div class="notes"><strong>NOTLAR:</strong><br>${proforma.notlar}</div>` : ''}
-          
           <div style="margin-top: 50px; font-size: 10px; color: #666; text-align: center;">
             Bu belge bilgilendirme amaçlıdır, mali değeri yoktur. Fatura yerine geçmez.
           </div>
@@ -262,15 +253,11 @@ const yazdirProforma = async (proforma) => {
       </body>
       </html>
     `;
-
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-
+    setTimeout(() => { printWindow.print(); }, 500);
   } catch (err) {
     alert('Yazdırma verisi alınırken hata: ' + err.message);
   }
@@ -287,60 +274,6 @@ const getDurumBadge = (durum) => {
   if (durum === 'Gönderildi') return 'px-2 py-1 text-xs rounded bg-blue-100 text-blue-600';
   if (durum === 'Dönüştürüldü') return 'px-2 py-1 text-xs rounded bg-purple-100 text-purple-600 font-bold';
   return 'px-2 py-1 text-xs rounded bg-gray-100 text-gray-800';
-};
-
-const isEmrineDonustur = async (proforma) => {
-  if (!confirm(`${proforma.proforma_no} numaralı proformayı iş emrine dönüştürmek istiyor musunuz?`)) return;
-
-  try {
-    loading.value = true;
-    
-    // Proforma kalemlerini (yeni kolonlarla beraber) çek
-    const { data: kalemler } = await supabase.from('proforma_kalemleri').select('*').eq('proforma_id', proforma.id);
-
-    // İş Emri oluştur
-    const { data: yeniIsEmri, error: isEmriError } = await supabase.from('is_emirleri').insert([{
-      musteri_id: proforma.musteri_id,
-      siparis_tarihi: new Date().toISOString().split('T')[0],
-      is_emri_tipi: 'SİPARİŞ',
-      durum: 'Açık',
-      toplam_tutar: proforma.toplam_tutar,
-      notlar: `Proformadan dönüştürüldü (Ref: ${proforma.proforma_no})\n\n${proforma.notlar || ''}`,
-      maliyet: 0,
-      is_tamamlandi: false
-    }]).select().single();
-
-    if (isEmriError) throw isEmriError;
-
-    // Kalemleri aktar (Depo, Tedarikçi, Anlaşma bilgileriyle)
-    if (kalemler && kalemler.length > 0) {
-      const yeniKalemler = kalemler.map(k => ({
-        is_emri_id: yeniIsEmri.id,
-        urun_id: k.urun_id,
-        aciklama: k.aciklama,
-        miktar: k.miktar,
-        birim_fiyat: k.birim_fiyat,
-        kaynak_depo_id: k.kaynak_depo_id,
-        kaynak_tedarikci_id: k.kaynak_tedarikci_id,
-        anlasma_id: k.anlasma_id
-      }));
-      await supabase.from('is_emri_kalemleri').insert(yeniKalemler);
-    }
-
-    await supabase.from('proformalar').update({ 
-      durum: 'Dönüştürüldü',
-      donusturulen_is_emri_id: yeniIsEmri.id 
-    }).eq('id', proforma.id);
-
-    alert('Başarıyla iş emrine dönüştürüldü!');
-    router.push(`/app/is-emirleri/${yeniIsEmri.id}`); 
-
-  } catch (error) {
-    console.error(error);
-    alert('Dönüştürme hatası: ' + error.message);
-  } finally {
-    loading.value = false;
-  }
 };
 
 const formatTarih = (t) => t ? new Date(t).toLocaleDateString('tr-TR') : '-';

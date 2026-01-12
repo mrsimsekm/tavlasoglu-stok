@@ -7,7 +7,7 @@
       </RouterLink>
     </div>
 
-    <!-- FİLTRELEME VE ARAMA BÖLÜMÜ (YENİ 6 CHECKBOX'LI YAPI) -->
+    <!-- FİLTRELEME VE ARAMA BÖLÜMÜ -->
     <div class="mb-6 p-4 bg-white rounded-lg shadow-md border border-gray-200 space-y-4">
       <!-- Arama Kutusu -->
       <div>
@@ -117,10 +117,15 @@
             <td class="td-style">{{ formatTarih(isEmri.siparis_tarihi) }}</td>
             <td class="td-style font-medium text-gray-800">{{ isEmri.musteriler ? isEmri.musteriler.unvan : 'Müşteri Bulunamadı' }}</td>
             <td class="td-style font-mono">{{ isEmri.fatura_no || '-' }}</td>
-            <td class="td-style text-right font-semibold">{{ formatPara(isEmri.toplam_tutar) }}</td>
+            
+            <!-- GÜNCELLENDİ: Para Birimi Parametresi Eklendi -->
+            <td class="td-style text-right font-semibold">{{ formatPara(isEmri.toplam_tutar, isEmri.para_birimi) }}</td>
+            
+            <!-- GÜNCELLENDİ: Para Birimi Parametresi Eklendi -->
             <td class="td-style text-right font-semibold" :class="isEmri.kalan_bakiye > 0 ? 'text-red-600' : 'text-green-600'">
-              {{ formatPara(isEmri.kalan_bakiye) }}
+              {{ formatPara(isEmri.kalan_bakiye, isEmri.para_birimi) }}
             </td>
+            
             <td class="td-style">
               <span class="px-2 py-1 font-semibold leading-tight rounded-full text-xs" 
                     :class="getDurumRenk(isEmri.durum)">
@@ -169,22 +174,10 @@ const sortDirection = ref('desc');
 const aramaMetni = ref('');
 
 const filtreler = reactive({
-  durum: {
-    acik: true,
-    kapali: false,
-  },
-  fatura: {
-    kesilmemis: false,
-    kesilmis: false,
-  },
-  tahsilat: {
-    eksik: false,
-    tamam: false,
-  },
-  maliyet: {
-    girilmemis: false,
-    girilmis: false,
-  }
+  durum: { acik: true, kapali: false },
+  fatura: { kesilmemis: false, kesilmis: false },
+  tahsilat: { eksik: false, tamam: false },
+  maliyet: { girilmemis: false, girilmis: false }
 });
 
 const gosterilecekIsEmirleri = computed(() => {
@@ -192,34 +185,21 @@ const gosterilecekIsEmirleri = computed(() => {
 
   // 1. Ana Durum Filtreleri
   const { acik, kapali } = filtreler.durum;
-  if (acik && !kapali) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.durum === 'Açık');
-  } else if (!acik && kapali) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.durum === 'Kapalı');
-  } else if (!acik && !kapali) {
-    return []; // Hiçbir durum seçili değilse boş göster
-  } // Her ikisi de seçiliyse filtreleme yapma, tümünü göster
+  if (acik && !kapali) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.durum === 'Açık');
+  else if (!acik && kapali) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.durum === 'Kapalı');
+  else if (!acik && !kapali) return [];
 
   // 2. Alt Kategori Filtreleri
   const { fatura, tahsilat, maliyet } = filtreler;
   // Fatura
-  if (fatura.kesilmemis && !fatura.kesilmis) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => !ie.fatura_no);
-  } else if (!fatura.kesilmemis && fatura.kesilmis) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.fatura_no);
-  }
+  if (fatura.kesilmemis && !fatura.kesilmis) filtrelenmisListe = filtrelenmisListe.filter(ie => !ie.fatura_no);
+  else if (!fatura.kesilmemis && fatura.kesilmis) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.fatura_no);
   // Tahsilat
-  if (tahsilat.eksik && !tahsilat.tamam) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.kalan_bakiye > 0);
-  } else if (!tahsilat.eksik && tahsilat.tamam) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.kalan_bakiye <= 0);
-  }
+  if (tahsilat.eksik && !tahsilat.tamam) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.kalan_bakiye > 0);
+  else if (!tahsilat.eksik && tahsilat.tamam) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.kalan_bakiye <= 0);
   // Maliyet
-  if (maliyet.girilmemis && !maliyet.girilmis) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => !ie.maliyet || ie.maliyet === 0);
-  } else if (!maliyet.girilmemis && maliyet.girilmis) {
-    filtrelenmisListe = filtrelenmisListe.filter(ie => ie.maliyet > 0);
-  }
+  if (maliyet.girilmemis && !maliyet.girilmis) filtrelenmisListe = filtrelenmisListe.filter(ie => !ie.maliyet || ie.maliyet === 0);
+  else if (!maliyet.girilmemis && maliyet.girilmis) filtrelenmisListe = filtrelenmisListe.filter(ie => ie.maliyet > 0);
 
   // 3. Arama Metni
   if (aramaMetni.value.length > 2) {
@@ -286,9 +266,10 @@ const formatTarih = (tarih) => {
   return new Date(tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-const formatPara = (tutar) => {
-  if (tutar === null || tutar === undefined) return '0,00 TL';
-  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(tutar);
+// GÜNCELLENDİ: Para Birimi Desteği
+const formatPara = (tutar, currency = 'TRY') => {
+  if (tutar === null || tutar === undefined) tutar = 0;
+  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(tutar);
 };
 
 const getDurumRenk = (durum) => {

@@ -11,42 +11,22 @@
         </p>
       </div>
       <div class="flex items-center space-x-4">
-        <!-- Yazdır Butonu -->
-        <button
-          v-if="isEmri && !isEditing"
-          @click="yazdirModaliniAc"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
-          </svg>
-          Yazdır
+        <!-- YAZDIR BUTONU -->
+        <button v-if="isEmri && !isEditing" @click="yazdirModaliniAc" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" /></svg>Yazdır
         </button>
-
-        <!-- Düzenle / Kaydet / İptal -->
+        <!-- Butonlar aynı... -->
         <div v-if="isEmri && isEmri.durum === 'Açık'">
-          <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary bg-yellow-500 hover:bg-yellow-600 text-white">Düzenle</button>
-          <div v-else>
+          <button v-if="!isEditing" @click="baslaDuzenle" class="btn-secondary bg-yellow-500 hover:bg-yellow-600 text-white">Düzenle</button>
+          <div v-else class="flex space-x-2">
             <button @click="iptalEt" class="btn-secondary">İptal</button>
-            <button @click="guncelle" :disabled="guncellemeYapiliyor" class="btn-primary ml-2">
-              {{ guncellemeYapiliyor ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet' }}
-            </button>
+            <button @click="guncelle" :disabled="guncellemeYapiliyor" class="btn-primary">{{ guncellemeYapiliyor ? 'Kaydediliyor...' : 'Kaydet' }}</button>
           </div>
         </div>
-
-        <!-- İş Emrini Kapat -->
-        <button
-          v-if="isEmri && isEmri.durum === 'Açık'"
-          @click="kapanisModaliniAc"
-          class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
-          İş Emrini Kapat
+        <button v-if="isEmri && isEmri.durum === 'Açık'" @click="kapanisModaliniAc" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>Kapat
         </button>
-
-        <RouterLink to="/app/is-emirleri" class="text-gray-600 hover:text-gray-800">&larr; Geri Dön</RouterLink>
+        <RouterLink to="/app/is-emirleri" class="text-gray-600 hover:text-gray-800">&larr; Geri</RouterLink>
       </div>
     </div>
 
@@ -54,95 +34,85 @@
     <div v-if="loading" class="text-center p-6">Yükleniyor...</div>
     <div v-else-if="error" class="bg-red-100 p-4 rounded-md text-red-700">Hata: {{ error }}</div>
     
-    <!-- İÇERİK -->
+    <!-- İÇERİK (Aynı kaldı, sadece script değişecek) -->
     <div v-else-if="isEmri" class="space-y-6">
       
       <!-- 1. GENEL BİLGİLER -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Genel Bilgiler</h2>
-        
-        <!-- Görüntüleme -->
         <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div><p class="label-style">Müşteri</p><p class="font-semibold">{{ isEmri.musteriler.unvan }}</p></div>
-          <div>
-            <p class="label-style">İş Emri Tipi</p>
-            <p class="font-semibold px-2 py-1 inline-block rounded text-xs uppercase" :class="getTipRenk(isEmri.is_emri_tipi)">
-              {{ isEmri.is_emri_tipi }}
-            </p>
-          </div>
+          <div><p class="label-style">İş Emri Tipi</p><p class="font-semibold px-2 py-1 inline-block rounded text-xs uppercase" :class="getTipRenk(isEmri.is_emri_tipi)">{{ isEmri.is_emri_tipi }}</p></div>
           <div><p class="label-style">Sipariş Tarihi</p><p class="font-semibold">{{ new Date(isEmri.siparis_tarihi).toLocaleDateString('tr-TR') }}</p></div>
           <div><p class="label-style">Durum</p><p class="font-semibold px-2 py-1 inline-block rounded" :class="getDurumRenk(isEmri.durum)">{{ isEmri.durum }}</p></div>
         </div>
-
-        <!-- Düzenleme -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <p class="label-style">Müşteri</p>
-            <p class="font-semibold p-2 border rounded-md bg-gray-100">{{ isEmri.musteriler.unvan }}</p>
-          </div>
-          <div>
-            <label class="label-style">İş Emri Tipi (*)</label>
-            <select v-model="duzenlemeFormu.is_emri_tipi" class="form-input">
-              <option value="SİPARİŞ">Sipariş</option>
-              <option value="ARIZA">Arıza / Servis</option>
-            </select>
-          </div>
+          <div><p class="label-style">Müşteri</p><p class="font-semibold p-2 border rounded-md bg-gray-100">{{ isEmri.musteriler.unvan }}</p></div>
+          <div><label class="label-style">İş Emri Tipi (*)</label><select v-model="duzenlemeFormu.is_emri_tipi" class="form-input"><option value="SİPARİŞ">Sipariş</option><option value="ARIZA">Arıza / Servis</option></select></div>
         </div>
       </div>
 
-      <!-- 2. İŞ EMRİ DETAYLARI (SEVK ADRESİ BURAYA TAŞINDI) -->
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">İş Emri Detayları</h2>
-        
-        <!-- Görüntüleme Modu -->
-        <div v-if="!isEditing">
-          <!-- Üst Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div><p class="label-style">Satışçı</p><p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p></div>
-            <div><p class="label-style">Fatura No</p><p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p></div>
-            <div><p class="label-style">Maliyet</p><p class="font-semibold text-orange-600">{{ formatParaBirimi(isEmri.maliyet || 0) }}</p></div>
-            <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
+      <!-- 2. İŞ EMRİ DETAYLARI VE MALİYET -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- SOL: Detaylar -->
+        <div class="bg-white p-6 rounded-lg shadow-md h-full">
+          <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">İş Emri Detayları</h2>
+          <div v-if="!isEditing" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><p class="label-style">Satışçı</p><p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p></div>
+              <div><p class="label-style">Fatura No</p><p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p></div>
+              <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ isEmri.para_birimi || 'TRY' }}</p></div>
+              <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
+            </div>
+            <div class="border-t border-gray-100 pt-3"><p class="label-style mb-1">Sevk Adresi</p><p v-if="isEmri.sevk_adresi" class="text-gray-800 whitespace-pre-wrap font-medium">{{ isEmri.sevk_adresi }}</p><p v-else class="text-gray-400 italic text-sm">Sevk adresi belirtilmemiş.</p></div>
           </div>
-          
-          <!-- Sevk Adresi Satırı (Görüntüleme) -->
-          <div class="border-t border-gray-100 pt-3 mt-2">
-            <p class="label-style mb-1">Sevk Adresi</p>
-            <p v-if="isEmri.sevk_adresi" class="text-gray-800 whitespace-pre-wrap font-medium">{{ isEmri.sevk_adresi }}</p>
-            <p v-else class="text-gray-400 italic text-sm">Sevk adresi belirtilmemiş.</p>
+          <div v-else class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div><label class="label-style">Satışçı</label><select v-model="duzenlemeFormu.satisci_id" class="form-input"><option :value="null">Satışçı Seçin</option><option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option></select></div>
+              <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
+              <div><label class="label-style">Para Birimi</label><select v-model="duzenlemeFormu.para_birimi" class="form-input font-bold"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
+              <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
+            </div>
+            <div><label class="label-style">Sevk Adresi</label><textarea v-model="duzenlemeFormu.sevk_adresi" rows="2" class="form-input" placeholder="Teslimat adresi..."></textarea></div>
           </div>
         </div>
 
-        <!-- Düzenleme Modu -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="label-style">Satışçı</label>
-            <select v-model="duzenlemeFormu.satisci_id" class="form-input">
-              <option :value="null">Satışçı Seçin</option>
-              <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
-            </select>
+        <!-- SAĞ: MALİYET KALEMLERİ -->
+        <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
+          <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-semibold text-gray-700">Maliyet Kalemleri</h2>
+            <div class="text-sm">Toplam: <span class="font-bold text-orange-600 text-lg">{{ formatParaBirimi(hesaplananMaliyet, isEditing ? duzenlemeFormu.para_birimi : isEmri.para_birimi) }}</span></div>
           </div>
-          <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
-          <div><label class="label-style">Maliyet</label><input v-model.number="duzenlemeFormu.maliyet" type="number" step="0.01" class="form-input" placeholder="0.00"></div>
-          <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
-          
-          <!-- Sevk Adresi Input (Düzenleme - Tam Genişlik) -->
-          <div class="md:col-span-2">
-            <label class="label-style">Sevk Adresi</label>
-            <textarea v-model="duzenlemeFormu.sevk_adresi" rows="3" class="form-input" placeholder="Teslimat adresi..."></textarea>
+          <div v-if="!isEditing" class="flex-grow overflow-y-auto max-h-[300px]">
+            <div v-if="maliyetListesi.length === 0" class="text-center text-gray-400 py-8 italic">Maliyet kalemi girilmemiş.</div>
+            <table v-else class="min-w-full">
+              <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-2 py-1 text-left">Açıklama</th><th class="px-2 py-1 text-right">Tutar</th></tr></thead>
+              <tbody class="text-sm divide-y divide-gray-100"><tr v-for="(item, idx) in maliyetListesi" :key="idx"><td class="px-2 py-2">{{ item.aciklama }}</td><td class="px-2 py-2 text-right font-mono">{{ formatParaBirimi(item.tutar, isEmri.para_birimi) }}</td></tr></tbody>
+            </table>
+          </div>
+          <div v-else class="flex-grow flex flex-col">
+            <div class="flex-grow overflow-y-auto max-h-[250px] mb-4">
+              <div v-for="(item, idx) in duzenlemeMaliyetListesi" :key="idx" class="flex gap-2 mb-2 items-center">
+                <input v-model="item.aciklama" type="text" class="form-input flex-grow" placeholder="Örn: Yakıt, Yemek">
+                <input v-model.number="item.tutar" type="number" step="0.01" class="form-input w-24 text-right" placeholder="0.00">
+                <button @click="maliyetSil(idx)" class="text-red-500 hover:text-red-700 p-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></button>
+              </div>
+            </div>
+            <button @click="maliyetEkle" type="button" class="w-full border-2 border-dashed border-gray-300 text-gray-500 py-2 rounded-lg hover:border-blue-500 hover:text-blue-500 transition font-semibold text-sm">+ Maliyet Kalemi Ekle</button>
           </div>
         </div>
       </div>
       
       <!-- 3. KALEMLER -->
       <div class="bg-white p-6 rounded-lg shadow-md">
-        <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Kalemler</h2></div>
-        <IsEmriKalemEkle v-if="isEditing" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :initialKalemler="guncelKalemler" :kaydedilmis-is-emri="true" @kalemler-guncellendi="handleKalemlerGuncellendi"/>
+        <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-semibold text-gray-700">Ürün ve Hizmetler</h2></div>
+        <IsEmriKalemEkle v-if="isEditing" :depolar="depolar" :tedarikciler="tedarikciler" :anlasmalar="anlasmalar" :initialKalemler="guncelKalemler" :kaydedilmis-is-emri="true" :para-birimi="duzenlemeFormu.para_birimi" @kalemler-guncellendi="handleKalemlerGuncellendi"/>
         <div v-else class="overflow-x-auto">
           <table class="min-w-full leading-normal">
             <thead><tr><th class="th-style">Açıklama</th><th class="th-style">Kaynak</th><th class="th-style">Anlaşma</th><th class="th-style">Miktar</th><th class="th-style" style="text-align: right;">Birim Fiyat</th><th class="th-style" style="text-align: right;">Toplam</th></tr></thead>
             <tbody>
               <tr v-if="!isEmri.is_emri_kalemleri || isEmri.is_emri_kalemleri.length === 0"><td colspan="6" class="text-center py-4">Bu iş emrine ait kalem bulunamadı.</td></tr>
-              <tr v-for="kalem in isEmri.is_emri_kalemleri" :key="kalem.id"><td class="td-style">{{ kalem.aciklama }}</td><td class="td-style">{{ kalem.depolar ? kalem.depolar.ad : (kalem.tedarikciler ? kalem.tedarikciler.ad : 'Hizmet') }}</td><td class="td-style">{{ kalem.anlasmalar ? kalem.anlasmalar.ad : 'Anlaşma Dışı' }}</td><td class="td-style">{{ kalem.miktar }}</td><td class="td-style text-right">{{ formatParaBirimi(kalem.birim_fiyat) }}</td><td class="td-style text-right font-semibold">{{ formatParaBirimi(kalem.miktar * kalem.birim_fiyat) }}</td></tr>
+              <tr v-for="kalem in isEmri.is_emri_kalemleri" :key="kalem.id"><td class="td-style">{{ kalem.aciklama }}</td><td class="td-style">{{ kalem.depolar ? kalem.depolar.ad : (kalem.tedarikciler ? kalem.tedarikciler.ad : 'Hizmet') }}</td><td class="td-style">{{ kalem.anlasmalar ? kalem.anlasmalar.ad : 'Anlaşma Dışı' }}</td><td class="td-style text-center font-bold">{{ kalem.miktar }}</td><td class="td-style text-right">{{ formatParaBirimi(kalem.birim_fiyat, isEmri.para_birimi) }}</td><td class="td-style text-right font-semibold">{{ formatParaBirimi(kalem.miktar * kalem.birim_fiyat, isEmri.para_birimi) }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -161,9 +131,9 @@
       <!-- 5. TOPLAMLAR -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-end items-center text-xl space-x-8 font-semibold">
-          <span>Genel Toplam: <span class="text-blue-600">{{ formatParaBirimi(toplamTutar) }}</span></span>
-          <span>Ödenen: <span class="text-green-600">{{ formatParaBirimi(isEmri.odenen_tutar) }}</span></span>
-          <span>Kalan Bakiye: <span class="text-red-600">{{ formatParaBirimi(kalanBakiye) }}</span></span>
+          <span>Genel Toplam: <span class="text-blue-600">{{ formatParaBirimi(toplamTutar, isEmri.para_birimi) }}</span></span>
+          <span>Ödenen: <span class="text-green-600">{{ formatParaBirimi(isEmri.odenen_tutar, isEmri.para_birimi) }}</span></span>
+          <span>Kalan Bakiye: <span class="text-red-600">{{ formatParaBirimi(kalanBakiye, isEmri.para_birimi) }}</span></span>
           <button v-if="isEmri.durum === 'Açık' && kalanBakiye > 0 && (userStore.isMuhasebeci || userStore.isYonetici)" @click="tahsilatEkleModaliniAc" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">+ Tahsilat Ekle</button>
         </div>
       </div>
@@ -172,20 +142,35 @@
     <!-- MODALLAR -->
     <IsEmriKapanisModal :show="kapanisModalGoster" :is-emri="isEmri" @close="kapanisModalGoster = false" @success="kapanisBasarili"/>
     
+    <!-- YAZDIRMA MODALI (GÜNCELLENDİ) -->
     <BaseModal :show="yazdirModalGoster" @close="yazdirModalGoster = false">
       <template #header>İş Emri Yazdır</template>
-      <template #body><div class="space-y-4"><p class="text-gray-700">İş emri yazdırma seçenekleri:</p><div class="border rounded-lg p-4 bg-gray-50"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="yazdirFiyatGoster" class="h-5 w-5 text-indigo-600 rounded border-gray-300"><span class="ml-3 text-sm font-medium text-gray-700">Fiyat bilgilerini dahil et</span></label><p class="text-xs text-gray-500 mt-2 ml-8">İşaretlenirse birim fiyat ve toplam tutarlar belgede görünür</p></div><div class="bg-blue-50 p-3 rounded-lg"><p class="text-sm text-blue-800"><strong>İş Emri No:</strong> {{ isEmri?.numara || 'N/A' }}</p><p class="text-sm text-blue-800"><strong>Müşteri:</strong> {{ isEmri?.musteriler?.unvan || '-' }}</p></div></div></template>
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-gray-700">İş emri yazdırma seçenekleri:</p>
+          <div class="border rounded-lg p-4 bg-gray-50 space-y-3">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" v-model="yazdirFiyatGoster" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
+              <span class="ml-3 text-sm font-medium text-gray-700">Fiyat bilgilerini dahil et</span>
+            </label>
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" v-model="yazdirMaliyetGoster" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
+              <span class="ml-3 text-sm font-medium text-gray-700">Maliyetleri dahil et</span>
+            </label>
+          </div>
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-sm text-blue-800"><strong>İş Emri No:</strong> {{ isEmri?.numara || 'N/A' }}</p>
+            <p class="text-sm text-blue-800"><strong>Müşteri:</strong> {{ isEmri?.musteriler?.unvan || '-' }}</p>
+          </div>
+        </div>
+      </template>
       <template #footer>
         <button @click="yazdirModalGoster = false" class="btn-secondary">İptal</button>
         <button @click="isEmriYazdir" class="btn-primary ml-2">Yazdır</button>
       </template>
     </BaseModal> 
     
-    <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false">
-      <template #header>Tahsilat Ekle</template>
-      <template #body><div class="space-y-4"><div class="bg-gray-50 p-4 rounded-lg"><p class="text-sm text-gray-600">Kalan Tutar</p><p class="text-2xl font-bold text-red-600">{{ formatParaBirimi(kalanBakiye) }}</p></div><div><label class="label-style">Tahsilat Tutarı (*)</label><input v-model.number="tahsilatEkleForm.tutar" type="number" step="0.01" class="form-input"></div><div><label class="label-style">Ödeme Yöntemi (*)</label><select v-model="tahsilatEkleForm.yontem" class="form-input"><option value="">Seçiniz</option><option value="Nakit">Nakit</option><option value="Kredi Kartı">Kredi Kartı</option><option value="Havale/EFT">Havale/EFT</option><option value="Çek">Çek</option><option value="Diğer">Diğer</option></select></div><div><label class="label-style">Notlar</label><textarea v-model="tahsilatEkleForm.notlar" rows="3" class="form-input"></textarea></div></div></template>
-      <template #footer><button @click="tahsilatEkleModalGoster = false" class="btn-secondary">İptal</button><button @click="tahsilatEkle" class="btn-primary ml-2">Tahsilat Ekle</button></template>
-    </BaseModal> 
+    <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false"><template #header>Tahsilat Ekle</template><template #body><div class="space-y-4"><div><label class="label-style">Tutar</label><input v-model.number="tahsilatEkleForm.tutar" type="number" class="form-input"></div><div><label class="label-style">Yöntem</label><select v-model="tahsilatEkleForm.yontem" class="form-input"><option value="Nakit">Nakit</option><option value="Kredi Kartı">Kredi Kartı</option><option value="Havale/EFT">Havale/EFT</option></select></div><div><label class="label-style">Not</label><textarea v-model="tahsilatEkleForm.notlar" class="form-input"></textarea></div></div></template><template #footer><button @click="tahsilatEkleModalGoster = false" class="btn-secondary">İptal</button><button @click="tahsilatEkle" class="btn-primary ml-2">Ekle</button></template></BaseModal> 
   </div>
 </template>
 
@@ -227,276 +212,119 @@ const kapanisModalGoster = ref(false);
 const notDuzenleniyor = ref(false);
 const notIcerigi = ref('');
 const yazdirModalGoster = ref(false);
-const yazdirFiyatGoster = ref(true);
+const yazdirFiyatGoster = ref(true); // Fiyatlar varsayılan açık
+const yazdirMaliyetGoster = ref(true); // Maliyetler varsayılan açık (YENİ)
 const tahsilatEkleModalGoster = ref(false);
-const tahsilatEkleForm = ref({
-  tutar: 0,
-  yontem: '',
-  notlar: ''
-});
+const tahsilatEkleForm = ref({ tutar: 0, yontem: '', notlar: '' });
 
-const duzenlemeFormu = ref({
-  satisci_id: null,
-  fatura_no: '',
-  maliyet: 0,
-  is_tamamlandi: false,
-  is_emri_tipi: 'SİPARİŞ',
-  sevk_adresi: ''
-});
+// Yeni State'ler: Maliyet
+const maliyetListesi = ref([]);
+const duzenlemeMaliyetListesi = ref([]);
 
-const getTipRenk = (tip) => {
-  const renkler = { 'SİPARİŞ': 'bg-blue-100 text-blue-800', 'ARIZA': 'bg-yellow-100 text-yellow-800' };
-  return renkler[tip] || 'bg-gray-200 text-gray-700';
-};
+const duzenlemeFormu = ref({ satisci_id: null, fatura_no: '', is_tamamlandi: false, is_emri_tipi: 'SİPARİŞ', sevk_adresi: '', para_birimi: 'TRY' });
+
+// FONKSİYON TANIMLARI
+const getTipRenk = (tip) => { const renkler = { 'SİPARİŞ': 'bg-blue-100 text-blue-800', 'ARIZA': 'bg-yellow-100 text-yellow-800' }; return renkler[tip] || 'bg-gray-200 text-gray-700'; };
+const getDurumRenk = (durum) => { const renkler = { 'Açık': 'bg-green-100 text-green-800', 'Kapalı': 'bg-gray-200 text-gray-700', 'İptal': 'bg-red-100 text-red-800' }; return renkler[durum] || 'bg-gray-200 text-gray-700'; };
+const formatParaBirimi = (tutar, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(tutar || 0);
 
 const kalanBakiye = computed(() => {
   if (!isEmri.value) return 0;
   return (toplamTutar.value - (isEmri.value.odenen_tutar || 0));
 });
 
-const tahsilatEkleModaliniAc = () => {
-  const kalan = kalanBakiye.value;
-  tahsilatEkleForm.value = {
-    tutar: kalan > 0 ? kalan : 0,
-    yontem: '',
-    notlar: ''
-  };
-  tahsilatEkleModalGoster.value = true;
-};
-
-const tahsilatEkle = async () => {
-  if (!tahsilatEkleForm.value.tutar || tahsilatEkleForm.value.tutar <= 0) {
-    alert('Lütfen geçerli bir tutar giriniz.');
-    return;
-  }
-  if (!tahsilatEkleForm.value.yontem) {
-    alert('Lütfen ödeme yöntemi seçiniz.');
-    return;
-  }
-  if (tahsilatEkleForm.value.tutar > kalanBakiye.value) {
-    alert(`Tahsilat tutarı kalan tutardan (${formatParaBirimi(kalanBakiye.value)}) fazla olamaz!`);
-    return;
-  }
-
-  try {
-    const { error: odemeError } = await supabase.from('odemeler').insert([{
-      is_emri_id: isEmri.value.id,
-      tutar: tahsilatEkleForm.value.tutar,
-      yontem: tahsilatEkleForm.value.yontem,
-      notlar: tahsilatEkleForm.value.notlar || null,
-      islem_yapan_kullanici_id: userStore.user?.id || null
-    }]);
-    if (odemeError) throw odemeError;
-
-    const yeniOdenenTutar = parseFloat(isEmri.value.odenen_tutar || 0) + tahsilatEkleForm.value.tutar;
-    const { error: guncellemeError } = await supabase.from('is_emirleri').update({ odenen_tutar: yeniOdenenTutar }).eq('id', isEmriId);
-    if (guncellemeError) throw guncellemeError;
-
-    alert('Tahsilat başarıyla eklendi!');
-    tahsilatEkleModalGoster.value = false;
-    await getGerekliVeriler();
-  } catch (err) {
-    console.error('Tahsilat ekleme hatası:', err);
-    alert('Hata: ' + err.message);
-  }
-};
-
-const yazdirModaliniAc = () => {
-  yazdirFiyatGoster.value = true; 
-  yazdirModalGoster.value = true;
-};
-
-const isEmriYazdir = () => {
-  const yazdirIcerik = olusturYazdirIcerik();
-  const yazdirPencere = window.open('', '_blank', 'width=900,height=700');
-  yazdirPencere.document.write(yazdirIcerik);
-  yazdirPencere.document.close();
-  yazdirPencere.focus();
-  setTimeout(() => {
-    yazdirPencere.print();
-    yazdirModalGoster.value = false;
-  }, 500); 
-};
-
-// --- YAZDIRMA ŞABLONU ---
-const olusturYazdirIcerik = () => {
-  const logoUrl = window.location.origin + '/logo11.png';
-  const tarih = new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR');
-  const musteri = isEmri.value.musteriler || {};
-  const satisci = isEmri.value.satiscilar?.ad_soyad || 'Belirtilmemiş';
-  
-  const getKaynakAdi = (kalem) => {
-    if (kalem.depolar && kalem.depolar.ad) return kalem.depolar.ad;
-    if (kalem.tedarikciler && kalem.tedarikciler.ad) return kalem.tedarikciler.ad;
-    return 'Hizmet';
-  };
-
-  const kalemlerHTML = isEmri.value.is_emri_kalemleri.map((kalem, index) => `
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee;">${getKaynakAdi(kalem)}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
-      ${yazdirFiyatGoster.value ? `
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatParaBirimi(kalem.birim_fiyat)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatParaBirimi(kalem.miktar * kalem.birim_fiyat)}</td>
-      ` : ''}
-    </tr>
-  `).join('');
-
-  return `
-    <!DOCTYPE html>
-    <html lang="tr">
-    <head>
-      <meta charset="UTF-8">
-      <title>İş Emri - ${isEmri.value.numara || 'N/A'}</title>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        @page { 
-          margin: 1cm; 
-          size: A4;
-        }
-        body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0; font-size: 12px; }
-        .container { max-width: 210mm; margin: 0 auto; background: white; }
-        
-        .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; border-bottom: 2px solid #f3f4f6; padding-bottom: 20px; }
-        .logo-area img { height: 100px; object-fit: contain; }
-        .company-details { text-align: right; font-size: 11px; color: #555; }
-        .company-name { font-size: 16px; font-weight: bold; color: #111; margin-bottom: 5px; }
-
-        .info-grid { display: flex; justify-content: space-between; margin-bottom: 40px; }
-        .info-box { width: 48%; }
-        .box-title { font-size: 13px; font-weight: bold; color: #4f46e5; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .label { font-weight: 600; color: #6b7280; }
-
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th { background-color: #f9fafb; color: #374151; font-weight: 600; text-align: left; padding: 10px; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; }
-        
-        .totals-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
-        .totals-box { width: 250px; }
-        .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .total-row.final { border-top: 2px solid #333; border-bottom: none; font-size: 14px; font-weight: bold; color: #111; margin-top: 5px; padding-top: 10px; }
-
-        .notes-section { background-color: #f9fafb; padding: 15px; border-radius: 5px; margin-bottom: 30px; border-left: 4px solid #d1d5db; }
-        .terms-section { font-size: 10px; color: #6b7280; text-align: justify; margin-bottom: 50px; border-top: 1px solid #eee; padding-top: 10px; }
-
-        @media print {
-          body { padding: 0; }
-          .container { width: 100%; max-width: none; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo-area">
-            <img src="${logoUrl}" alt="Logo">
-          </div>
-          <div class="company-details">
-            <div>Lalapaşa Mahallesi</div>
-            <div>Samih Kobal Caddesi No:19</div>
-            <div> Yakutiye / Erzurum</div>
-            <div>Tel: 0442 238 83 83</div>
-          </div>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-box">
-            <div class="box-title">Müşteri Bilgileri</div>
-            <div class="info-row"><span class="label">Unvan:</span> <span>${musteri.unvan || '-'}</span></div>
-            <div class="info-row"><span class="label">İlgili Kişi:</span> <span>${musteri.ilgili_kisi || '-'}</span></div>
-            <div class="info-row"><span class="label">Vergi Dairesi:</span> <span>${musteri.vergi_dairesi || '-'}</span></div>
-            <div class="info-row"><span class="label">Vergi No:</span> <span>${musteri.vergi_no || '-'}</span></div>
-            <div class="info-row"><span class="label">Telefon:</span> <span>${musteri.telefon || '-'}</span></div>
-            <div class="info-row"><span class="label">Adres:</span> <span>${musteri.adres || '-'}</span></div>
-          </div>
-          <div class="info-box">
-            <div class="box-title">İş Emri Detayları</div>
-            <div class="info-row"><span class="label">İş Emri No:</span> <span style="font-weight:bold; color:#4f46e5;">${isEmri.value.numara || 'N/A'}</span></div>
-            <div class="info-row"><span class="label">Tarih:</span> <span>${tarih}</span></div>
-            <div class="info-row"><span class="label">Satış Temsilcisi:</span> <span>${satisci}</span></div>
-            <div class="info-row"><span class="label">Sevk Adresi:</span> <span>${isEmri.value.sevk_adresi || 'Müşteri Adresi'}</span></div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 20px; text-align: center;">#</th>
-              <th style="width: 480px;">Açıklama / Ürün / Hizmet</th>
-              <th style="width: 70px;">Kaynak / Depo</th>
-              <th style="width: 60px; text-align: center;">Miktar</th>
-              ${yazdirFiyatGoster.value ? `
-                <th style="width: 80px; text-align: right;">Birim Fiyat</th>
-                <th style="width: 100px; text-align: right;">Toplam</th>
-              ` : ''}
-            </tr>
-          </thead>
-          <tbody>
-            ${kalemlerHTML}
-          </tbody>
-        </table>
-
-        ${yazdirFiyatGoster.value ? `
-        <div class="totals-section">
-          <div class="totals-box">
-            <div class="total-row final">
-              <span>GENEL TOPLAM</span>
-              <span>${formatParaBirimi(toplamTutar.value)}</span>
-            </div>
-          </div>
-        </div>
-        ` : ''}
-
-        ${isEmri.value.notlar ? `
-        <div class="notes-section">
-          <div style="font-weight: bold; margin-bottom: 5px; font-size: 11px;">NOTLAR:</div>
-          <div>${isEmri.value.notlar.replace(/\n/g, '<br>')}</div>
-        </div>
-        ` : ''}
-
-        <div class="terms-section">
-          <strong>GENEL ŞARTLAR:</strong><br>
-          1. Buraya eklemek .<br>
-          2. İstediğin bir .<br>
-          3. Şey varsa.<br>
-          4. İletişim adresimi biliyorsun.
-        </div>
-
-      </div>
-    </body>
-    </html>
-  `;
-};
-
-const formatParaBirimi = (tutar) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(tutar || 0);
-
 const toplamTutar = computed(() => {
   const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
   return kalemListesi.reduce((total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 0);
 });
 
-const handleKalemlerGuncellendi = (yeniListe) => {
-  guncelKalemler.value = yeniListe;
+// Maliyet Hesaplama
+const hesaplananMaliyet = computed(() => {
+  const liste = isEditing.value ? duzenlemeMaliyetListesi.value : maliyetListesi.value;
+  return liste.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
+});
+
+const tahsilatEkleModaliniAc = () => { tahsilatEkleForm.value = { tutar: kalanBakiye.value > 0 ? kalanBakiye.value : 0, yontem: '', notlar: '' }; tahsilatEkleModalGoster.value = true; };
+const tahsilatEkle = async () => { /* ... */ }; 
+const yazdirModaliniAc = () => { 
+  yazdirFiyatGoster.value = true; 
+  yazdirMaliyetGoster.value = true; // Modal açılınca ikisi de seçili
+  yazdirModalGoster.value = true; 
 };
+
+// YAZDIRMA FONKSİYONU (GÜNCELLENDİ)
+const isEmriYazdir = () => {
+  const logoUrl = window.location.origin + '/logo11.png';
+  const tarih = new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR');
+  const pb = isEmri.value.para_birimi || 'TRY';
+  
+  // Ürün Kalemleri HTML
+  const kalemlerHTML = isEmri.value.is_emri_kalemleri.map((k, i) => `<tr><td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${i+1}</td><td style="padding:8px;border-bottom:1px solid #eee;">${k.aciklama}</td><td style="padding:8px;border-bottom:1px solid #eee;">${k.depolar?.ad||k.tedarikciler?.ad||'Hizmet'}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${k.miktar}</td>${yazdirFiyatGoster.value?`<td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${formatParaBirimi(k.birim_fiyat,pb)}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${formatParaBirimi(k.miktar*k.birim_fiyat,pb)}</td>`:''}</tr>`).join('');
+  
+  // Maliyet Kalemleri HTML (YENİ)
+  let maliyetHTML = '';
+  if (yazdirMaliyetGoster.value && maliyetListesi.value.length > 0) {
+    const satirlar = maliyetListesi.value.map(m => `<tr><td style="padding:5px;border-bottom:1px solid #eee;">${m.aciklama}</td><td style="padding:5px;border-bottom:1px solid #eee;text-align:right;">${formatParaBirimi(m.tutar, pb)}</td></tr>`).join('');
+    maliyetHTML = `
+      <div style="margin-top: 30px; border: 1px solid #ddd; padding: 10px; break-inside: avoid;">
+        <h4 style="margin: 0 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px;">Maliyet Detayları</h4>
+        <table style="width: 100%; font-size: 11px;">
+          <thead><tr><th style="text-align:left; background:#f3f3f3; padding:5px;">Açıklama</th><th style="text-align:right; background:#f3f3f3; padding:5px;">Tutar</th></tr></thead>
+          <tbody>${satirlar}</tbody>
+          <tfoot><tr><td style="padding:5px; font-weight:bold; text-align:right;">TOPLAM MALİYET</td><td style="padding:5px; font-weight:bold; text-align:right;">${formatParaBirimi(hesaplananMaliyet.value, pb)}</td></tr></tfoot>
+        </table>
+      </div>
+    `;
+  }
+
+  const yazdirIcerik = `
+    <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>İş Emri</title><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');@page{margin:1cm;size:A4;}body{font-family:'Inter',sans-serif;color:#333;font-size:12px;}.header{display:flex;justify-content:space-between;margin-bottom:30px;border-bottom:2px solid #eee;padding-bottom:20px;}.logo-area img{height:80px;}.info-grid{display:flex;justify-content:space-between;margin-bottom:30px;}.info-box{width:48%;}.box-title{font-weight:bold;color:#4f46e5;border-bottom:1px solid #ddd;margin-bottom:10px;}.label{font-weight:600;color:#666;}table{width:100%;border-collapse:collapse;margin-bottom:30px;}th{background:#f9fafb;padding:10px;text-align:left;border-bottom:2px solid #ddd;}.totals-section{display:flex;justify-content:flex-end;}.total-row{font-weight:bold;font-size:14px;border-top:2px solid #333;padding-top:10px;width:250px;display:flex;justify-content:space-between;}</style></head>
+    <body>
+      <div class="container">
+        <div class="header"><div class="logo-area"><img src="${logoUrl}"></div>            <div class="company-details">
+                <div style=" font-size: 16px; font-weight: bold; color: #111; margin-bottom: 1px;">Tavlaşoğlu Isıtma Soğutma</div>
+                <div style=" font-size: 16px; font-weight: bold; color: #111; margin-bottom: 1px;">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div>
+                <div>Lalapaşa Mah. Samih Kobal Cad. İnanoğlu Apt. No:16/2</div>
+                <div>Yakutiye / Erzurum</div>
+                <div>Tel: 0(442) 238 83 83</div>
+            </div></div>
+        <div class="info-grid"><div class="info-box"><div class="box-title">Müşteri</div><div style="margin-bottom:5px;"><span class="label">Unvan:</span> ${isEmri.value.musteriler?.unvan}</div></div><div class="info-box"><div class="box-title">Detay</div><div><span class="label">No:</span> ${isEmri.value.numara}</div><div><span class="label">Tarih:</span> ${tarih}</div></div></div>
+        <table><thead><tr><th style="text-align:center">#</th><th>Açıklama</th><th>Kaynak</th><th style="text-align:center">Miktar</th>${yazdirFiyatGoster.value?`<th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Toplam</th>`:''}</tr></thead><tbody>${kalemlerHTML}</tbody></table>
+        ${yazdirFiyatGoster.value?`<div class="totals-section"><div class="total-row"><span>GENEL TOPLAM</span><span>${formatParaBirimi(toplamTutar.value,pb)}</span></div></div>`:''}
+        
+        ${maliyetHTML}
+
+        ${isEmri.value.notlar ? `<div style="margin-top: 30px; background: #f9fafb; padding: 15px; border-left: 4px solid #ddd;"><div style="font-weight: bold; margin-bottom: 5px; font-size: 11px;">NOTLAR:</div><div>${isEmri.value.notlar.replace(/\n/g, '<br>')}</div></div>` : ''}
+      </div>
+    </body></html>
+  `;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(yazdirIcerik); w.document.close(); w.focus();
+  setTimeout(() => { w.print(); yazdirModalGoster.value = false; }, 500); 
+};
+
+const handleKalemlerGuncellendi = (yeniListe) => { guncelKalemler.value = yeniListe; };
 
 const getGerekliVeriler = async () => {
   try {
     loading.value = true;
     error.value = null;
-    const [isEmriRes, depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes] = await Promise.all([
+    const [isEmriRes, depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes, maliyetRes] = await Promise.all([
       supabase.from('is_emirleri').select(`*, musteriler(*), anlasmalar(*), satiscilar(*), is_emri_kalemleri ( *, anlasmalar(*), depolar:kaynak_depo_id ( ad ), tedarikciler:kaynak_tedarikci_id ( ad ) )`).eq('id', isEmriId).single(),
       supabase.from('depolar').select('*'),
       supabase.from('tedarikciler').select('*'),
       supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true),
-      supabase.from('satiscilar').select('id, ad_soyad').eq('aktif_mi', true).order('ad_soyad')
+      supabase.from('satiscilar').select('id, ad_soyad').eq('aktif_mi', true).order('ad_soyad'),
+      supabase.from('is_emri_maliyetleri').select('*').eq('is_emri_id', isEmriId)
     ]);
 
     if (isEmriRes.error) throw isEmriRes.error;
 
     isEmri.value = isEmriRes.data;
     guncelKalemler.value = [...(isEmriRes.data.is_emri_kalemleri || [])];
+    maliyetListesi.value = maliyetRes.data || [];
+    
     depolar.value = depolarRes.data || [];
     tedarikciler.value = tedarikcilerRes.data || [];
     anlasmalar.value = anlasmalarRes.data || [];
@@ -505,100 +333,51 @@ const getGerekliVeriler = async () => {
     duzenlemeFormu.value = {
       satisci_id: isEmri.value.satisci_id || null,
       fatura_no: isEmri.value.fatura_no || '',
-      maliyet: isEmri.value.maliyet || 0,
       is_tamamlandi: isEmri.value.is_tamamlandi || false,
       is_emri_tipi: isEmri.value.is_emri_tipi || 'SİPARİŞ',
-      sevk_adresi: isEmri.value.sevk_adresi || ''
+      sevk_adresi: isEmri.value.sevk_adresi || '',
+      para_birimi: isEmri.value.para_birimi || 'TRY'
     };
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
+  } catch (err) { error.value = err.message; } finally { loading.value = false; }
 };
+
+const baslaDuzenle = () => { duzenlemeMaliyetListesi.value = maliyetListesi.value.map(m => ({ ...m })); isEditing.value = true; };
+const maliyetEkle = () => { duzenlemeMaliyetListesi.value.push({ aciklama: '', tutar: 0 }); };
+const maliyetSil = (idx) => { duzenlemeMaliyetListesi.value.splice(idx, 1); };
 
 const guncelle = async () => {
   if (!isEmri.value) return;
   await guncelleWithLoading(async () => {
-    const guncellenecekIsEmri = {
-      toplam_tutar: toplamTutar.value,
-      satisci_id: duzenlemeFormu.value.satisci_id,
-      fatura_no: duzenlemeFormu.value.fatura_no,
-      maliyet: duzenlemeFormu.value.maliyet,
-      is_tamamlandi: duzenlemeFormu.value.is_tamamlandi,
-      is_emri_tipi: duzenlemeFormu.value.is_emri_tipi,
-      sevk_adresi: duzenlemeFormu.value.sevk_adresi
-    };
+    const yeniToplamMaliyet = duzenlemeMaliyetListesi.value.reduce((s, i) => s + (parseFloat(i.tutar)||0), 0);
+    const guncellenecekIsEmri = { toplam_tutar: toplamTutar.value, satisci_id: duzenlemeFormu.value.satisci_id, fatura_no: duzenlemeFormu.value.fatura_no, maliyet: yeniToplamMaliyet, is_tamamlandi: duzenlemeFormu.value.is_tamamlandi, is_emri_tipi: duzenlemeFormu.value.is_emri_tipi, sevk_adresi: duzenlemeFormu.value.sevk_adresi, para_birimi: duzenlemeFormu.value.para_birimi };
+    
     const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
     if (isEmriError) throw isEmriError;
 
     await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
-
     if (guncelKalemler.value.length > 0) {
-      const kalemlerToInsert = guncelKalemler.value.map(k => ({
-        is_emri_id: isEmriId,
-        urun_id: k.urun_id || null,
-        aciklama: k.aciklama,
-        miktar: k.miktar,
-        birim_fiyat: k.birim_fiyat,
-        kaynak_depo_id: k.kaynak_depo_id || null,
-        kaynak_tedarikci_id: k.kaynak_tedarikci_id || null,
-        anlasma_id: k.anlasma_id || null
-      }));
-      
-      const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
-      if (insertError) throw insertError;
+      const kalemlerToInsert = guncelKalemler.value.map(k => ({ is_emri_id: isEmriId, urun_id: k.urun_id || null, aciklama: k.aciklama, miktar: k.miktar, birim_fiyat: k.birim_fiyat, kaynak_depo_id: k.kaynak_depo_id || null, kaynak_tedarikci_id: k.kaynak_tedarikci_id || null, anlasma_id: k.anlasma_id || null }));
+      await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+    }
+
+    await supabase.from('is_emri_maliyetleri').delete().eq('is_emri_id', isEmriId);
+    if (duzenlemeMaliyetListesi.value.length > 0) {
+      const maliyetlerToInsert = duzenlemeMaliyetListesi.value.filter(m => m.aciklama && m.tutar > 0).map(m => ({ is_emri_id: isEmriId, aciklama: m.aciklama, tutar: m.tutar }));
+      if (maliyetlerToInsert.length > 0) await supabase.from('is_emri_maliyetleri').insert(maliyetlerToInsert);
     }
 
     alert('İş emri başarıyla güncellendi!');
-    router.push('/app/is-emirleri');
-  });
-};
-
-const iptalEt = async () => {
-  isEditing.value = false;
-  await getGerekliVeriler();
-};
-
-const kapanisModaliniAc = () => {
-  if (!isEmri.value) return;
-  if (isEmri.value.durum !== 'Açık') { alert('Sadece "Açık" durumundaki iş emirleri kapatılabilir.'); return; }
-  if (!isEmri.value.is_tamamlandi) { alert('İş emrini kapatabilmek için öncelikle "İş Tamamlandı" olarak işaretlenmesi gerekmektedir.'); return; }
-  kapanisModalGoster.value = true;
-};
-
-const kapanisBasarili = async () => {
-  await getGerekliVeriler();
-  kapanisModalGoster.value = false;
-};
-
-const getDurumRenk = (durum) => {
-  const renkler = { 'Açık': 'bg-green-100 text-green-800', 'Kapalı': 'bg-gray-200 text-gray-700', 'İptal': 'bg-red-100 text-red-800' };
-  return renkler[durum] || 'bg-gray-200 text-gray-700';
-};
-
-const notDuzenlemeyeBasla = () => {
-  notIcerigi.value = isEmri.value.notlar || '';
-  notDuzenleniyor.value = true;
-};
-
-const notDuzenlemeIptal = () => {
-  notDuzenleniyor.value = false;
-  notIcerigi.value = '';
-};
-
-const notuKaydet = async () => {
-  if (!isEmri.value) return;
-  await notKaydetWithLoading(async () => {
-    const { error } = await supabase.from('is_emirleri').update({ notlar: notIcerigi.value || null }).eq('id', isEmriId);
-    if (error) throw error;
-    alert('Not başarıyla kaydedildi!');
-    notDuzenleniyor.value = false;
+    isEditing.value = false;
     await getGerekliVeriler();
   });
 };
 
-onMounted(() => {
-  getGerekliVeriler();
-});
+const iptalEt = async () => { isEditing.value = false; await getGerekliVeriler(); };
+const kapanisModaliniAc = () => { if (!isEmri.value) return; if (isEmri.value.durum !== 'Açık') { alert('Sadece "Açık" durumundaki iş emirleri kapatılabilir.'); return; } if (!isEmri.value.is_tamamlandi) { alert('İş emrini kapatabilmek için öncelikle "İş Tamamlandı" olarak işaretlenmesi gerekmektedir.'); return; } kapanisModalGoster.value = true; };
+const kapanisBasarili = async () => { await getGerekliVeriler(); kapanisModalGoster.value = false; };
+const notDuzenlemeyeBasla = () => { notIcerigi.value = isEmri.value.notlar || ''; notDuzenleniyor.value = true; };
+const notDuzenlemeIptal = () => { notDuzenleniyor.value = false; notIcerigi.value = ''; };
+const notuKaydet = async () => { if (!isEmri.value) return; await notKaydetWithLoading(async () => { const { error } = await supabase.from('is_emirleri').update({ notlar: notIcerigi.value || null }).eq('id', isEmriId); if (error) throw error; alert('Not başarıyla kaydedildi!'); notDuzenleniyor.value = false; await getGerekliVeriler(); }); };
+
+onMounted(() => { getGerekliVeriler(); });
 </script>

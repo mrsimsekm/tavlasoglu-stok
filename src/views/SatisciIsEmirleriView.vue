@@ -24,6 +24,7 @@
           <select v-model="filtreler.durum" @change="isEmirleriniYukle" class="w-full p-2 border rounded-md bg-white">
             <option value="">Tümü</option>
             <option value="Açık">Açık</option>
+            <option value="Kapalı">Kapalı</option>
             <option value="Tamamlandı">Tamamlandı</option>
           </select>
         </div>
@@ -66,23 +67,48 @@
         </div>
       </div>
 
-      <!-- Özet İstatistikler -->
+      <!-- Özet İstatistikler (Çoklu Para Birimi) -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+        <!-- Toplam İş Emri -->
         <div class="bg-blue-50 p-4 rounded-lg">
-          <p class="text-sm text-blue-600 font-semibold">Toplam İş Emri</p>
+          <p class="text-sm text-blue-600 font-semibold mb-1">Toplam İş Emri</p>
           <p class="text-2xl font-bold text-blue-700">{{ isEmirleri.length }}</p>
         </div>
+
+        <!-- Toplam Tutar -->
         <div class="bg-green-50 p-4 rounded-lg">
-          <p class="text-sm text-green-600 font-semibold">Toplam Tutar</p>
-          <p class="text-2xl font-bold text-green-700">{{ formatParaBirimi(toplamTutar) }}</p>
+          <p class="text-sm text-green-600 font-semibold mb-2">Toplam Tutar</p>
+          <div v-if="Object.keys(toplamTutarByCurrency).length > 0">
+            <div v-for="(tutar, pb) in toplamTutarByCurrency" :key="pb" class="flex justify-between text-sm mb-1 border-b border-green-200 pb-1 last:border-0 last:pb-0">
+              <span class="font-bold text-green-800">{{ pb }}:</span>
+              <span class="font-bold text-green-700">{{ formatParaBirimi(tutar, pb) }}</span>
+            </div>
+          </div>
+          <div v-else class="text-green-700 font-bold">0,00 ₺</div>
         </div>
+
+        <!-- Toplam Maliyet -->
         <div class="bg-orange-50 p-4 rounded-lg">
-          <p class="text-sm text-orange-600 font-semibold">Toplam Maliyet</p>
-          <p class="text-2xl font-bold text-orange-700">{{ formatParaBirimi(toplamMaliyet) }}</p>
+          <p class="text-sm text-orange-600 font-semibold mb-2">Toplam Maliyet</p>
+          <div v-if="Object.keys(toplamMaliyetByCurrency).length > 0">
+            <div v-for="(tutar, pb) in toplamMaliyetByCurrency" :key="pb" class="flex justify-between text-sm mb-1 border-b border-orange-200 pb-1 last:border-0 last:pb-0">
+              <span class="font-bold text-orange-800">{{ pb }}:</span>
+              <span class="font-bold text-orange-700">{{ formatParaBirimi(tutar, pb) }}</span>
+            </div>
+          </div>
+          <div v-else class="text-orange-700 font-bold">0,00 ₺</div>
         </div>
+
+        <!-- Net Kar -->
         <div class="bg-purple-50 p-4 rounded-lg">
-          <p class="text-sm text-purple-600 font-semibold">Net Kar</p>
-          <p class="text-2xl font-bold text-purple-700">{{ formatParaBirimi(toplamTutar - toplamMaliyet) }}</p>
+          <p class="text-sm text-purple-600 font-semibold mb-2">Net Kar</p>
+          <div v-if="Object.keys(netKarByCurrency).length > 0">
+            <div v-for="(tutar, pb) in netKarByCurrency" :key="pb" class="flex justify-between text-sm mb-1 border-b border-purple-200 pb-1 last:border-0 last:pb-0">
+              <span class="font-bold text-purple-800">{{ pb }}:</span>
+              <span class="font-bold text-purple-700">{{ formatParaBirimi(tutar, pb) }}</span>
+            </div>
+          </div>
+          <div v-else class="text-purple-700 font-bold">0,00 ₺</div>
         </div>
       </div>
     </div>
@@ -133,15 +159,18 @@
                   {{ isEmri.durum }}
                 </span>
               </td>
+              
+              <!-- Tutar Alanları (Para Birimine Göre) -->
               <td class="px-5 py-4 text-right font-semibold text-sm text-blue-600">
-                {{ formatParaBirimi(isEmri.toplam_tutar || 0) }}
+                {{ formatParaBirimi(isEmri.toplam_tutar || 0, isEmri.para_birimi) }}
               </td>
               <td class="px-5 py-4 text-right font-semibold text-sm text-orange-600">
-                {{ formatParaBirimi(isEmri.maliyet || 0) }}
+                {{ formatParaBirimi(isEmri.maliyet || 0, isEmri.para_birimi) }}
               </td>
               <td class="px-5 py-4 text-right font-semibold text-sm" :class="(isEmri.toplam_tutar - isEmri.maliyet) > 0 ? 'text-green-600' : 'text-red-600'">
-                {{ formatParaBirimi((isEmri.toplam_tutar || 0) - (isEmri.maliyet || 0)) }}
+                {{ formatParaBirimi((isEmri.toplam_tutar || 0) - (isEmri.maliyet || 0), isEmri.para_birimi) }}
               </td>
+              
               <td class="px-5 py-4 text-center">
                 <RouterLink 
                   :to="`/app/is-emirleri/${isEmri.id}`"
@@ -181,18 +210,45 @@ const filtreler = ref({
   bitis_tarihi: null
 });
 
-const toplamTutar = computed(() => {
-  return isEmirleri.value.reduce((toplam, ie) => toplam + (parseFloat(ie.toplam_tutar) || 0), 0);
+// Toplam Tutar (Para Birimine Göre Gruplu)
+const toplamTutarByCurrency = computed(() => {
+  const totals = {};
+  isEmirleri.value.forEach(ie => {
+    const pb = ie.para_birimi || 'TRY';
+    if (!totals[pb]) totals[pb] = 0;
+    totals[pb] += parseFloat(ie.toplam_tutar || 0);
+  });
+  return totals;
 });
 
-const toplamMaliyet = computed(() => {
-  return isEmirleri.value.reduce((toplam, ie) => toplam + (parseFloat(ie.maliyet) || 0), 0);
+// Toplam Maliyet (Para Birimine Göre Gruplu)
+const toplamMaliyetByCurrency = computed(() => {
+  const totals = {};
+  isEmirleri.value.forEach(ie => {
+    const pb = ie.para_birimi || 'TRY';
+    if (!totals[pb]) totals[pb] = 0;
+    totals[pb] += parseFloat(ie.maliyet || 0);
+  });
+  return totals;
 });
 
-const formatParaBirimi = (tutar) => {
+// Net Kar (Para Birimine Göre Gruplu)
+const netKarByCurrency = computed(() => {
+  const totals = {};
+  isEmirleri.value.forEach(ie => {
+    const pb = ie.para_birimi || 'TRY';
+    const kar = (parseFloat(ie.toplam_tutar || 0) - parseFloat(ie.maliyet || 0));
+    if (!totals[pb]) totals[pb] = 0;
+    totals[pb] += kar;
+  });
+  return totals;
+});
+
+// Format (Para Birimi Destekli)
+const formatParaBirimi = (tutar, currency = 'TRY') => {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
-    currency: 'TRY',
+    currency: currency || 'TRY',
     minimumFractionDigits: 2
   }).format(tutar || 0);
 };

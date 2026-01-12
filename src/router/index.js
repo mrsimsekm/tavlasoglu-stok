@@ -75,7 +75,6 @@ const router = createRouter({
           name: 'is-emri-detay', 
           component: IsEmriDetayView 
         },
-        // 2. ROTA EKLENDİ
         {
           path: 'alacaklar',
           name: 'alacaklar',
@@ -102,21 +101,22 @@ const router = createRouter({
           name: 'satisci-performans',
           component: SatisciPerformansView,
           meta: {
-            roles: ['yonetici'] // Sadece yetkililer görsün
+            roles: ['yonetici']
           }
         },
+        // --- PROFORMA ROTALARI (GÜNCELLENDİ: /app/ önekleri kaldırıldı) ---
         {
-          path: '/app/proformalar',
+          path: 'proformalar',
           name: 'proformalar',
           component: () => import('../views/ProformalarView.vue')
         },
         {
-          path: '/app/proformalar/yeni',
+          path: 'proformalar/yeni',
           name: 'yeni-proforma',
           component: () => import('../views/ProformaFormView.vue')
         },
         {
-          path: '/app/proformalar/:id',
+          path: 'proformalar/:id',
           name: 'proforma-detay',
           component: () => import('../views/ProformaDetayView.vue')
         }
@@ -126,11 +126,10 @@ const router = createRouter({
   ]
 })
 
-// YETKİ KONTROLÜ - Yetkisiz kullanıcılar için tam engelleme
+// YETKİ KONTROLÜ
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
-  // Profil bilgisi henüz yüklenmediyse fetchUser'ı çalıştır
   if (userStore.profile === null && !userStore.loading) {
     await userStore.fetchUser()
   }
@@ -138,32 +137,18 @@ router.beforeEach(async (to, from, next) => {
   const isAuthenticated = !!userStore.user
   const userRole = userStore.profile?.rol
 
-  console.log('Router kontrol:', {
-    gidilenSayfa: to.path,
-    authenticated: isAuthenticated,
-    rol: userRole,
-    isYetkisiz: userStore.isYetkisiz
-  })
-
-  // 1. YETKİSİZ KULLANICI KONTROLÜ (EN ÖNCELİKLİ)
-  // Yetkisiz kullanıcı SADECE /yetkisiz sayfasını görebilir
   if (isAuthenticated && userStore.isYetkisiz) {
     if (to.path !== '/yetkisiz') {
-      console.warn('❌ Yetkisiz kullanıcı engellendi:', to.path)
       return next({ name: 'yetkisiz', replace: true })
     } else {
-      // Yetkisiz sayfasındaysa izin ver
       return next()
     }
   }
 
-  // 2. Yetkisiz sayfasına yetkili kullanıcı erişmeye çalışıyorsa
   if (to.path === '/yetkisiz' && userStore.isYetkili) {
-    console.log('✅ Yetkili kullanıcı dashboard\'a yönlendiriliyor')
     return next({ name: 'dashboard', replace: true })
   }
 
-  // 3. Giriş yapmış kullanıcı login sayfasına gitmeye çalışırsa
   if (to.name === 'login' && isAuthenticated) {
     if (userStore.isYetkisiz) {
       return next({ name: 'yetkisiz', replace: true })
@@ -171,24 +156,18 @@ router.beforeEach(async (to, from, next) => {
     return next({ name: 'dashboard', replace: true })
   }
   
-  // 4. Gidilmek istenen sayfa yetki gerektiriyor mu?
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   if (requiresAuth && !isAuthenticated) {
-    console.log('❌ Giriş yapılmamış, login\'e yönlendiriliyor')
     return next({ name: 'login' })
   }
 
-  // 5. Gidilmek istenen sayfa özel roller gerektiriyor mu?
   const requiredRoles = to.meta.roles
   if (requiredRoles && Array.isArray(requiredRoles) && requiredRoles.length > 0) {
     if (!requiredRoles.includes(userRole)) {
-      console.warn(`❌ Yetkisiz erişim: Kullanıcı rolü '${userRole}', gereken roller '${requiredRoles.join(', ')}'`)
       return next({ name: 'dashboard', replace: true })
     }
   }
   
-  // Tüm kontrollerden geçti
-  console.log('✅ Erişim izni verildi:', to.path)
   next()
 })
 

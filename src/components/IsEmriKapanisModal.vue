@@ -17,16 +17,16 @@
             </div>
             <div>
               <p class="text-xs text-gray-500">Toplam Tutar</p>
-              <p class="text-md font-bold text-blue-600">{{ formatParaBirimi(isEmri.toplam_tutar) }}</p>
+              <p class="text-md font-bold text-blue-600">{{ formatParaBirimi(isEmri.toplam_tutar, isEmri.para_birimi) }}</p>
             </div>
             <div>
               <p class="text-xs text-gray-500">Daha Önce Ödenen</p>
-              <p class="text-md font-semibold text-green-600">{{ formatParaBirimi(isEmri.odenen_tutar || 0) }}</p>
+              <p class="text-md font-semibold text-green-600">{{ formatParaBirimi(isEmri.odenen_tutar || 0, isEmri.para_birimi) }}</p>
             </div>
           </div>
           <div class="mt-3 pt-3 border-t border-gray-200">
             <p class="text-xs text-gray-500">Kalan Tutar</p>
-            <p class="text-2xl font-bold text-red-600">{{ formatParaBirimi(kalanTutar) }}</p>
+            <p class="text-2xl font-bold text-red-600">{{ formatParaBirimi(kalanTutar, isEmri.para_birimi) }}</p>
           </div>
         </div>
 
@@ -80,9 +80,14 @@
           <div class="space-y-3">
             <div>
               <label class="label-style">Tahsilat Tutarı</label>
-              <input v-model.number="tahsilatForm.tutar" type="number" step="0.01" :max="kalanTutar" class="form-input" placeholder="Tahsil edilecek tutar">
+              <div class="relative mt-1">
+                <input v-model.number="tahsilatForm.tutar" type="number" step="0.01" :max="kalanTutar" class="form-input pr-16" placeholder="Tahsil edilecek tutar">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span class="text-gray-500 font-bold text-sm">{{ isEmri.para_birimi || 'TRY' }}</span>
+                </div>
+              </div>
               <div class="flex justify-between mt-1">
-                <p class="text-xs text-gray-500">Maksimum: {{ formatParaBirimi(kalanTutar) }}</p>
+                <p class="text-xs text-gray-500">Maksimum: {{ formatParaBirimi(kalanTutar, isEmri.para_birimi) }}</p>
                 <button @click="tahsilatForm.tutar = kalanTutar" type="button" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">Tümünü Tahsil Et</button>
               </div>
             </div>
@@ -114,7 +119,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-600 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
             <div>
               <p class="text-sm font-semibold text-orange-800">Alacak Oluşacak!</p>
-              <p class="text-xs text-orange-700">Kalan {{ formatParaBirimi(kalanTutar - (tahsilatForm.tutar || 0)) }} tutarı için alacak kaydı oluşturulacak.</p>
+              <p class="text-xs text-orange-700">Kalan {{ formatParaBirimi(kalanTutar - (tahsilatForm.tutar || 0), isEmri.para_birimi) }} tutarı için alacak kaydı oluşturulacak.</p>
             </div>
           </div>
         </div>
@@ -240,7 +245,6 @@ const isEmriKapat = async () => {
   try {
     islemYapiliyor.value = true;
 
-    // 1. Eğer tahsilat yapılacaksa önce ödeme kaydı oluştur
     if (kalanTutar.value > 0 && tahsilatForm.value.tutar > 0) {
       const { error: odemeError } = await supabase.from('odemeler').insert([{
         is_emri_id: props.isEmri.id,
@@ -256,7 +260,6 @@ const isEmriKapat = async () => {
       if (guncellemeError) throw guncellemeError;
     }
 
-    // 2. İş emrini kapat (durum ve diğer alanları güncelle)
     const guncelNotlar = kapanisNotlari.value 
       ? (props.isEmri.notlar ? props.isEmri.notlar + '\n\n[Kapanış]: ' + kapanisNotlari.value : '[Kapanış]: ' + kapanisNotlari.value)
       : props.isEmri.notlar;
@@ -274,7 +277,6 @@ const isEmriKapat = async () => {
       .eq('id', props.isEmri.id);
     if (durumError) throw durumError;
 
-    // 3. Eğer hala kalan tutar varsa alacak oluştur
     const yeniKalanTutar = kalanTutar.value - (tahsilatForm.value.tutar || 0);
     if (yeniKalanTutar > 0) {
       const { data: alacakData, error: alacakError } = await supabase.rpc('alacak_olustur', { p_is_emri_id: props.isEmri.id });
@@ -282,7 +284,7 @@ const isEmriKapat = async () => {
       if (alacakData && !alacakData.success) console.error('Alacak oluşturma uyarısı:', alacakData.message);
     }
 
-    alert('İş emri başarıyla kapatıldı!' + (yeniKalanTutar > 0 ? '\n\nAlacak kaydı oluşturuldu: ' + formatParaBirimi(yeniKalanTutar) : ''));
+    alert('İş emri başarıyla kapatıldı!' + (yeniKalanTutar > 0 ? '\n\nAlacak kaydı oluşturuldu: ' + formatParaBirimi(yeniKalanTutar, props.isEmri.para_birimi) : ''));
     emit('success');
     emit('close');
   } catch (error) {
@@ -293,8 +295,13 @@ const isEmriKapat = async () => {
   }
 };
 
-const formatParaBirimi = (tutar) => {
-  return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(tutar || 0);
+// GÜNCELLENDİ: Para Birimi Desteği
+const formatParaBirimi = (tutar, currency = 'TRY') => {
+  return new Intl.NumberFormat('tr-TR', { 
+    style: 'currency', 
+    currency: currency || 'TRY', 
+    minimumFractionDigits: 2 
+  }).format(tutar || 0);
 };
 
 onMounted(() => {
