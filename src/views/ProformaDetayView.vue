@@ -381,7 +381,7 @@ const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
 
-const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'ISI POMPASI', 'İŞÇİLİK', 'YEDEK PARÇA'];
+const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'ISI POMPASI', 'DX', 'İŞÇİLİK', 'YEDEK PARÇA'];
 
 // --- VERİ ÇEKME ---
 const getDetay = async () => {

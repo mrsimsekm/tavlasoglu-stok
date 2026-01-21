@@ -181,7 +181,7 @@ const aramaMetni = ref('');
 const durumFiltresi = ref('Tümü');
 const secilenKategoriler = ref([]);
 
-const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'ISI POMPASI', 'İŞÇİLİK', 'YEDEK PARÇA'];
+const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'DX', 'ISI POMPASI', 'İŞÇİLİK', 'YEDEK PARÇA'];
 
 const verileriGetir = async () => {
   loading.value = true;

@@ -215,7 +215,13 @@ const KATEGORI_SARTLARI = {
 • İç ve dış ünitelerde konsol ihtiyacı doğması halinde tarafımıza ait değildir.
 • Projeye istinaden fiyat verilmiş olup değişikliklerin tarafımıza bildirilmesi gerekmektedir.`,
 
-  'SOĞUK ODA': `\nDX
+  'SOĞUK ODA': `\nSOĞUK ODA
+• Nakliye ve montaj dahildir. Şantiye teslim olup vinç ve hammaliye hariçtir.
+• Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.
+• İç ve dış ünitelerde konsol ihtiyacı doğması halinde tarafımıza ait değildir.
+• Projeye istinaden fiyat verilmiş olup değişikliklerin tarafımıza bildirilmesi gerekmektedir.`,
+
+  'DX': `\nDX
 • Nakliye ve montaj dahildir. Şantiye teslim olup vinç ve hammaliye hariçtir.
 • Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.
 • İç ve dış ünitelerde konsol ihtiyacı doğması halinde tarafımıza ait değildir.
