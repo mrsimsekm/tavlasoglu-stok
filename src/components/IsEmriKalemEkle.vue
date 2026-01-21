@@ -86,9 +86,14 @@
       
       <!-- BİRİM FİYAT -->
       <div class="col-span-6 md:col-span-2">
-        <!-- Para birimi etikette gösteriliyor -->
-        <label class="label-style">Birim Fiyat ({{ props.paraBirimi }})</label>
-        <input v-model.number="yeniKalem.birim_fiyat" type="number" step="0.01" class="form-input mt-1" />
+        <label class="label-style">
+            Birim Fiyat
+            <span class="text-xs font-normal text-gray-500 block">({{ kdvDahil ? 'KDV Dahil' : 'KDV Hariç' }})</span>
+        </label>
+        <div class="relative mt-1">
+            <input v-model.number="yeniKalem.birim_fiyat" type="number" step="0.01" class="form-input pr-12" />
+            <span class="absolute right-3 top-2 text-gray-400 text-sm">{{ props.paraBirimi }}</span>
+        </div>
       </div>
 
       <!-- EKLE BUTONU -->
@@ -109,14 +114,19 @@
               <th v-if="!proformaModu" class="th-style text-center">Kaynak</th>
               <th v-if="!proformaModu" class="th-style text-center">Anlaşma</th>
               <th class="th-style text-center">Miktar</th>
-              <th class="th-style text-right">Birim Fiyat</th>
+              <th class="th-style text-right">
+                Birim Fiyat <br>
+                <span class="text-[10px] text-gray-500 font-normal">({{ kdvDahil ? 'Dahil' : 'Hariç' }})</span>
+              </th>
+              <!-- KDV KOLONU -->
+              <th class="th-style text-right">KDV (%20)</th>
               <th class="th-style text-right">Toplam</th>
               <th class="th-style w-12"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="kalemler.length === 0">
-              <td :colspan="proformaModu ? 5 : 7" class="text-center py-4 text-gray-500">Henüz malzeme veya hizmet eklenmedi.</td>
+              <td :colspan="proformaModu ? 6 : 8" class="text-center py-4 text-gray-500">Henüz malzeme veya hizmet eklenmedi.</td>
             </tr>
             <tr v-for="(kalem, index) in kalemler" :key="index">
               <td class="td-style">{{ kalem.aciklama }}</td>
@@ -128,9 +138,18 @@
               
               <td class="td-style text-center">{{ kalem.miktar }}</td>
               
-              <!-- DİNAMİK PARA BİRİMİ FORMATI -->
+              <!-- Birim Fiyat (Giriş Değeri) -->
               <td class="td-style text-right">{{ formatPara(kalem.birim_fiyat) }}</td>
-              <td class="td-style text-right font-semibold">{{ formatPara(kalem.miktar * kalem.birim_fiyat) }}</td>
+
+              <!-- KDV Hesabı -->
+              <td class="td-style text-right text-gray-600 text-xs">
+                {{ formatPara(hesaplaSatirKDV(kalem)) }}
+              </td>
+
+              <!-- Toplam Hesabı -->
+              <td class="td-style text-right font-bold text-gray-800">
+                {{ formatPara(hesaplaSatirToplam(kalem)) }}
+              </td>
               
               <td class="td-style text-center">
                 <button @click="kalemSil(index)" class="text-red-500 hover:text-red-700">
@@ -165,7 +184,8 @@ const props = defineProps({
   anlasmalar: Array,
   varsayilanAnlasma: Object,
   proformaModu: { type: Boolean, default: false },
-  paraBirimi: { type: String, default: 'TRY' } // YENİ PROP
+  paraBirimi: { type: String, default: 'TRY' },
+  kdvDahil: { type: Boolean, default: true } // YENİ PROP: KDV Dahil/Hariç
 });
 
 const emit = defineEmits(['kalemler-guncellendi']);
@@ -201,6 +221,30 @@ const formatPara = (val) => {
     currency: props.paraBirimi || 'TRY' 
   }).format(val || 0);
 };
+
+// --- YENİ HESAPLAMA MANTIĞI ---
+const hesaplaSatirToplam = (kalem) => {
+    const hamTutar = kalem.miktar * kalem.birim_fiyat;
+    if (props.kdvDahil) {
+        // Eğer KDV dahilse, giriş yapılan birim fiyat son fiyattır.
+        return hamTutar;
+    } else {
+        // Eğer KDV hariçse, toplam tutar = hamTutar * 1.2
+        return hamTutar * 1.2;
+    }
+};
+
+const hesaplaSatirKDV = (kalem) => {
+    const hamTutar = kalem.miktar * kalem.birim_fiyat;
+    if (props.kdvDahil) {
+        // KDV Dahil ise, KDV = Toplam / 6 (örn: 120 TL toplam ise 20 TL KDV)
+        return hamTutar / 6;
+    } else {
+        // KDV Hariç ise, KDV = Ham Tutar * 0.20
+        return hamTutar * 0.20;
+    }
+};
+// ------------------------------
 
 onMounted(() => {
   if (props.initialKalemler) {

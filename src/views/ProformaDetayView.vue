@@ -80,6 +80,20 @@
                <span v-if="suresiGectiMi(proforma)" class="text-xs ml-1">(Süresi Doldu)</span>
              </p>
           </div>
+          <div>
+            <p class="label-style">KDV Durumu</p>
+            <p class="font-semibold">{{ proforma.kdv_dahil ? 'Dahil' : 'Hariç' }}</p>
+          </div>
+          <!-- KATEGORİLER GÖRÜNTÜLEME -->
+          <div class="col-span-2">
+            <p class="label-style">Kategoriler</p>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="kat in (proforma.kategoriler || [])" :key="kat" class="px-2 py-1 bg-gray-100 border rounded text-xs text-gray-600">
+                {{ kat }}
+              </span>
+              <span v-if="!proforma.kategoriler || proforma.kategoriler.length === 0" class="text-gray-400 text-sm italic">Etiket yok</span>
+            </div>
+          </div>
         </div>
 
         <!-- Düzenleme Modu -->
@@ -101,6 +115,24 @@
                <option value="GBP">GBP</option>
              </select>
           </div>
+          
+          <div class="flex items-center">
+            <label class="flex items-center cursor-pointer">
+              <input type="checkbox" v-model="form.kdv_dahil" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
+              <span class="ml-3 text-sm font-medium text-gray-700">KDV Dahil</span>
+            </label>
+          </div>
+          
+          <div class="col-span-3">
+             <label class="label-style">Kategoriler</label>
+             <div class="grid grid-cols-4 gap-2 border p-3 rounded bg-gray-50">
+                <label v-for="kat in kategoriListesi" :key="kat" class="flex items-center space-x-2 cursor-pointer">
+                  <input type="checkbox" :value="kat" v-model="form.kategoriler" class="h-4 w-4 text-indigo-600 rounded">
+                  <span class="text-xs">{{ kat }}</span>
+                </label>
+             </div>
+          </div>
+
           <div class="col-span-3">
             <label class="label-style">Notlar</label>
             <textarea v-model="form.notlar" rows="3" class="form-input" placeholder="Notları buraya giriniz..."></textarea>
@@ -119,9 +151,12 @@
            :anlasmalar="anlasmalar" 
            :initialKalemler="guncelKalemler" 
            :proforma-modu="true"
+           :para-birimi="form.para_birimi"
+           :kdv-dahil="form.kdv_dahil"
            @kalemler-guncellendi="handleKalemlerGuncellendi"
         />
 
+        <!-- DETAY TABLOSU (KAYNAK YOK, KDV VAR) -->
         <div v-else class="overflow-x-auto">
           <table class="min-w-full leading-normal">
             <thead>
@@ -129,7 +164,10 @@
                 <th class="th-style text-center">#</th>
                 <th class="th-style">Açıklama</th>
                 <th class="th-style text-center">Miktar</th>
-                <th class="th-style text-right">Birim Fiyat</th>
+                <th class="th-style text-right">
+                    Birim Fiyat
+                    <span class="block text-[10px] text-gray-500 font-normal">({{ proforma.kdv_dahil ? 'Dahil' : 'Hariç' }})</span>
+                </th>
                 <th class="th-style text-right">Tutar</th>
               </tr>
             </thead>
@@ -139,7 +177,8 @@
                 <td class="td-style font-medium">{{ kalem.aciklama }}</td>
                 <td class="td-style text-center font-bold">{{ kalem.miktar }}</td>
                 <td class="td-style text-right">{{ formatPara(kalem.birim_fiyat, proforma.para_birimi) }}</td>
-                <td class="td-style text-right font-bold text-gray-800">{{ formatPara(kalem.miktar * kalem.birim_fiyat, proforma.para_birimi) }}</td>
+                <!-- Hesaplanan satır toplamı -->
+                <td class="td-style text-right font-bold text-gray-800">{{ formatPara(hesaplaSatirTutar(kalem, proforma.kdv_dahil), proforma.para_birimi) }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -155,6 +194,35 @@
           </div>
         </div>
       </div>
+
+      <!-- ŞARTLAR VE KOŞULLAR (YENİ BÖLÜM) -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-semibold text-gray-700">Şartlar ve Koşullar</h2>
+            <!-- Sadece görüntüleme modunda düzenleme butonu görünür -->
+            <button v-if="!isEditing" @click="showSartlarModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-bold border border-blue-200 bg-blue-50 px-3 py-1 rounded">
+                Şartları Düzenle
+            </button>
+        </div>
+        <div class="bg-gray-50 p-4 rounded border text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto font-mono">
+            {{ proforma.sartlar || 'Şart belirtilmemiş.' }}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ŞARTLARI DÜZENLEME MODALI -->
+    <div v-if="showSartlarModal" class="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b bg-gray-50 rounded-t-lg"><h3 class="text-lg font-bold text-gray-800">Şartlar ve Koşulları Düzenle</h3></div>
+            <div class="p-6 flex-grow overflow-y-auto">
+                <textarea v-model="tempSartlar" rows="15" class="w-full border p-3 rounded text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3 rounded-b-lg">
+                <button @click="showSartlarModal = false" class="px-4 py-2 bg-gray-300 text-gray-800 rounded font-bold">İptal</button>
+                <button @click="sartlariKaydet" class="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">Kaydet</button>
+            </div>
+        </div>
     </div>
 
     <!-- İŞ EMRİNE DÖNÜŞTÜRME MODALI -->
@@ -300,6 +368,8 @@ const proforma = ref(null);
 
 // Dönüştürme Modalı State'leri
 const showConvertModal = ref(false);
+const showSartlarModal = ref(false); // YENİ
+const tempSartlar = ref(''); // YENİ
 const converting = ref(false);
 const convertItems = ref([]);
 const workOrderNote = ref('');
@@ -310,6 +380,8 @@ const guncelKalemler = ref([]);
 const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
+
+const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'ISI POMPASI', 'İŞÇİLİK', 'YEDEK PARÇA'];
 
 // --- VERİ ÇEKME ---
 const getDetay = async () => {
@@ -323,6 +395,7 @@ const getDetay = async () => {
 
     if (error) throw error;
     proforma.value = data;
+    tempSartlar.value = data.sartlar || ''; // Şartları modal için hazırla
 
     const [depolarRes, tedarikcilerRes, anlasmalarRes] = await Promise.all([
       supabase.from('depolar').select('*'),
@@ -350,7 +423,9 @@ const baslaDuzenle = () => {
   form.value = {
     gecerlilik_tarihi: proforma.value.gecerlilik_tarihi,
     notlar: proforma.value.notlar,
-    para_birimi: proforma.value.para_birimi || 'TRY' // Para birimini al
+    para_birimi: proforma.value.para_birimi || 'TRY',
+    kdv_dahil: proforma.value.kdv_dahil,
+    kategoriler: proforma.value.kategoriler || [] 
   };
   guncelKalemler.value = (proforma.value.proforma_kalemleri || []).map(k => ({
     id: k.id,
@@ -374,17 +449,38 @@ const handleKalemlerGuncellendi = (liste) => {
   guncelKalemler.value = liste;
 };
 
+const hesaplaSatirTutar = (kalem, kdvDahil) => {
+  const ham = kalem.miktar * kalem.birim_fiyat;
+  return kdvDahil ? ham : ham * 1.2;
+};
+
+// SADECE ŞARTLARI KAYDETME FONKSİYONU (YENİ)
+const sartlariKaydet = async () => {
+    try {
+        const { error } = await supabase.from('proformalar').update({ sartlar: tempSartlar.value }).eq('id', id);
+        if(error) throw error;
+        
+        proforma.value.sartlar = tempSartlar.value;
+        showSartlarModal.value = false;
+        alert("Şartlar başarıyla güncellendi.");
+    } catch(err) {
+        alert("Şartlar kaydedilirken hata oluştu: " + err.message);
+    }
+};
+
 const kaydet = async () => {
   if (guncelKalemler.value.length === 0) { alert('En az bir kalem olmalıdır.'); return; }
   loading.value = true;
   try {
-    const toplamTutar = guncelKalemler.value.reduce((sum, k) => sum + (k.miktar * k.birim_fiyat), 0);
+    const toplamTutar = guncelKalemler.value.reduce((sum, k) => sum + hesaplaSatirTutar(k, form.value.kdv_dahil), 0);
 
     const { error: mainError } = await supabase.from('proformalar').update({
         gecerlilik_tarihi: form.value.gecerlilik_tarihi,
         notlar: form.value.notlar,
         toplam_tutar: toplamTutar,
-        para_birimi: form.value.para_birimi // Para birimini güncelle
+        para_birimi: form.value.para_birimi,
+        kdv_dahil: form.value.kdv_dahil,
+        kategoriler: form.value.kategoriler
       }).eq('id', id);
     if (mainError) throw mainError;
 
@@ -489,22 +585,24 @@ const convertToWorkOrder = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
-    const date = new Date();
-    const isEmriNo = `IE-${date.getFullYear()}${date.getMonth()+1}-${Math.floor(Math.random()*10000)}`;
+    // Numara için prosedürü çağır
+    let isEmriNo = 'IE-AUTO';
+    try { const { data: yeniNo } = await supabase.rpc('is_emri_numara_olustur'); if(yeniNo) isEmriNo = yeniNo; } catch(e) { console.error(e); }
     
     const { data: isEmri, error: isEmriError } = await supabase.from('is_emirleri').insert([{
       musteri_id: proforma.value.musteri_id,
       siparis_tarihi: new Date(),
-      durum: 'Bekliyor', 
+      durum: 'Açık', // Bekliyor -> Açık olarak güncellendi
       toplam_tutar: proforma.value.toplam_tutar,
       notlar: workOrderNote.value,
       olusturan_kullanici_id: user?.id,
-      satisci_id: user?.id,
+      satisci_id: null, // FK HATASINI ÖNLEMEK İÇİN NULL GÖNDERİYORUZ
       numara: isEmriNo,
       is_tamamlandi: false,
-      is_emri_tipi: 'Satış',
+      is_emri_tipi: 'SİPARİŞ', // Satış -> SİPARİŞ olarak güncellendi
       sevk_adresi: proforma.value.musteriler?.adres,
-      para_birimi: proforma.value.para_birimi || 'TRY' // Para birimini aktar
+      para_birimi: proforma.value.para_birimi || 'TRY',
+      kdv_dahil: proforma.value.kdv_dahil
     }]).select().single();
 
     if (isEmriError) throw isEmriError;
@@ -572,21 +670,29 @@ const yazdir = () => {
   const tarih = formatTarih(p.olusturma_tarihi);
   const gecerlilik = formatTarih(p.gecerlilik_tarihi);
   const musteri = p.musteriler || {};
-  const kalemler = p.proforma_kalemleri || [];
   const pb = p.para_birimi || 'TRY';
+  const kdvDahil = p.kdv_dahil;
 
-  const kalemlerHTML = kalemler.map((kalem, index) => {
+  const kalemlerHTML = p.proforma_kalemleri.map((kalem, index) => {
+      let tutar = kalem.miktar * kalem.birim_fiyat;
+      if (!kdvDahil) tutar = tutar * 1.2;
       return `
         <tr>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.depolar ? kalem.depolar.ad : (kalem.tedarikciler ? kalem.tedarikciler.ad : 'Hizmet/Diğer')}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.miktar * kalem.birim_fiyat, pb)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">
+            ${formatPara(kalem.birim_fiyat, pb)}<br>
+            <span style="font-size:9px;color:#666">(${kdvDahil ? 'Dahil' : 'Hariç'})</span>
+          </td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
         </tr>
       `;
   }).join('');
+
+  const genelToplam = p.toplam_tutar;
+  const araToplam = genelToplam / 1.2;
+  const toplamKDV = genelToplam - araToplam;
 
   const htmlContent = `
       <!DOCTYPE html>
@@ -611,7 +717,9 @@ const yazdir = () => {
           table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
           th { background: #f9fafb; padding: 10px; border-bottom: 2px solid #ddd; text-align: left; font-size: 11px; }
           .totals { display: flex; justify-content: flex-end; }
-          .total-row { display: flex; justify-content: space-between; width: 250px; padding: 5px 0; font-weight: bold; font-size: 14px; border-top: 2px solid #333; }
+          .total-wrapper { width: 250px; }
+          .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
+          .total-row.final { font-weight: bold; font-size: 14px; border-top: 2px solid #333; margin-top: 5px; padding-top: 10px; }
           .notes { background: #f9fafb; padding: 15px; border-left: 4px solid #ddd; margin-top: 30px; }
           
           /* Footer Notu Sabitleme */
@@ -665,7 +773,6 @@ const yazdir = () => {
               <tr>
                 <th style="text-align: center;">#</th>
                 <th>Açıklama</th>
-                <th>Kaynak</th>
                 <th style="text-align: center;">Miktar</th>
                 <th style="text-align: right;">Birim Fiyat</th>
                 <th style="text-align: right;">Tutar</th>
@@ -677,15 +784,20 @@ const yazdir = () => {
           </table>
 
           <div class="totals">
-            <div class="total-row">
-              <span>GENEL TOPLAM</span>
-              <span>${formatPara(p.toplam_tutar, pb)}</span>
+            <div class="total-wrapper">
+                <div class="total-row"><span>Ara Toplam (KDV'siz):</span><span>${formatPara(araToplam, pb)}</span></div>
+                <div class="total-row"><span>Toplam KDV (%20):</span><span>${formatPara(toplamKDV, pb)}</span></div>
+                <div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatPara(genelToplam, pb)}</span></div>
             </div>
+          </div>
+          
+          <div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 10px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Şartlar ve Koşullar</h4>
+            <div style="white-space: pre-wrap; font-size: 10px; color: #444; line-height: 1.4;">${p.sartlar || 'Şart belirtilmemiş.'}</div>
           </div>
 
           ${p.notlar ? `<div class="notes"><strong>NOTLAR:</strong><br>${p.notlar.replace(/\n/g, '<br>')}</div>` : ''}
           
-          <!-- Sabit Footer -->
           <div class="footer-note">
             Bu belge bilgilendirme amaçlıdır, mali değeri yoktur. Fatura yerine geçmez.
           </div>

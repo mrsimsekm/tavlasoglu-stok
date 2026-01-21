@@ -65,14 +65,21 @@
               </select>
             </div>
 
-            <div class="flex items-center h-[70px]"> 
-              <label class="flex items-center cursor-pointer mt-5">
+            <!-- KDV DAHİL CHECKBOX -->
+            <div class="flex flex-col h-[70px] justify-center">
+               <label class="flex items-center cursor-pointer">
+                <input type="checkbox" v-model="isEmri.kdv_dahil" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
+                <span class="ml-3 text-sm font-medium text-gray-700">KDV Dahil</span>
+              </label>
+            </div>
+
+            <!-- İŞ TAMAMLANDI CHECKBOX -->
+            <div class="flex flex-col h-[70px] justify-center"> 
+              <label class="flex items-center cursor-pointer">
                 <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
                 <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
               </label>
             </div>
-
-            <div class="md:col-span-1"></div> <!-- Boşluk -->
 
             <!-- SATIR 3 -->
             <div class="md:col-span-3">
@@ -133,6 +140,7 @@
             :anlasmalar="anlasmalar" 
             :varsayilan-anlasma="secilenVarsayilanAnlasma"
             :para-birimi="isEmri.para_birimi" 
+            :kdv-dahil="isEmri.kdv_dahil"
           />
           <div v-else class="text-center p-4 text-gray-500">Kaynaklar yükleniyor...</div>
         </div>
@@ -155,6 +163,8 @@
   </div>
 </template>
 
+
+
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
@@ -176,8 +186,10 @@ const isEmri = ref({
   notlar: '',
   satisci_id: null,
   fatura_no: '',
+  numara: 'Sistem Atayacak', // Başlangıçta placeholder
   is_tamamlandi: false,
-  maliyet: 0, // Bu alan artık hesaplanan toplama eşitlenecek
+  kdv_dahil: true, 
+  maliyet: 0, 
   is_emri_tipi: 'SİPARİŞ',
   sevk_adresi: '',
   para_birimi: 'TRY'
@@ -185,7 +197,7 @@ const isEmri = ref({
 
 const secilenVarsayilanAnlasma = ref(null);
 const isEmriKalemleri = ref([]);
-const maliyetListesi = ref([]); // Yeni Maliyet Listesi
+const maliyetListesi = ref([]); 
 const secilenMusteriUnvani = ref('');
 const depolar = ref([]);
 const tedarikciler = ref([]);
@@ -208,14 +220,24 @@ const maliyetEkle = () => {
 };
 
 // Hesaplamalar
-const toplamTutar = computed(() => isEmriKalemleri.value.reduce((total, kalem) => total + (kalem.miktar * kalem.birim_fiyat), 0));
+const toplamTutar = computed(() => {
+  return isEmriKalemleri.value.reduce((total, kalem) => {
+    const hamTutar = kalem.miktar * kalem.birim_fiyat;
+    if (isEmri.value.kdv_dahil) {
+      return total + hamTutar;
+    } else {
+      return total + (hamTutar * 1.2);
+    }
+  }, 0);
+});
+
 const toplamMaliyet = computed(() => maliyetListesi.value.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0));
 
 const formatPara = (val, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(val || 0);
 
 onMounted(async () => {
-  const d = new Date();
-  isEmri.value.numara = `IE-${d.getFullYear()}${d.getMonth()+1}-${Math.floor(Math.random()*10000)}`;
+  // BURADAN NUMARA OLUŞTURMA KODUNU KALDIRDIK.
+  // Artık numara sayfa açılışında rezerve edilmeyecek.
 
   const [depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes] = await Promise.all([
     supabase.from('depolar').select('*'),
@@ -240,15 +262,25 @@ const kaydet = async () => {
   if (isEmriKalemleri.value.length === 0) { alert('Lütfen en az bir malzeme veya hizmet ekleyin.'); return; }
 
   await withLoading(async () => {
+    // 1. ÖNCE NUMARAYI OLUŞTUR
+    try {
+      const { data: yeniNumara, error: numaraError } = await supabase.rpc('is_emri_numara_olustur');
+      if (numaraError) throw numaraError;
+      isEmri.value.numara = yeniNumara;
+    } catch (err) {
+      alert('Numara oluşturulurken hata oluştu: ' + err.message);
+      return; // İşlemi durdur
+    }
+
+    // Değerleri ata
     isEmri.value.toplam_tutar = toplamTutar.value;
-    isEmri.value.maliyet = toplamMaliyet.value; // Maliyet toplamını ana tabloya yaz
+    isEmri.value.maliyet = toplamMaliyet.value; 
     
-    // 1. İş Emri Başlığını Kaydet
+    // 2. İş Emri Başlığını Kaydet (Oluşan numara ile)
     const { data: isEmriData, error: isEmriError } = await supabase
       .from('is_emirleri')
       .insert([{
-        ...isEmri.value,
-        numara: isEmri.value.numara || `IE-${Math.floor(Math.random()*100000)}`
+        ...isEmri.value
       }])
       .select('id')
       .single();
@@ -256,7 +288,7 @@ const kaydet = async () => {
     if (isEmriError) throw isEmriError;
     const newIsEmriId = isEmriData.id;
 
-    // 2. Ürün Kalemlerini Kaydet
+    // 3. Ürün Kalemlerini Kaydet
     const kalemlerToInsert = isEmriKalemleri.value.map(kalem => ({
       is_emri_id: newIsEmriId,
       urun_id: kalem.urun_id || null,
@@ -273,7 +305,7 @@ const kaydet = async () => {
       if (kalemlerError) throw kalemlerError;
     }
 
-    // 3. Maliyet Kalemlerini Kaydet (YENİ)
+    // 4. Maliyet Kalemlerini Kaydet
     const maliyetlerToInsert = maliyetListesi.value
       .filter(m => m.aciklama && m.tutar > 0)
       .map(m => ({
@@ -287,7 +319,7 @@ const kaydet = async () => {
       if (maliyetError) throw maliyetError;
     }
 
-    alert('İş emri başarıyla kaydedildi!');
+    alert(`İş emri başarıyla kaydedildi! Numara: ${isEmri.value.numara}`);
     router.push('/app/is-emirleri');
   });
 };
