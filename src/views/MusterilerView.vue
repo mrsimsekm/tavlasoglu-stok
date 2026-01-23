@@ -4,7 +4,7 @@
     
     <div class="flex justify-between items-center mb-6">
       <div class="relative w-1/3">
-        <input type="text" placeholder="Müşteri ara..." v-model="aramaMetni" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <input type="text" placeholder="Müşteri ara (Unvan, VKN, Tel, İl)..." v-model="aramaMetni" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         <div class="absolute top-0 left-0 inline-flex items-center p-2 mt-1 ml-2 text-gray-400">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
@@ -121,7 +121,6 @@ const formModaliniAc = (musteri = null) => {
 };
 
 const formuKaydet = async () => {
-  // DÜZELTME: Müşteri kodu kontrolü kaldırıldı, sadece Unvan zorunlu.
   if (!aktifMusteri.value.unvan) {
     alert('Ünvan alanı zorunludur.');
     return;
@@ -174,9 +173,20 @@ const localStorageKey = 'musteri-kolon-ayarlari';
 const kolonAyarlariniKaydet = () => { localStorage.setItem(localStorageKey, JSON.stringify(kolonlar.value)); };
 const kolonAyarlariniYukle = () => {
   const kayitliAyarlar = localStorage.getItem(localStorageKey);
-  if (kayitliAyarlar) { return JSON.parse(kayitliAyarlar); }
+  if (kayitliAyarlar) { 
+    const parsed = JSON.parse(kayitliAyarlar);
+    return parsed.filter(k => k.key !== 'musteri_kodu'); 
+  }
   return [
-    { key: 'musteri_kodu', label: 'Müşteri Kodu', gorunur: true }, { key: 'unvan', label: 'Unvan', gorunur: true }, { key: 'ilgili_kisi', label: 'İlgili Kişi', gorunur: true }, { key: 'telefon', label: 'Telefon', gorunur: true }, { key: 'il', label: 'İl', gorunur: true }, { key: 'ilce', label: 'İlçe', gorunur: false }, { key: 'tckn', label: 'TCKN', gorunur: false }, { key: 'adres', label: 'Adres', gorunur: false }, { key: 'vergi_dairesi', label: 'Vergi Dairesi', gorunur: false }, { key: 'vergi_no', label: 'Vergi No', gorunur: false },
+    { key: 'unvan', label: 'Unvan', gorunur: true }, 
+    { key: 'ilgili_kisi', label: 'İlgili Kişi', gorunur: true }, 
+    { key: 'telefon', label: 'Telefon', gorunur: true }, 
+    { key: 'il', label: 'İl', gorunur: true }, 
+    { key: 'ilce', label: 'İlçe', gorunur: false }, 
+    { key: 'tckn', label: 'TCKN', gorunur: false }, 
+    { key: 'adres', label: 'Adres', gorunur: false }, 
+    { key: 'vergi_dairesi', label: 'Vergi Dairesi', gorunur: false }, 
+    { key: 'vergi_no', label: 'Vergi No', gorunur: false },
   ];
 };
 
@@ -192,8 +202,28 @@ const filtrelenmisMusteriler = computed(() => {
 const getMusteriler = async () => {
   try {
     loading.value = true;
-    const { data, error } = await supabase.from('musteriler').select('*').order('musteri_kodu', { ascending: true });
+    const { data, error } = await supabase.from('musteriler').select('*');
+    
     if (error) throw error;
+    
+    // GÜNCELLEME: Frontend tarafında özel sıralama (Harfler önce, Rakamlar sonra)
+    if (data) {
+      data.sort((a, b) => {
+        const unvanA = a.unvan || '';
+        const unvanB = b.unvan || '';
+        
+        // İlk karakterin rakam olup olmadığını kontrol et
+        const isANumber = /^\d/.test(unvanA);
+        const isBNumber = /^\d/.test(unvanB);
+
+        if (isANumber && !isBNumber) return 1; // A rakam, B harf ise -> B önce gelir (A sona gider)
+        if (!isANumber && isBNumber) return -1; // A harf, B rakam ise -> A önce gelir
+        
+        // İkisi de aynı türdense (ikisi de harf veya ikisi de rakam) normal Türkçe sıralama
+        return unvanA.localeCompare(unvanB, 'tr');
+      });
+    }
+
     tumMusteriler.value = data;
   } catch (error) {
     console.error('Müşteriler çekilirken hata oluştu:', error.message);
