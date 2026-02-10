@@ -62,7 +62,7 @@
               <div><p class="label-style">Satışçı</p><p class="font-semibold">{{ isEmri.satiscilar?.ad_soyad || '-' }}</p></div>
               <div><p class="label-style">Fatura No</p><p class="font-semibold">{{ isEmri.fatura_no || '-' }}</p></div>
               <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ isEmri.para_birimi || 'TRY' }}</p></div>
-              <div><p class="label-style">KDV Durumu</p><p class="font-semibold text-gray-800">{{ isEmri.kdv_dahil ? 'Dahil' : 'Hariç' }}</p></div>
+              <div><p class="label-style">KDV Durumu</p><p class="font-semibold text-gray-800">Hariç</p></div>
               <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
             </div>
             <div class="border-t border-gray-100 pt-3"><p class="label-style mb-1">Sevk Adresi</p><p v-if="isEmri.sevk_adresi" class="text-gray-800 whitespace-pre-wrap font-medium">{{ isEmri.sevk_adresi }}</p><p v-else class="text-gray-400 italic text-sm">Sevk adresi belirtilmemiş.</p></div>
@@ -72,7 +72,6 @@
               <div><label class="label-style">Satışçı</label><select v-model="duzenlemeFormu.satisci_id" class="form-input"><option :value="null">Satışçı Seçin</option><option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option></select></div>
               <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
               <div><label class="label-style">Para Birimi</label><select v-model="duzenlemeFormu.para_birimi" class="form-input font-bold"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
-              <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.kdv_dahil" class="h-5 w-5 text-indigo-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">KDV Dahil</span></label></div>
               <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
             </div>
             <div><label class="label-style">Sevk Adresi</label><textarea v-model="duzenlemeFormu.sevk_adresi" rows="2" class="form-input" placeholder="Teslimat adresi..."></textarea></div>
@@ -117,7 +116,6 @@
           :initialKalemler="guncelKalemler" 
           :kaydedilmis-is-emri="true" 
           :para-birimi="duzenlemeFormu.para_birimi" 
-          :kdv-dahil="duzenlemeFormu.kdv_dahil"
           @kalemler-guncellendi="handleKalemlerGuncellendi"
         />
         
@@ -129,11 +127,11 @@
                 <th class="th-style">Kaynak</th>
                 <th class="th-style">Anlaşma</th>
                 <th class="th-style text-center">Miktar</th>
+                <th class="th-style text-center">Birim</th>
                 <th class="th-style text-right">
-                  Birim Fiyat<br><span class="text-[10px] text-gray-500 font-normal">({{ isEmri.kdv_dahil ? 'Dahil' : 'Hariç' }})</span>
+                  Birim Fiyat<br><span class="text-[10px] text-gray-500 font-normal">(KDV Hariç)</span>
                 </th>
-                <th class="th-style text-right">KDV (%20)</th>
-                <th class="th-style text-right">Toplam</th>
+                <th class="th-style text-right">Toplam (KDV Hariç)</th>
               </tr>
             </thead>
             <tbody>
@@ -143,9 +141,9 @@
                 <td class="td-style">{{ kalem.depolar ? kalem.depolar.ad : (kalem.tedarikciler ? kalem.tedarikciler.ad : 'Hizmet') }}</td>
                 <td class="td-style">{{ kalem.anlasmalar ? kalem.anlasmalar.ad : 'Anlaşma Dışı' }}</td>
                 <td class="td-style text-center font-bold">{{ kalem.miktar }}</td>
-                <td class="td-style text-right">{{ formatParaBirimi(kalem.birim_fiyat, isEmri.para_birimi) }}</td>
-                <td class="td-style text-right text-xs text-gray-500">{{ formatParaBirimi(hesaplaSatirKDV(kalem), isEmri.para_birimi) }}</td>
-                <td class="td-style text-right font-semibold">{{ formatParaBirimi(hesaplaSatirToplam(kalem), isEmri.para_birimi) }}</td>
+                <td class="td-style text-center text-xs text-gray-500">{{ kalem.birim || 'Adet' }}</td>
+                <td class="td-style text-right font-mono">{{ formatParaBirimi(kalem.birim_fiyat, isEmri.para_birimi) }}</td>
+                <td class="td-style text-right font-semibold">{{ formatParaBirimi(kalem.miktar * kalem.birim_fiyat, isEmri.para_birimi) }}</td>
               </tr>
             </tbody>
           </table>
@@ -164,11 +162,34 @@
 
       <!-- 5. TOPLAMLAR -->
       <div class="bg-white p-6 rounded-lg shadow-md">
-        <div class="flex justify-end items-center text-xl space-x-8 font-semibold">
-          <span>Genel Toplam: <span class="text-blue-600">{{ formatParaBirimi(toplamTutar, isEmri.para_birimi) }}</span></span>
-          <span>Ödenen: <span class="text-green-600">{{ formatParaBirimi(isEmri.odenen_tutar, isEmri.para_birimi) }}</span></span>
-          <span>Kalan Bakiye: <span class="text-red-600">{{ formatParaBirimi(kalanBakiye, isEmri.para_birimi) }}</span></span>
-          <button v-if="isEmri.durum === 'Açık' && kalanBakiye > 0 && (userStore.isMuhasebeci || userStore.isYonetici)" @click="tahsilatEkleModaliniAc" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">+ Tahsilat Ekle</button>
+        <div class="flex flex-col items-end space-y-2">
+           <div class="flex justify-between w-64 text-gray-600">
+              <span>Ara Toplam:</span>
+              <span class="font-semibold">{{ formatParaBirimi(toplamlar.araToplam, isEmri.para_birimi) }}</span>
+           </div>
+           <div class="flex justify-between w-64 text-gray-600">
+              <span>KDV (%20):</span>
+              <span class="font-semibold">{{ formatParaBirimi(toplamlar.kdv, isEmri.para_birimi) }}</span>
+           </div>
+           <div class="flex justify-between w-64 text-xl font-bold text-gray-800 border-t pt-2 border-gray-200">
+              <span>Genel Toplam:</span>
+              <span class="text-blue-600">{{ formatParaBirimi(toplamlar.genelToplam, isEmri.para_birimi) }}</span>
+           </div>
+           
+           <div class="w-64 border-t my-2"></div>
+
+           <div class="flex justify-between w-64 text-sm">
+             <span>Ödenen:</span>
+             <span class="text-green-600 font-bold">{{ formatParaBirimi(isEmri.odenen_tutar, isEmri.para_birimi) }}</span>
+           </div>
+           <div class="flex justify-between w-64 text-sm">
+             <span>Kalan Bakiye:</span>
+             <span class="text-red-600 font-bold">{{ formatParaBirimi(kalanBakiye, isEmri.para_birimi) }}</span>
+           </div>
+           
+           <div class="mt-2">
+              <button v-if="isEmri.durum === 'Açık' && kalanBakiye > 0 && (userStore.isMuhasebeci || userStore.isYonetici)" @click="tahsilatEkleModaliniAc" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm">+ Tahsilat Ekle</button>
+           </div>
         </div>
       </div>
     </div>
@@ -282,7 +303,7 @@ const duzenlemeFormu = ref({
     is_emri_tipi: 'SİPARİŞ', 
     sevk_adresi: '', 
     para_birimi: 'TRY',
-    kdv_dahil: true
+    kdv_dahil: false // Varsayılan False
 });
 
 // FONKSİYON TANIMLARI
@@ -290,30 +311,18 @@ const getTipRenk = (tip) => { const renkler = { 'SİPARİŞ': 'bg-blue-100 text-
 const getDurumRenk = (durum) => { const renkler = { 'Açık': 'bg-green-100 text-green-800', 'Kapalı': 'bg-gray-200 text-gray-700', 'İptal': 'bg-red-100 text-red-800' }; return renkler[durum] || 'bg-gray-200 text-gray-700'; };
 const formatParaBirimi = (tutar, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(tutar || 0);
 
-// --- YENİ HESAPLAMA MANTIĞI ---
-const hesaplaSatirToplam = (kalem) => {
-    const kdvDahilMi = isEditing.value ? duzenlemeFormu.value.kdv_dahil : isEmri.value.kdv_dahil;
-    const hamTutar = kalem.miktar * kalem.birim_fiyat;
-    if (kdvDahilMi) return hamTutar;
-    else return hamTutar * 1.2;
-};
-
-const hesaplaSatirKDV = (kalem) => {
-    const kdvDahilMi = isEditing.value ? duzenlemeFormu.value.kdv_dahil : isEmri.value.kdv_dahil;
-    const hamTutar = kalem.miktar * kalem.birim_fiyat;
-    if (kdvDahilMi) return hamTutar / 6;
-    else return hamTutar * 0.20;
-};
-// ------------------------------
+// --- YENİ HESAPLAMA MANTIĞI (KDV HARİÇ) ---
+const toplamlar = computed(() => {
+  const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
+  const araToplam = kalemListesi.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+  const kdv = araToplam * 0.20;
+  const genelToplam = araToplam + kdv;
+  return { araToplam, kdv, genelToplam };
+});
 
 const kalanBakiye = computed(() => {
   if (!isEmri.value) return 0;
-  return (toplamTutar.value - (isEmri.value.odenen_tutar || 0));
-});
-
-const toplamTutar = computed(() => {
-  const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
-  return kalemListesi.reduce((total, kalem) => total + hesaplaSatirToplam(kalem), 0);
+  return (toplamlar.value.genelToplam - (isEmri.value.odenen_tutar || 0));
 });
 
 // Maliyet Hesaplama
@@ -375,18 +384,16 @@ const yazdirModaliniAc = () => {
   yazdirModalGoster.value = true; 
 };
 
-// YAZDIRMA FONKSİYONU (GÜNCELLENDİ)
+// YAZDIRMA FONKSİYONU
 const isEmriYazdir = () => {
   const logoUrl = window.location.origin + '/logo11.png';
   const tarih = new Date(isEmri.value.siparis_tarihi).toLocaleDateString('tr-TR');
   const pb = isEmri.value.para_birimi || 'TRY';
-  const kdvDahilMi = isEmri.value.kdv_dahil;
 
   // Ürün Kalemleri HTML
   const kalemlerHTML = isEmri.value.is_emri_kalemleri.map((k, i) => {
     const birimFiyat = k.birim_fiyat;
-    const satirToplam = hesaplaSatirToplam(k);
-    const kdvTutar = hesaplaSatirKDV(k);
+    const satirToplam = birimFiyat * k.miktar;
     
     return `
     <tr>
@@ -394,21 +401,18 @@ const isEmriYazdir = () => {
         <td style="padding:8px;border-bottom:1px solid #eee;">${k.aciklama}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;">${k.depolar?.ad||k.tedarikciler?.ad||'Hizmet'}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${k.miktar}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${k.birim || 'Adet'}</td>
         ${yazdirFiyatGoster.value ? `
-            <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">
-                ${formatParaBirimi(birimFiyat, pb)}<br>
-                <span style="font-size:9px; color:#666;">(${kdvDahilMi ? 'Dahil' : 'Hariç'})</span>
-            </td>
-            <td style="padding:8px;border-bottom:1px solid #eee;text-align:right; font-size:11px; color:#666;">${formatParaBirimi(kdvTutar, pb)}</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${formatParaBirimi(birimFiyat, pb)}</td>
             <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${formatParaBirimi(satirToplam, pb)}</td>
         ` : ''}
     </tr>`;
   }).join('');
 
   // Toplam Hesaplamaları
-  const genelToplam = toplamTutar.value;
-  const araToplam = genelToplam / 1.2;
-  const toplamKDV = genelToplam - araToplam;
+  const araToplam = toplamlar.value.araToplam;
+  const toplamKDV = toplamlar.value.kdv;
+  const genelToplam = toplamlar.value.genelToplam;
   
   // Maliyet Kalemleri HTML
   let maliyetHTML = '';
@@ -455,13 +459,13 @@ const isEmriYazdir = () => {
             <div style="white-space: pre-wrap;">${isEmri.value.sevk_adresi ? isEmri.value.sevk_adresi : 'Belirtilmemiş'}</div>
         </div>
 
-        <table><thead><tr><th style="text-align:center">#</th><th>Açıklama</th><th>Kaynak</th><th style="text-align:center">Miktar</th>${yazdirFiyatGoster.value?`<th style="text-align:right">Birim Fiyat</th><th style="text-align:right">KDV</th><th style="text-align:right">Toplam</th>`:''}</tr></thead><tbody>${kalemlerHTML}</tbody></table>
+        <table><thead><tr><th style="text-align:center">#</th><th>Açıklama</th><th>Kaynak</th><th style="text-align:center">Miktar</th><th style="text-align:center">Birim</th>${yazdirFiyatGoster.value?`<th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Toplam</th>`:''}</tr></thead><tbody>${kalemlerHTML}</tbody></table>
         
         ${yazdirFiyatGoster.value ? `
         <div class="totals-section">
             <div class="total-wrapper">
-                <div class="total-row"><span>Ara Toplam (KDV'siz):</span><span>${formatParaBirimi(araToplam, pb)}</span></div>
-                <div class="total-row"><span>Toplam KDV (%20):</span><span>${formatParaBirimi(toplamKDV, pb)}</span></div>
+                <div class="total-row"><span>Ara Toplam:</span><span>${formatParaBirimi(araToplam, pb)}</span></div>
+                <div class="total-row"><span>KDV (%20):</span><span>${formatParaBirimi(toplamKDV, pb)}</span></div>
                 <div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatParaBirimi(genelToplam, pb)}</span></div>
             </div>
         </div>
@@ -512,7 +516,7 @@ const getGerekliVeriler = async () => {
       is_emri_tipi: isEmri.value.is_emri_tipi || 'SİPARİŞ',
       sevk_adresi: isEmri.value.sevk_adresi || '',
       para_birimi: isEmri.value.para_birimi || 'TRY',
-      kdv_dahil: isEmri.value.kdv_dahil 
+      kdv_dahil: false // Her zaman False
     };
   } catch (err) { error.value = err.message; } finally { loading.value = false; }
 };
@@ -526,7 +530,7 @@ const guncelle = async () => {
   await guncelleWithLoading(async () => {
     const yeniToplamMaliyet = duzenlemeMaliyetListesi.value.reduce((s, i) => s + (parseFloat(i.tutar)||0), 0);
     const guncellenecekIsEmri = { 
-        toplam_tutar: toplamTutar.value, 
+        toplam_tutar: toplamlar.value.genelToplam, // KDV Dahil son rakam
         satisci_id: duzenlemeFormu.value.satisci_id, 
         fatura_no: duzenlemeFormu.value.fatura_no, 
         maliyet: yeniToplamMaliyet, 
@@ -534,7 +538,7 @@ const guncelle = async () => {
         is_emri_tipi: duzenlemeFormu.value.is_emri_tipi, 
         sevk_adresi: duzenlemeFormu.value.sevk_adresi, 
         para_birimi: duzenlemeFormu.value.para_birimi,
-        kdv_dahil: duzenlemeFormu.value.kdv_dahil 
+        kdv_dahil: false 
     };
     
     const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
@@ -542,7 +546,17 @@ const guncelle = async () => {
 
     await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
     if (guncelKalemler.value.length > 0) {
-      const kalemlerToInsert = guncelKalemler.value.map(k => ({ is_emri_id: isEmriId, urun_id: k.urun_id || null, aciklama: k.aciklama, miktar: k.miktar, birim_fiyat: k.birim_fiyat, kaynak_depo_id: k.kaynak_depo_id || null, kaynak_tedarikci_id: k.kaynak_tedarikci_id || null, anlasma_id: k.anlasma_id || null }));
+      const kalemlerToInsert = guncelKalemler.value.map(k => ({ 
+        is_emri_id: isEmriId, 
+        urun_id: k.urun_id || null, 
+        aciklama: k.aciklama, 
+        miktar: k.miktar, 
+        birim: k.birim, 
+        birim_fiyat: k.birim_fiyat, 
+        kaynak_depo_id: k.kaynak_depo_id || null, 
+        kaynak_tedarikci_id: k.kaynak_tedarikci_id || null, 
+        anlasma_id: k.anlasma_id || null 
+      }));
       await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
     }
 

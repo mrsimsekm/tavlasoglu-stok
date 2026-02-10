@@ -61,11 +61,9 @@
         
         <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div><p class="label-style">Müşteri</p><p class="font-semibold text-lg">{{ proforma.musteriler?.unvan }}</p></div>
+          <div><p class="label-style">İlgili Kişi</p><p class="font-semibold">{{ proforma.ilgili_kisi || proforma.musteriler?.ilgili_kisi || '-' }}</p></div>
           <div><p class="label-style">Oluşturma Tarihi</p><p class="font-semibold">{{ formatTarih(proforma.olusturma_tarihi) }}</p></div>
-          <div>
-            <p class="label-style">Para Birimi</p>
-            <p class="font-bold text-indigo-600">{{ proforma.para_birimi || 'TRY' }}</p>
-          </div>
+          <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ proforma.para_birimi || 'TRY' }}</p></div>
           <div>
             <p class="label-style">Durum</p>
             <span :class="getDurumBadge(proforma.durum)">{{ proforma.durum }}</span>
@@ -80,11 +78,6 @@
                <span v-if="suresiGectiMi(proforma)" class="text-xs ml-1">(Süresi Doldu)</span>
              </p>
           </div>
-          <div>
-            <p class="label-style">KDV Durumu</p>
-            <p class="font-semibold">{{ proforma.kdv_dahil ? 'Dahil' : 'Hariç' }}</p>
-          </div>
-          <!-- KATEGORİLER GÖRÜNTÜLEME -->
           <div class="col-span-2">
             <p class="label-style">Kategoriler</p>
             <div class="flex flex-wrap gap-2">
@@ -103,6 +96,10 @@
             <p class="font-semibold p-2 bg-gray-100 rounded border">{{ proforma.musteriler?.unvan }}</p>
           </div>
           <div>
+             <label class="label-style">İlgili Kişi</label>
+             <input v-model="form.ilgili_kisi" type="text" class="form-input">
+          </div>
+          <div>
             <label class="label-style">Geçerlilik Tarihi</label>
             <input v-model="form.gecerlilik_tarihi" type="date" class="form-input">
           </div>
@@ -115,14 +112,6 @@
                <option value="GBP">GBP</option>
              </select>
           </div>
-          
-          <div class="flex items-center">
-            <label class="flex items-center cursor-pointer">
-              <input type="checkbox" v-model="form.kdv_dahil" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
-              <span class="ml-3 text-sm font-medium text-gray-700">KDV Dahil</span>
-            </label>
-          </div>
-          
           <div class="col-span-3">
              <label class="label-style">Kategoriler</label>
              <div class="grid grid-cols-4 gap-2 border p-3 rounded bg-gray-50">
@@ -132,7 +121,6 @@
                 </label>
              </div>
           </div>
-
           <div class="col-span-3">
             <label class="label-style">Notlar</label>
             <textarea v-model="form.notlar" rows="3" class="form-input" placeholder="Notları buraya giriniz..."></textarea>
@@ -152,23 +140,20 @@
            :initialKalemler="guncelKalemler" 
            :proforma-modu="true"
            :para-birimi="form.para_birimi"
-           :kdv-dahil="form.kdv_dahil"
            @kalemler-guncellendi="handleKalemlerGuncellendi"
         />
 
-        <!-- DETAY TABLOSU (KAYNAK YOK, KDV VAR) -->
+        <!-- Detay Tablosu (YENİ SÜTUNLAR) -->
         <div v-else class="overflow-x-auto">
           <table class="min-w-full leading-normal">
             <thead>
               <tr>
-                <th class="th-style text-center">#</th>
+                <th class="th-style text-center w-12">#</th>
                 <th class="th-style">Açıklama</th>
                 <th class="th-style text-center">Miktar</th>
-                <th class="th-style text-right">
-                    Birim Fiyat
-                    <span class="block text-[10px] text-gray-500 font-normal">({{ proforma.kdv_dahil ? 'Dahil' : 'Hariç' }})</span>
-                </th>
-                <th class="th-style text-right">Tutar</th>
+                <th class="th-style text-center">Birim</th>
+                <th class="th-style text-right">Birim Fiyat (KDV Hariç)</th>
+                <th class="th-style text-right">Tutar (KDV Hariç)</th>
               </tr>
             </thead>
             <tbody>
@@ -176,18 +161,31 @@
                 <td class="td-style text-center">{{ index + 1 }}</td>
                 <td class="td-style font-medium">{{ kalem.aciklama }}</td>
                 <td class="td-style text-center font-bold">{{ kalem.miktar }}</td>
-                <td class="td-style text-right">{{ formatPara(kalem.birim_fiyat, proforma.para_birimi) }}</td>
-                <!-- Hesaplanan satır toplamı -->
-                <td class="td-style text-right font-bold text-gray-800">{{ formatPara(hesaplaSatirTutar(kalem, proforma.kdv_dahil), proforma.para_birimi) }}</td>
+                <td class="td-style text-center text-xs">{{ kalem.birim }}</td>
+                <td class="td-style text-right font-mono">{{ formatPara(kalem.birim_fiyat, proforma.para_birimi) }}</td>
+                <td class="td-style text-right font-bold text-gray-800 font-mono">{{ formatPara(kalem.miktar * kalem.birim_fiyat, proforma.para_birimi) }}</td>
               </tr>
             </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="px-5 py-3 text-right font-bold text-gray-700 border-t">GENEL TOPLAM:</td>
-                <td class="px-5 py-3 text-right font-bold text-xl text-blue-600 border-t">{{ formatPara(proforma.toplam_tutar, proforma.para_birimi) }}</td>
-              </tr>
-            </tfoot>
           </table>
+          
+          <!-- Toplamlar Bölümü -->
+          <div class="flex justify-end mt-4">
+            <div class="w-full max-w-sm space-y-2">
+               <div class="flex justify-between text-gray-600">
+                  <span>Ara Toplam:</span>
+                  <span class="font-semibold">{{ formatPara(toplamlar.araToplam, proforma.para_birimi) }}</span>
+               </div>
+               <div class="flex justify-between text-gray-600">
+                  <span>KDV (%20):</span>
+                  <span class="font-semibold">{{ formatPara(toplamlar.kdv, proforma.para_birimi) }}</span>
+               </div>
+               <div class="flex justify-between text-xl font-bold text-gray-800 border-t pt-2">
+                  <span>GENEL TOPLAM:</span>
+                  <span class="text-indigo-600">{{ formatPara(toplamlar.genelToplam, proforma.para_birimi) }}</span>
+               </div>
+            </div>
+          </div>
+          
           <div v-if="proforma.notlar" class="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
             <p class="text-sm font-bold text-yellow-800 mb-1">NOTLAR:</p>
             <p class="text-sm text-yellow-900 whitespace-pre-wrap">{{ proforma.notlar }}</p>
@@ -195,11 +193,10 @@
         </div>
       </div>
 
-      <!-- ŞARTLAR VE KOŞULLAR (YENİ BÖLÜM) -->
+      <!-- ŞARTLAR VE KOŞULLAR -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4 border-b pb-2">
             <h2 class="text-xl font-semibold text-gray-700">Şartlar ve Koşullar</h2>
-            <!-- Sadece görüntüleme modunda düzenleme butonu görünür -->
             <button v-if="!isEditing" @click="showSartlarModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-bold border border-blue-200 bg-blue-50 px-3 py-1 rounded">
                 Şartları Düzenle
             </button>
@@ -227,14 +224,11 @@
 
     <!-- İŞ EMRİNE DÖNÜŞTÜRME MODALI -->
     <div v-if="showConvertModal" class="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-5xl h-full md:h-auto md:max-h-[90vh] flex flex-col">
-        <!-- Modal Header -->
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-5xl md:max-h-[90vh] flex flex-col">
         <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
           <h3 class="text-xl font-bold text-gray-800">İş Emri Oluştur - Kaynak Seçimi</h3>
           <button type="button" @click="showConvertModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
         </div>
-
-        <!-- Modal Body -->
         <div class="p-6 overflow-y-auto flex-grow">
           <div class="mb-4 bg-blue-50 p-4 rounded text-sm text-blue-800 border border-blue-100 flex justify-between items-center">
              <div>
@@ -242,12 +236,11 @@
              </div>
              <div class="font-bold text-indigo-700">Para Birimi: {{ proforma.para_birimi || 'TRY' }}</div>
           </div>
-
           <table class="min-w-full divide-y divide-gray-200 border">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ürün / Açıklama</th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Miktar</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Miktar / Birim</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Tipi</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kaynak Seçimi <span class="text-red-500">*</span></th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Anlaşma</th>
@@ -257,9 +250,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="(item, idx) in convertItems" :key="idx">
                 <td class="px-4 py-4 text-sm font-medium text-gray-900">{{ item.aciklama }}</td>
-                <td class="px-4 py-4 text-sm text-center font-bold">{{ item.miktar }}</td>
-                
-                <!-- Kaynak Tipi -->
+                <td class="px-4 py-4 text-sm text-center font-bold">{{ item.miktar }} <span class="text-xs text-gray-500">{{ item.birim }}</span></td>
                 <td class="px-4 py-4 text-sm">
                   <select v-model="item.sourceType" @change="handleSourceTypeChange(item)" class="border rounded p-1 w-full text-sm">
                     <option value="depo">Depo</option>
@@ -267,74 +258,36 @@
                     <option value="hizmet">Hizmet/Stoksuz</option>
                   </select>
                 </td>
-
-                <!-- Kaynak -->
                 <td class="px-4 py-4 text-sm">
-                  <select 
-                    v-model="item.selectedSourceId" 
-                    @change="checkStock(item)" 
-                    class="border rounded p-1 w-full text-sm"
-                    :disabled="item.sourceType === 'hizmet'"
-                    :class="{'bg-gray-100': item.sourceType === 'hizmet', 'border-red-500': item.sourceType !== 'hizmet' && !item.selectedSourceId}"
-                  >
+                  <select v-model="item.selectedSourceId" @change="checkStock(item)" class="border rounded p-1 w-full text-sm" :disabled="item.sourceType === 'hizmet'" :class="{'bg-gray-100': item.sourceType === 'hizmet', 'border-red-500': item.sourceType !== 'hizmet' && !item.selectedSourceId}">
                     <option :value="null">Seçiniz...</option>
-                    <template v-if="item.sourceType === 'depo'">
-                      <option v-for="d in depolar" :key="d.id" :value="d.id">{{ d.ad }}</option>
-                    </template>
-                    <template v-if="item.sourceType === 'tedarikci'">
-                      <option v-for="t in tedarikciler" :key="t.id" :value="t.id">{{ t.ad }}</option>
-                    </template>
+                    <template v-if="item.sourceType === 'depo'"><option v-for="d in depolar" :key="d.id" :value="d.id">{{ d.ad }}</option></template>
+                    <template v-if="item.sourceType === 'tedarikci'"><option v-for="t in tedarikciler" :key="t.id" :value="t.id">{{ t.ad }}</option></template>
                   </select>
                 </td>
-
-                <!-- Anlaşma -->
                 <td class="px-4 py-4 text-sm">
-                  <select 
-                    v-model="item.selectedAgreementId" 
-                    class="border rounded p-1 w-full text-sm"
-                    :disabled="item.sourceType === 'depo' || item.sourceType === 'hizmet'"
-                    :class="{'bg-gray-100': item.sourceType === 'depo' || item.sourceType === 'hizmet'}"
-                  >
+                  <select v-model="item.selectedAgreementId" class="border rounded p-1 w-full text-sm" :disabled="item.sourceType === 'depo' || item.sourceType === 'hizmet'" :class="{'bg-gray-100': item.sourceType === 'depo' || item.sourceType === 'hizmet'}">
                     <option :value="null">Anlaşma Yok</option>
                     <option v-for="a in anlasmalar" :key="a.id" :value="a.id">{{ a.ad }}</option>
                   </select>
                 </td>
-
-                <!-- Stok Durumu -->
                 <td class="px-4 py-4 text-sm">
                   <div v-if="item.sourceType === 'depo' && item.selectedSourceId">
-                    <span v-if="item.checkingStock" class="text-gray-500">Kontrol ediliyor...</span>
-                    <span v-else-if="item.stockError" class="text-red-600 font-bold flex items-center">
-                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      Yetersiz ({{ item.currentStock }})
-                    </span>
-                    <span v-else class="text-green-600 font-bold flex items-center">
-                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                      Uygun ({{ item.currentStock }})
-                    </span>
+                    <span v-if="item.checkingStock">Kontrol...</span>
+                    <span v-else-if="item.stockError" class="text-red-600 font-bold flex items-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Yetersiz ({{ item.currentStock }})</span>
+                    <span v-else class="text-green-600 font-bold flex items-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Uygun ({{ item.currentStock }})</span>
                   </div>
-                  <span v-else-if="item.sourceType === 'hizmet'" class="text-gray-400 italic">Stok Takibi Yok</span>
+                  <span v-else-if="item.sourceType === 'hizmet'" class="text-gray-400 italic">Stoksuz</span>
                   <span v-else class="text-orange-500 text-xs">Seçim Bekleniyor</span>
                 </td>
               </tr>
             </tbody>
           </table>
-
-          <div class="mt-6">
-            <label class="block text-sm font-medium text-gray-700">İş Emri Notu</label>
-            <textarea v-model="workOrderNote" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="İş emri için özel bir notunuz varsa buraya ekleyin..."></textarea>
-          </div>
+          <div class="mt-6"><label class="block text-sm font-medium text-gray-700">İş Emri Notu</label><textarea v-model="workOrderNote" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="İş emri için özel bir notunuz varsa buraya ekleyin..."></textarea></div>
         </div>
-
-        <!-- Modal Footer -->
         <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3 rounded-b-lg">
           <button type="button" @click="showConvertModal = false" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 font-bold">İptal</button>
-          <button 
-            type="button"
-            @click="convertToWorkOrder" 
-            :disabled="converting || hasStockErrors" 
-            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
+          <button type="button" @click="convertToWorkOrder" :disabled="converting || hasStockErrors" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed">
             <span v-if="converting" class="mr-2 animate-spin">⟳</span>
             {{ converting ? 'Oluşturuluyor...' : 'Onayla ve İş Emri Oluştur' }}
           </button>
@@ -366,15 +319,13 @@ const loading = ref(false);
 const isEditing = ref(false);
 const proforma = ref(null);
 
-// Dönüştürme Modalı State'leri
 const showConvertModal = ref(false);
-const showSartlarModal = ref(false); // YENİ
-const tempSartlar = ref(''); // YENİ
+const showSartlarModal = ref(false);
+const tempSartlar = ref('');
 const converting = ref(false);
 const convertItems = ref([]);
 const workOrderNote = ref('');
 
-// Form ve Kaynaklar
 const form = ref({});
 const guncelKalemler = ref([]);
 const depolar = ref([]);
@@ -389,18 +340,18 @@ const getDetay = async () => {
   try {
     const { data, error } = await supabase
       .from('proformalar')
-      .select(`*, musteriler(*), proforma_kalemleri(*, depolar(ad), tedarikciler(ad), anlasmalar(ad))`)
+      .select(`*, musteriler(*), proforma_kalemleri(*)`) // Basitleştirilmiş sorgu, ilişkiler artık kalem ekle'de
       .eq('id', id)
       .single();
 
     if (error) throw error;
     proforma.value = data;
-    tempSartlar.value = data.sartlar || ''; // Şartları modal için hazırla
+    tempSartlar.value = data.sartlar || '';
 
     const [depolarRes, tedarikcilerRes, anlasmalarRes] = await Promise.all([
       supabase.from('depolar').select('*'),
       supabase.from('tedarikciler').select('*'),
-      supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id, taahhut_edilen_miktar)').eq('aktif_mi', true)
+      supabase.from('anlasmalar').select('*, anlasma_kalemleri(urun_id)').eq('aktif_mi', true)
     ]);
     depolar.value = depolarRes.data || [];
     tedarikciler.value = tedarikcilerRes.data || [];
@@ -409,7 +360,6 @@ const getDetay = async () => {
     if (route.query.otomatikDonustur === 'true' && proforma.value.durum !== 'Dönüştürüldü') {
       setTimeout(() => { openConvertModal(); }, 500);
     }
-
   } catch (err) {
     alert('Veri çekme hatası: ' + err.message);
     router.push('/app/proformalar');
@@ -418,53 +368,47 @@ const getDetay = async () => {
   }
 };
 
+// --- YENİ HESAPLAMA MANTIĞI ---
+const toplamlar = computed(() => {
+    if (!proforma.value || !proforma.value.proforma_kalemleri) return { araToplam: 0, kdv: 0, genelToplam: 0 };
+    const araToplam = proforma.value.proforma_kalemleri.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+    const kdv = araToplam * 0.20;
+    const genelToplam = araToplam + kdv;
+    return { araToplam, kdv, genelToplam };
+});
+
+const toplamlarDuzenleme = computed(() => {
+    const araToplam = guncelKalemler.value.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+    const kdv = araToplam * 0.20;
+    const genelToplam = araToplam + kdv;
+    return { araToplam, kdv, genelToplam };
+});
+
 // --- DÜZENLEME MODU ---
 const baslaDuzenle = () => {
   form.value = {
     gecerlilik_tarihi: proforma.value.gecerlilik_tarihi,
+    ilgili_kisi: proforma.value.ilgili_kisi || proforma.value.musteriler?.ilgili_kisi || '',
     notlar: proforma.value.notlar,
     para_birimi: proforma.value.para_birimi || 'TRY',
-    kdv_dahil: proforma.value.kdv_dahil,
     kategoriler: proforma.value.kategoriler || [] 
   };
-  guncelKalemler.value = (proforma.value.proforma_kalemleri || []).map(k => ({
-    id: k.id,
-    urun_id: k.urun_id,
-    aciklama: k.aciklama,
-    miktar: k.miktar,
-    birim_fiyat: k.birim_fiyat,
-    kaynak_depo_id: null,
-    kaynak_tedarikci_id: null,
-    anlasma_id: null
-  }));
+  guncelKalemler.value = (proforma.value.proforma_kalemleri || []).map(k => ({ ...k }));
   isEditing.value = true;
 };
 
-const iptalEt = () => {
-  isEditing.value = false;
-  getDetay();
-};
+const iptalEt = () => { isEditing.value = false; getDetay(); };
+const handleKalemlerGuncellendi = (liste) => { guncelKalemler.value = liste; };
 
-const handleKalemlerGuncellendi = (liste) => {
-  guncelKalemler.value = liste;
-};
-
-const hesaplaSatirTutar = (kalem, kdvDahil) => {
-  const ham = kalem.miktar * kalem.birim_fiyat;
-  return kdvDahil ? ham : ham * 1.2;
-};
-
-// SADECE ŞARTLARI KAYDETME FONKSİYONU (YENİ)
 const sartlariKaydet = async () => {
     try {
         const { error } = await supabase.from('proformalar').update({ sartlar: tempSartlar.value }).eq('id', id);
         if(error) throw error;
-        
         proforma.value.sartlar = tempSartlar.value;
         showSartlarModal.value = false;
-        alert("Şartlar başarıyla güncellendi.");
+        alert("Şartlar güncellendi.");
     } catch(err) {
-        alert("Şartlar kaydedilirken hata oluştu: " + err.message);
+        alert("Hata: " + err.message);
     }
 };
 
@@ -472,14 +416,12 @@ const kaydet = async () => {
   if (guncelKalemler.value.length === 0) { alert('En az bir kalem olmalıdır.'); return; }
   loading.value = true;
   try {
-    const toplamTutar = guncelKalemler.value.reduce((sum, k) => sum + hesaplaSatirTutar(k, form.value.kdv_dahil), 0);
-
     const { error: mainError } = await supabase.from('proformalar').update({
         gecerlilik_tarihi: form.value.gecerlilik_tarihi,
+        ilgili_kisi: form.value.ilgili_kisi,
         notlar: form.value.notlar,
-        toplam_tutar: toplamTutar,
+        toplam_tutar: toplamlarDuzenleme.value.genelToplam,
         para_birimi: form.value.para_birimi,
-        kdv_dahil: form.value.kdv_dahil,
         kategoriler: form.value.kategoriler
       }).eq('id', id);
     if (mainError) throw mainError;
@@ -491,10 +433,8 @@ const kaydet = async () => {
       urun_id: k.urun_id || null,
       aciklama: k.aciklama,
       miktar: k.miktar,
-      birim_fiyat: k.birim_fiyat,
-      kaynak_depo_id: null,
-      kaynak_tedarikci_id: null,
-      anlasma_id: null
+      birim: k.birim, // BİRİM EKLENDİ
+      birim_fiyat: k.birim_fiyat
     }));
 
     const { error: insertError } = await supabase.from('proforma_kalemleri').insert(kalemlerToInsert);
@@ -510,12 +450,10 @@ const kaydet = async () => {
   }
 };
 
+// --- DÖNÜŞTÜRME MODALI ---
 const openConvertModal = () => {
   if (!proforma.value) return;
-
-  const liste = proforma.value.proforma_kalemleri || [];
-  
-  convertItems.value = liste.map(k => ({
+  convertItems.value = (proforma.value.proforma_kalemleri || []).map(k => ({
     ...k,
     sourceType: k.urun_id ? 'depo' : 'hizmet',
     selectedSourceId: null,
@@ -524,7 +462,6 @@ const openConvertModal = () => {
     stockError: false,
     currentStock: 0
   }));
-  
   workOrderNote.value = proforma.value.notlar || '';
   showConvertModal.value = true;
 };
@@ -537,32 +474,15 @@ const handleSourceTypeChange = (item) => {
 };
 
 const checkStock = async (item) => {
-  if (item.sourceType !== 'depo' || !item.selectedSourceId || !item.urun_id) {
-    item.stockError = false;
-    return;
-  }
-
+  if (item.sourceType !== 'depo' || !item.selectedSourceId || !item.urun_id) { item.stockError = false; return; }
   item.checkingStock = true;
   try {
-    const { data, error } = await supabase
-      .from('stok_seviyeleri')
-      .select('miktar, rezerve_miktar')
-      .eq('urun_id', item.urun_id)
-      .eq('depo_id', item.selectedSourceId)
-      .single();
-
+    const { data, error } = await supabase.from('stok_seviyeleri').select('miktar, rezerve_miktar').eq('urun_id', item.urun_id).eq('depo_id', item.selectedSourceId).single();
     if (error && error.code !== 'PGRST116') throw error; 
-
     const eldekiMiktar = data ? (data.miktar - data.rezerve_miktar) : 0;
     item.currentStock = eldekiMiktar;
-
-    if (eldekiMiktar < item.miktar) {
-      item.stockError = true;
-    } else {
-      item.stockError = false;
-    }
+    item.stockError = eldekiMiktar < item.miktar;
   } catch (err) {
-    console.error('Stok kontrol hatası', err);
     item.stockError = true; 
   } finally {
     item.checkingStock = false;
@@ -570,249 +490,107 @@ const checkStock = async (item) => {
 };
 
 const hasStockErrors = computed(() => {
-  const missingSelection = convertItems.value.some(item => 
-    (item.sourceType !== 'hizmet' && !item.selectedSourceId)
-  );
+  const missingSelection = convertItems.value.some(item => (item.sourceType !== 'hizmet' && !item.selectedSourceId));
   if (missingSelection) return true;
-
   return convertItems.value.some(item => item.stockError);
 });
 
 const convertToWorkOrder = async () => {
   if (hasStockErrors.value) return;
-
   converting.value = true;
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
-    // Numara için prosedürü çağır
-    let isEmriNo = 'IE-AUTO';
-    try { const { data: yeniNo } = await supabase.rpc('is_emri_numara_olustur'); if(yeniNo) isEmriNo = yeniNo; } catch(e) { console.error(e); }
+    const { data: yeniNo } = await supabase.rpc('is_emri_numara_olustur');
     
     const { data: isEmri, error: isEmriError } = await supabase.from('is_emirleri').insert([{
       musteri_id: proforma.value.musteri_id,
       siparis_tarihi: new Date(),
-      durum: 'Açık', // Bekliyor -> Açık olarak güncellendi
+      durum: 'Açık',
       toplam_tutar: proforma.value.toplam_tutar,
       notlar: workOrderNote.value,
       olusturan_kullanici_id: user?.id,
-      satisci_id: null, // FK HATASINI ÖNLEMEK İÇİN NULL GÖNDERİYORUZ
-      numara: isEmriNo,
+      satisci_id: null,
+      numara: yeniNo || 'IE-HATA',
       is_tamamlandi: false,
-      is_emri_tipi: 'SİPARİŞ', // Satış -> SİPARİŞ olarak güncellendi
+      is_emri_tipi: 'SİPARİŞ',
       sevk_adresi: proforma.value.musteriler?.adres,
       para_birimi: proforma.value.para_birimi || 'TRY',
-      kdv_dahil: proforma.value.kdv_dahil
+      kdv_dahil: false
     }]).select().single();
-
     if (isEmriError) throw isEmriError;
 
     const kalemlerInsert = convertItems.value.map(item => ({
       is_emri_id: isEmri.id,
       urun_id: item.urun_id,
       miktar: item.miktar,
+      birim: item.birim, // BİRİM EKLENDİ
       birim_fiyat: item.birim_fiyat,
       aciklama: item.aciklama,
       kaynak_depo_id: item.sourceType === 'depo' ? item.selectedSourceId : null,
       kaynak_tedarikci_id: item.sourceType === 'tedarikci' ? item.selectedSourceId : null,
       anlasma_id: item.selectedAgreementId
     }));
-
-    const { error: itemsError } = await supabase.from('is_emri_kalemleri').insert(kalemlerInsert);
-    if (itemsError) throw itemsError;
-
-    const { error: updateError } = await supabase.from('proformalar').update({
-      durum: 'Dönüştürüldü',
-      donusturulen_is_emri_id: isEmri.id
-    }).eq('id', proforma.value.id);
-
-    if (updateError) throw updateError;
+    await supabase.from('is_emri_kalemleri').insert(kalemlerInsert);
+    await supabase.from('proformalar').update({ durum: 'Dönüştürüldü', donusturulen_is_emri_id: isEmri.id }).eq('id', proforma.value.id);
 
     alert('İş Emri başarıyla oluşturuldu!');
     showConvertModal.value = false;
     router.push(`/app/is-emirleri/${isEmri.id}`);
-
   } catch (err) {
     alert('Dönüştürme hatası: ' + err.message);
-    console.error(err);
   } finally {
     converting.value = false;
   }
 };
 
+// --- YARDIMCI FONKSİYONLAR ---
 const suresiGectiMi = (p) => {
   if (p.durum === 'Dönüştürüldü') return false;
-  const bugun = new Date().toISOString().split('T')[0];
-  return p.gecerlilik_tarihi < bugun;
+  return p.gecerlilik_tarihi < new Date().toISOString().split('T')[0];
 };
 
 const getDurumBadge = (durum) => {
-  if (durum === 'Taslak') return 'px-2 py-1 text-xs rounded bg-gray-100 text-gray-600';
-  if (durum === 'Gönderildi') return 'px-2 py-1 text-xs rounded bg-blue-100 text-blue-600';
-  if (durum === 'Dönüştürüldü') return 'px-2 py-1 text-xs rounded bg-purple-100 text-purple-600 font-bold';
-  return 'px-2 py-1 text-xs rounded bg-gray-100 text-gray-800';
+  const durumMap = { 'Taslak': 'bg-gray-100 text-gray-600', 'Gönderildi': 'bg-blue-100 text-blue-600', 'Dönüştürüldü': 'bg-purple-100 text-purple-600 font-bold' };
+  return `px-2 py-1 text-xs rounded ${durumMap[durum] || 'bg-gray-100 text-gray-800'}`;
 };
 
 const formatTarih = (t) => t ? new Date(t).toLocaleDateString('tr-TR') : '-';
+const formatPara = (val, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(val || 0);
 
-// TEK BİR KEZ TANIMLANDI
-const formatPara = (val, currency = 'TRY') => {
-  return new Intl.NumberFormat('tr-TR', { 
-    style: 'currency', 
-    currency: currency || 'TRY' 
-  }).format(val || 0);
-};
-
+// --- YAZDIRMA FONKSİYONU ---
 const yazdir = () => {
   if (!proforma.value) return;
   const p = proforma.value;
   const logoUrl = window.location.origin + '/logo11.png';
   const tarih = formatTarih(p.olusturma_tarihi);
-  const gecerlilik = formatTarih(p.gecerlilik_tarihi);
   const musteri = p.musteriler || {};
+  const ilgiliKisi = p.ilgili_kisi || musteri.ilgili_kisi || '-';
   const pb = p.para_birimi || 'TRY';
-  const kdvDahil = p.kdv_dahil;
 
   const kalemlerHTML = p.proforma_kalemleri.map((kalem, index) => {
       let tutar = kalem.miktar * kalem.birim_fiyat;
-      if (!kdvDahil) tutar = tutar * 1.2;
       return `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">
-            ${formatPara(kalem.birim_fiyat, pb)}<br>
-            <span style="font-size:9px;color:#666">(${kdvDahil ? 'Dahil' : 'Hariç'})</span>
-          </td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
+          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
         </tr>
       `;
   }).join('');
 
-  const genelToplam = p.toplam_tutar;
-  const araToplam = genelToplam / 1.2;
-  const toplamKDV = genelToplam - araToplam;
-
   const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="tr">
-      <head>
-        <meta charset="UTF-8">
-        <title>Proforma Fatura - ${p.proforma_no}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-          @page { margin: 1cm; size: A4; }
-          body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0; font-size: 12px; min-height: 100vh; position: relative; }
-          .container { max-width: 210mm; margin: 0 auto; background: white; padding-bottom: 50px; }
-          .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-          .logo-area img { height: 100px; object-fit: contain; }
-          .company-details { text-align: right; font-size: 11px; color: #555; }
-          .company-name { font-size: 16px; font-weight: bold; color: #111; margin-bottom: 1px; }
-          .doc-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; color: #4f46e5; }
-          .info-grid { display: flex; justify-content: space-between; margin-bottom: 30px; }
-          .info-box { width: 48%; }
-          .box-title { font-size: 13px; font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 10px; padding-bottom: 5px; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th { background: #f9fafb; padding: 10px; border-bottom: 2px solid #ddd; text-align: left; font-size: 11px; }
-          .totals { display: flex; justify-content: flex-end; }
-          .total-wrapper { width: 250px; }
-          .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
-          .total-row.final { font-weight: bold; font-size: 14px; border-top: 2px solid #333; margin-top: 5px; padding-top: 10px; }
-          .notes { background: #f9fafb; padding: 15px; border-left: 4px solid #ddd; margin-top: 30px; }
-          
-          /* Footer Notu Sabitleme */
-          .footer-note {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            padding: 10px;
-            background: white;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo-area"><img src="${logoUrl}" alt="Logo"></div>
-            <div class="company-details">
-                <div class="company-name">Tavlaşoğlu Isıtma Soğutma</div>
-                <div class="company-name">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div>
-                <div>Lalapaşa Mah. Samih Kobal Cad. İnanoğlu Apt. No:16/2</div>
-                <div>Yakutiye / Erzurum</div>
-                <div>Tel: 0(442) 238 83 83</div>
-            </div>
-          </div>
-
-          <div class="doc-title">PROFORMA FATURA</div>
-
-          <div class="info-grid">
-            <div class="info-box">
-              <div class="box-title">SAYIN / MÜŞTERİ</div>
-              <div class="row"><strong>${musteri.unvan || '-'}</strong></div>
-              <div class="row"><span>İlgili:</span> <span>${musteri.ilgili_kisi || '-'}</span></div>
-              <div class="row"><span>V.D:</span> <span>${musteri.vergi_dairesi || '-'}</span></div>
-              <div class="row"><span>V.No:</span> <span>${musteri.vergi_no || '-'}</span></div>
-              <div class="row"><span>Adres:</span> <span>${musteri.adres || '-'}</span></div>
-            </div>
-            <div class="info-box">
-              <div class="box-title">BELGE DETAYLARI</div>
-              <div class="row"><span>Proforma No:</span> <strong>${p.proforma_no}</strong></div>
-              <div class="row"><span>Tarih:</span> <span>${tarih}</span></div>
-              <div class="row"><span>Geçerlilik Tarihi:</span> <span style="color:red">${gecerlilik}</span></div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align: center;">#</th>
-                <th>Açıklama</th>
-                <th style="text-align: center;">Miktar</th>
-                <th style="text-align: right;">Birim Fiyat</th>
-                <th style="text-align: right;">Tutar</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${kalemlerHTML}
-            </tbody>
-          </table>
-
-          <div class="totals">
-            <div class="total-wrapper">
-                <div class="total-row"><span>Ara Toplam (KDV'siz):</span><span>${formatPara(araToplam, pb)}</span></div>
-                <div class="total-row"><span>Toplam KDV (%20):</span><span>${formatPara(toplamKDV, pb)}</span></div>
-                <div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatPara(genelToplam, pb)}</span></div>
-            </div>
-          </div>
-          
-          <div style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 10px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Şartlar ve Koşullar</h4>
-            <div style="white-space: pre-wrap; font-size: 10px; color: #444; line-height: 1.4;">${p.sartlar || 'Şart belirtilmemiş.'}</div>
-          </div>
-
-          ${p.notlar ? `<div class="notes"><strong>NOTLAR:</strong><br>${p.notlar.replace(/\n/g, '<br>')}</div>` : ''}
-          
-          <div class="footer-note">
-            Bu belge bilgilendirme amaçlıdır, mali değeri yoktur. Fatura yerine geçmez.
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+      <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Proforma - ${p.proforma_no}</title>
+        <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'); @page { margin: 1cm; size: A4; } body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.4; margin: 0; padding: 0; font-size: 11px; } .container { max-width: 210mm; margin: 0 auto; background: white; padding-bottom: 20px; } .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; } .logo-area img { height: 80px; object-fit: contain; } .company-details { text-align: right; font-size: 10px; color: #555; } .company-name { font-size: 14px; font-weight: bold; color: #111; } .doc-no { font-weight: bold; font-size: 12px; color: #333; } .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; margin-top: 10px; } .info-box { width: 48%; border: 1px solid #eee; padding: 10px; border-radius: 4px; } .box-title { font-size: 11px; font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 5px; padding-bottom: 2px; color: #4f46e5; } .row { display: flex; justify-content: space-between; margin-bottom: 3px; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } th { background: #f9fafb; padding: 6px; border-bottom: 2px solid #ddd; text-align: left; font-size: 10px; font-weight: bold; } .totals { display: flex; justify-content: flex-end; } .total-wrapper { width: 200px; } .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; } .total-row.final { font-weight: bold; font-size: 12px; border-top: 2px solid #333; margin-top: 3px; padding-top: 5px; } .footer-note { position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 9px; color: #999; padding: 5px; }
+        </style></head><body><div class="container"><div class="header"><div class="logo-area"><img src="${logoUrl}" alt="Logo"></div><div class="company-details"><div class="company-name">Tavlaşoğlu Isıtma Soğutma</div><div class="company-name">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div><div>Lalapaşa Mah. Samih Kobal Cad. İnanoğlu Apt. No:16/2 Yakutiye / Erzurum</div><div>Tel: 0(442) 238 83 83 | V.D: Aziziye | V.No: 8300346377</div></div></div><div class="info-grid"><div class="info-box"><div class="box-title">SAYIN / MÜŞTERİ</div><div class="row"><strong>${musteri.unvan || '-'}</strong></div><div class="row"><span>İlgili:</span> <span>${ilgiliKisi}</span></div><div class="row"><span>Adres:</span> <span>${musteri.adres || '-'}</span></div><div class="row"><span>V.No:</span> <span>${musteri.vergi_no || '-'}</span></div></div><div class="info-box"><div class="box-title">BELGE BİLGİLERİ</div><div class="row"><span>Tarih:</span> <span>${tarih}</span></div><div class="row"><span>Proforma No:</span> <span class="doc-no">${p.proforma_no}</span></div></div></div><table><thead><tr><th style="text-align: center; width: 30px;">#</th><th>Açıklama</th><th style="text-align: center; width: 60px;">Miktar</th><th style="text-align: center; width: 60px;">Birim</th><th style="text-align: right; width: 100px;">Birim Fiyat</th><th style="text-align: right; width: 100px;">Tutar</th></tr></thead><tbody>${kalemlerHTML}</tbody></table><div class="totals"><div class="total-wrapper"><div class="total-row"><span>Ara Toplam:</span><span>${formatPara(toplamlar.value.araToplam, pb)}</span></div><div class="total-row"><span>KDV (%20):</span><span>${formatPara(toplamlar.value.kdv, pb)}</span></div><div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatPara(toplamlar.value.genelToplam, pb)}</span></div></div></div><div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;"><h4 style="margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase;">Şartlar ve Koşullar</h4><div style="white-space: pre-wrap; font-size: 9px; color: #444; line-height: 1.3;">${p.sartlar || 'Şart belirtilmemiş.'}</div></div>${p.notlar ? `<div style="margin-top:10px; padding:10px; background:#f9fafb; font-size:9px;"><strong>NOTLAR:</strong><br>${p.notlar}</div>` : ''}<div class="footer-note">Bu belge bilgilendirme amaçlıdır. Proforma Fatura.</div></div></body></html>`;
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    setTimeout(() => { printWindow.print(); }, 500);
 };
 
 onMounted(getDetay);

@@ -13,8 +13,10 @@
             <h2 class="text-xl font-semibold mb-4 text-gray-700">Müşteri Bilgileri</h2>
             <label class="block text-sm font-medium text-gray-700">Müşteri Seçimi (*)</label>
             <MusteriAramaInput @musteri-secildi="handleMusteriSecildi" class="mt-1" />
-            <div v-if="isEmri.musteri_id" class="mt-4 p-4 bg-gray-50 rounded-lg border">
-              <p><strong>Unvan:</strong> {{ secilenMusteriUnvani }}</p>
+            
+            <div v-if="isEmri.musteri_id" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <p class="font-bold text-blue-900">{{ secilenMusteriUnvani }}</p>
+              <p class="text-xs text-blue-700 mt-1">Seçili Müşteri</p>
             </div>
           </div>
           <div>
@@ -34,18 +36,22 @@
             
             <!-- SATIR 1 -->
             <div>
+              <label class="block text-sm font-medium text-gray-700">İş Emri No (*)</label>
+              <input 
+                v-model.number="isEmri.numara" 
+                type="number" 
+                required
+                class="mt-1 block w-full p-2 border rounded-md h-[42px] font-bold text-gray-900 bg-yellow-50" 
+                placeholder="Otomatik..."
+              >
+              <p class="text-[10px] text-gray-500 mt-1">Sıradaki numara otomatik atanır, değiştirebilirsiniz.</p>
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-gray-700">İş Emri Tipi (*)</label>
               <select v-model="isEmri.is_emri_tipi" required class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px]">
                 <option value="SİPARİŞ">Sipariş</option>
                 <option value="ARIZA">Arıza / Servis</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Satışçı</label>
-              <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px]">
-                <option :value="null">Satışçı Seçin</option>
-                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
               </select>
             </div>
 
@@ -56,6 +62,14 @@
 
             <!-- SATIR 2 -->
             <div>
+              <label class="block text-sm font-medium text-gray-700">Satışçı</label>
+              <select v-model="isEmri.satisci_id" class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px]">
+                <option :value="null">Satışçı Seçin</option>
+                <option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option>
+              </select>
+            </div>
+
+            <div>
               <label class="block text-sm font-medium text-gray-700">Para Birimi</label>
               <select v-model="isEmri.para_birimi" class="mt-1 block w-full p-2 border rounded-md bg-white h-[42px] font-bold text-gray-800">
                 <option value="TRY">₺ Türk Lirası (TRY)</option>
@@ -65,16 +79,8 @@
               </select>
             </div>
 
-            <!-- KDV DAHİL CHECKBOX -->
-            <div class="flex flex-col h-[70px] justify-center">
-               <label class="flex items-center cursor-pointer">
-                <input type="checkbox" v-model="isEmri.kdv_dahil" class="h-5 w-5 text-indigo-600 rounded border-gray-300">
-                <span class="ml-3 text-sm font-medium text-gray-700">KDV Dahil</span>
-              </label>
-            </div>
-
             <!-- İŞ TAMAMLANDI CHECKBOX -->
-            <div class="flex flex-col h-[70px] justify-center"> 
+            <div class="flex flex-col h-[42px] justify-center mt-7"> 
               <label class="flex items-center cursor-pointer">
                 <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
                 <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
@@ -140,34 +146,44 @@
             :anlasmalar="anlasmalar" 
             :varsayilan-anlasma="secilenVarsayilanAnlasma"
             :para-birimi="isEmri.para_birimi" 
-            :kdv-dahil="isEmri.kdv_dahil"
           />
           <div v-else class="text-center p-4 text-gray-500">Kaynaklar yükleniyor...</div>
         </div>
         
-        <!-- FOOTER -->
-        <div class="flex justify-end pt-6 border-t items-center space-x-4">
-          <div class="text-lg font-bold text-gray-700 mr-4">
-             Toplam: <span class="text-blue-600">{{ formatPara(toplamTutar, isEmri.para_birimi) }}</span>
+        <!-- FOOTER / TOPLAMLAR -->
+        <div class="flex justify-end pt-6 border-t">
+          <div class="w-full max-w-md space-y-3">
+             <div class="flex justify-between text-gray-600">
+                <span>Ara Toplam:</span>
+                <span class="font-semibold">{{ formatPara(toplamlar.araToplam, isEmri.para_birimi) }}</span>
+             </div>
+             <div class="flex justify-between text-gray-600">
+                <span>KDV (%20):</span>
+                <span class="font-semibold">{{ formatPara(toplamlar.kdv, isEmri.para_birimi) }}</span>
+             </div>
+             <div class="flex justify-between text-xl font-bold text-gray-800 border-t pt-2">
+                <span>GENEL TOPLAM:</span>
+                <span class="text-green-600">{{ formatPara(toplamlar.genelToplam, isEmri.para_birimi) }}</span>
+             </div>
+             
+             <button 
+               type="submit" 
+               :disabled="isEmriKayitYapiliyor || !isEmri.musteri_id"
+               class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition"
+             >
+               {{ isEmriKayitYapiliyor ? 'Kaydediliyor...' : 'İş Emrini Kaydet' }}
+             </button>
           </div>
-          <button 
-            type="submit" 
-            :disabled="isEmriKayitYapiliyor || !isEmri.musteri_id"
-            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {{ isEmriKayitYapiliyor ? 'Kaydediliyor...' : 'İş Emrini Kaydet' }}
-          </button>
         </div>
+
       </form>
     </div>
   </div>
 </template>
 
-
-
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
-import { useRouter, RouterLink } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { supabase } from '../supabase.js';
 import { useLoading } from '../composables/useLoading.js';
 import MusteriAramaInput from '../components/MusteriAramaInput.vue';
@@ -186,9 +202,9 @@ const isEmri = ref({
   notlar: '',
   satisci_id: null,
   fatura_no: '',
-  numara: 'Sistem Atayacak', // Başlangıçta placeholder
+  numara: null, // Sayısal alan
   is_tamamlandi: false,
-  kdv_dahil: true, 
+  kdv_dahil: false, 
   maliyet: 0, 
   is_emri_tipi: 'SİPARİŞ',
   sevk_adresi: '',
@@ -208,6 +224,7 @@ const kaynaklarHazir = ref(false);
 const handleMusteriSecildi = (musteri) => {
   isEmri.value.musteri_id = musteri.id;
   secilenMusteriUnvani.value = musteri.unvan;
+  isEmri.value.sevk_adresi = musteri.adres || '';
 };
 
 const handleKalemlerGuncellendi = (yeniListe) => {
@@ -219,16 +236,12 @@ const maliyetEkle = () => {
   maliyetListesi.value.push({ aciklama: '', tutar: 0 });
 };
 
-// Hesaplamalar
-const toplamTutar = computed(() => {
-  return isEmriKalemleri.value.reduce((total, kalem) => {
-    const hamTutar = kalem.miktar * kalem.birim_fiyat;
-    if (isEmri.value.kdv_dahil) {
-      return total + hamTutar;
-    } else {
-      return total + (hamTutar * 1.2);
-    }
-  }, 0);
+// --- HESAPLAMA ---
+const toplamlar = computed(() => {
+    const araToplam = isEmriKalemleri.value.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+    const kdv = araToplam * 0.20;
+    const genelToplam = araToplam + kdv;
+    return { araToplam, kdv, genelToplam };
 });
 
 const toplamMaliyet = computed(() => maliyetListesi.value.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0));
@@ -236,9 +249,6 @@ const toplamMaliyet = computed(() => maliyetListesi.value.reduce((sum, item) => 
 const formatPara = (val, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(val || 0);
 
 onMounted(async () => {
-  // BURADAN NUMARA OLUŞTURMA KODUNU KALDIRDIK.
-  // Artık numara sayfa açılışında rezerve edilmeyecek.
-
   const [depolarRes, tedarikcilerRes, anlasmalarRes, satiscilarRes] = await Promise.all([
     supabase.from('depolar').select('*'),
     supabase.from('tedarikciler').select('*'),
@@ -251,6 +261,16 @@ onMounted(async () => {
   anlasmalar.value = anlasmalarRes.data || [];
   satiscilar.value = satiscilarRes.data || [];
   kaynaklarHazir.value = true;
+
+  // --- SAYAÇTAN NUMARA ÇEKME ---
+  try {
+    const { data, error } = await supabase.rpc('bir_sonraki_is_emri_numarasi');
+    if (!error && data) {
+      isEmri.value.numara = data;
+    }
+  } catch (err) {
+    console.error("Numara alınamadı:", err);
+  }
 });
 
 watch(secilenVarsayilanAnlasma, (newAnlasma) => {
@@ -260,40 +280,36 @@ watch(secilenVarsayilanAnlasma, (newAnlasma) => {
 const kaydet = async () => {
   if (!isEmri.value.musteri_id) { alert('Lütfen bir müşteri seçin.'); return; }
   if (isEmriKalemleri.value.length === 0) { alert('Lütfen en az bir malzeme veya hizmet ekleyin.'); return; }
+  if (!isEmri.value.numara) { alert('Lütfen iş emri numarası giriniz.'); return; }
 
   await withLoading(async () => {
-    // 1. ÖNCE NUMARAYI OLUŞTUR
-    try {
-      const { data: yeniNumara, error: numaraError } = await supabase.rpc('is_emri_numara_olustur');
-      if (numaraError) throw numaraError;
-      isEmri.value.numara = yeniNumara;
-    } catch (err) {
-      alert('Numara oluşturulurken hata oluştu: ' + err.message);
-      return; // İşlemi durdur
-    }
-
-    // Değerleri ata
-    isEmri.value.toplam_tutar = toplamTutar.value;
+    // 1. İş Emri Başlığını Kaydet (Formdaki numara ile)
+    isEmri.value.toplam_tutar = toplamlar.value.genelToplam; 
     isEmri.value.maliyet = toplamMaliyet.value; 
     
-    // 2. İş Emri Başlığını Kaydet (Oluşan numara ile)
     const { data: isEmriData, error: isEmriError } = await supabase
       .from('is_emirleri')
-      .insert([{
-        ...isEmri.value
-      }])
+      .insert([{ ...isEmri.value }])
       .select('id')
       .single();
     
-    if (isEmriError) throw isEmriError;
+    if (isEmriError) {
+      if (isEmriError.code === '23505') { // Unique constraint violation code
+         alert(`Bu numara (${isEmri.value.numara}) zaten kullanımda. Lütfen başka bir numara girin.`);
+         return;
+      }
+      throw isEmriError;
+    }
+
     const newIsEmriId = isEmriData.id;
 
-    // 3. Ürün Kalemlerini Kaydet
+    // 2. Ürün Kalemlerini Kaydet
     const kalemlerToInsert = isEmriKalemleri.value.map(kalem => ({
       is_emri_id: newIsEmriId,
       urun_id: kalem.urun_id || null,
       aciklama: kalem.aciklama,
       miktar: kalem.miktar,
+      birim: kalem.birim,
       birim_fiyat: kalem.birim_fiyat,
       kaynak_depo_id: kalem.kaynak_depo_id || null,
       kaynak_tedarikci_id: kalem.kaynak_tedarikci_id || null,
@@ -305,7 +321,7 @@ const kaydet = async () => {
       if (kalemlerError) throw kalemlerError;
     }
 
-    // 4. Maliyet Kalemlerini Kaydet
+    // 3. Maliyet Kalemlerini Kaydet
     const maliyetlerToInsert = maliyetListesi.value
       .filter(m => m.aciklama && m.tutar > 0)
       .map(m => ({
@@ -319,7 +335,7 @@ const kaydet = async () => {
       if (maliyetError) throw maliyetError;
     }
 
-    alert(`İş emri başarıyla kaydedildi! Numara: ${isEmri.value.numara}`);
+    alert(`İş emri başarıyla kaydedildi! No: ${isEmri.value.numara}`);
     router.push('/app/is-emirleri');
   });
 };
