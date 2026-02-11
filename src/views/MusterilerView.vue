@@ -156,7 +156,6 @@
                 </svg>
               </button>
               
-              <!-- Sayfa Numaraları (Basitleştirilmiş: Sadece Mevcut Sayfa) -->
               <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
                 Sayfa {{ mevcutSayfa }} / {{ toplamSayfaSayisi }}
               </span>
@@ -249,7 +248,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount, watch, reactive } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue';
 import { supabase } from '../supabase.js';
 import BaseModal from '../components/BaseModal.vue';
 import { useLoading } from '../composables/useLoading.js';
@@ -289,7 +288,6 @@ const kolonlar = ref([]);
 
 // --- Lifecycle Hooks ---
 onMounted(() => {
-  // Kolon ayarlarını yükle
   const kayitliAyarlar = localStorage.getItem(localStorageKey);
   if (kayitliAyarlar) {
     kolonlar.value = JSON.parse(kayitliAyarlar);
@@ -315,11 +313,11 @@ const bitisKayit = computed(() => Math.min(mevcutSayfa.value * sayfaBasinaKayit,
 let debounceTimeout;
 watch(aramaMetni, (yeniDeger) => {
   clearTimeout(debounceTimeout);
-  loading.value = true; // Kullanıcı yazarken hemen loading göster
+  loading.value = true;
   debounceTimeout = setTimeout(() => {
-    mevcutSayfa.value = 1; // Aramada ilk sayfaya dön
+    mevcutSayfa.value = 1;
     getMusteriler();
-  }, 500); // 500ms bekle
+  }, 500);
 });
 
 // --- Sayfa Değiştirme ---
@@ -329,28 +327,22 @@ const sayfaDegistir = (sayfa) => {
   getMusteriler();
 };
 
-// --- Veri Çekme (Server-Side Logic) ---
+// --- Veri Çekme ---
 const getMusteriler = async () => {
   loading.value = true;
   try {
-    // Sayfalama aralığını hesapla (Supabase range 0-indexed çalışır)
     const from = (mevcutSayfa.value - 1) * sayfaBasinaKayit;
     const to = from + sayfaBasinaKayit - 1;
 
     let query = supabase
       .from('musteriler')
-      .select('*', { count: 'exact' }); // Toplam sayıyı da al
+      .select('*', { count: 'exact' });
 
-    // Arama filtresi
     if (aramaMetni.value) {
       const arama = aramaMetni.value.trim();
-      // Unvan, VKN, Telefon, İlgili Kişi veya İl alanlarında arama yap
       query = query.or(`unvan.ilike.%${arama}%,vergi_no.ilike.%${arama}%,telefon.ilike.%${arama}%,ilgili_kisi.ilike.%${arama}%,il.ilike.%${arama}%`);
     }
 
-    // Sıralama ve Sayfalama
-    // Türkçe karakter uyumlu sıralama Supabase'de varsayılan collation ile bazen sorun olabilir ama genelde 'unvan' yeterlidir.
-    // Eğer veritabanı collation ayarı tr_TR değilse, Supabase'de unvan.asc yapmak yeterlidir.
     query = query
       .order('unvan', { ascending: true })
       .range(from, to);
@@ -370,7 +362,7 @@ const getMusteriler = async () => {
   }
 };
 
-// --- Kolon Ayarları Kayıt ---
+// --- Kolon Ayarları ---
 const kolonAyarlariniKaydet = () => {
   localStorage.setItem(localStorageKey, JSON.stringify(kolonlar.value));
 };
@@ -385,18 +377,12 @@ const handleClickOutside = (event) => {
 const formModaliniAc = (musteri = null) => {
   if (musteri) {
     duzenlemeModu.value = true;
-    aktifMusteri.value = { ...musteri }; // Kopyasını al
+    aktifMusteri.value = { ...musteri };
   } else {
     duzenlemeModu.value = false;
     aktifMusteri.value = { 
-      unvan: '', 
-      ilgili_kisi: '', 
-      vergi_dairesi: '', 
-      vergi_no: '', 
-      telefon: '', 
-      adres: '', 
-      ilce: '', 
-      il: '' 
+      unvan: '', ilgili_kisi: '', vergi_dairesi: '', vergi_no: '', 
+      telefon: '', adres: '', ilce: '', il: '' 
     };
   }
   formModalGoster.value = true;
@@ -410,11 +396,11 @@ const formuKaydet = async () => {
   
   await withLoading(async () => {
     let error;
-    
-    // Benzersiz kod oluştur (Sadece yeni kayıtta)
-    if (!duzenlemeModu.value && !aktifMusteri.value.musteri_kodu) {
-      aktifMusteri.value.musteri_kodu = 'M' + Date.now().toString().slice(-6);
-    }
+
+    // !!! DÜZELTME: Hata veren musteri_kodu ataması kaldırıldı.
+    // if (!duzenlemeModu.value && !aktifMusteri.value.musteri_kodu) {
+    //   aktifMusteri.value.musteri_kodu = 'M' + Date.now().toString().slice(-6);
+    // }
 
     if (duzenlemeModu.value) {
       const { id, ...guncellenecekVeri } = aktifMusteri.value;
@@ -424,16 +410,12 @@ const formuKaydet = async () => {
     }
 
     if (error) {
-       // Unique constraint hatası kontrolü (örn: vergi no veya unvan)
        if (error.code === '23505') throw new Error('Bu kayıt zaten mevcut (Unvan veya Vergi No çakışması).');
        throw error;
     }
 
     formModalGoster.value = false;
-    // Listeyi güncelle (Mevcut sayfada kal)
     await getMusteriler();
-    
-    // İşlem başarılı mesajı (İsteğe bağlı toast notification eklenebilir)
   });
 };
 
@@ -444,7 +426,6 @@ const musteriSil = async (musteri) => {
       const { error } = await supabase.from('musteriler').delete().match({ id: musteri.id });
       if (error) throw error;
       
-      // Eğer sayfadaki son kaydı sildiysek ve ilk sayfada değilsek, bir önceki sayfaya git
       if (musteriler.value.length === 1 && mevcutSayfa.value > 1) {
         mevcutSayfa.value--;
       }
@@ -452,7 +433,6 @@ const musteriSil = async (musteri) => {
       await getMusteriler();
     } catch (error) {
       console.error('Silme hatası:', error.message);
-      // İlişkili kayıt hatası (Foreign Key)
       if (error.code === '23503') {
         alert('Bu müşteriye ait iş emirleri veya finansal kayıtlar olduğu için silinemez. Önce ilgili kayıtları silmelisiniz.');
       } else {
