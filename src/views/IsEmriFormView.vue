@@ -38,8 +38,8 @@
             <div>
               <label class="block text-sm font-medium text-gray-700">İş Emri No (*)</label>
               <input 
-                v-model.number="isEmri.numara" 
-                type="number" 
+                v-model="isEmri.numara" 
+                type="text" 
                 required
                 class="mt-1 block w-full p-2 border rounded-md h-[42px] font-bold text-gray-900 bg-yellow-50" 
                 placeholder="Otomatik..."
@@ -202,7 +202,7 @@ const isEmri = ref({
   notlar: '',
   satisci_id: null,
   fatura_no: '',
-  numara: null, // Sayısal alan
+  numara: null, // Artık metin (text) olarak gelecek
   is_tamamlandi: false,
   kdv_dahil: false, 
   maliyet: 0, 
@@ -265,11 +265,13 @@ onMounted(async () => {
   // --- SAYAÇTAN NUMARA ÇEKME ---
   try {
     const { data, error } = await supabase.rpc('bir_sonraki_is_emri_numarasi');
-    if (!error && data) {
+    if (error) throw error;
+    if (data) {
       isEmri.value.numara = data;
     }
   } catch (err) {
-    console.error("Numara alınamadı:", err);
+    console.error("Yeni iş emri numarası alınamadı:", err);
+    alert("Otomatik iş emri numarası alınırken bir hata oluştu. Lütfen manuel olarak girin.");
   }
 });
 
@@ -283,7 +285,7 @@ const kaydet = async () => {
   if (!isEmri.value.numara) { alert('Lütfen iş emri numarası giriniz.'); return; }
 
   await withLoading(async () => {
-    // 1. İş Emri Başlığını Kaydet (Formdaki numara ile)
+    // 1. İş Emri Başlığını Kaydet
     isEmri.value.toplam_tutar = toplamlar.value.genelToplam; 
     isEmri.value.maliyet = toplamMaliyet.value; 
     

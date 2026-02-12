@@ -415,22 +415,17 @@ import BaseModal from '../components/BaseModal.vue';
 // --- STATE ---
 const userStore = useUserStore();
 const loading = ref(false);
-const gruplar = ref([]); // Ekranda gösterilecek gruplanmış veriler
-const acikGruplar = ref(new Set()); // Detayı açık olan gruplar
+const gruplar = ref([]);
+const acikGruplar = ref(new Set());
 
 // Sayfalama
 const mevcutSayfa = ref(1);
 const sayfaBasinaGrup = 10;
-const toplamGrupSayisi = ref(0); // Tahmini toplam sayı (veya RPC ile tam sayı)
+const toplamGrupSayisi = ref(0);
 
 // Filtreler
 const depolar = ref([]);
-const filtreler = ref({
-  urunArama: '',
-  depoId: null,
-  baslangicTarihi: '',
-  bitisTarihi: ''
-});
+const filtreler = ref({ urunArama: '', depoId: null, baslangicTarihi: '', bitisTarihi: '' });
 let filtreDebounceTimer;
 
 // Modal & Form
@@ -450,7 +445,7 @@ let modalAramaDebounce;
 
 // --- COMPUTED ---
 const duzenlemeModu = computed(() => duzenlenenIndex.value !== null);
-const toplamMiktar = computed(() => girisListesi.value.reduce((sum, item) => sum + item.miktar, 0));
+const toplamMiktar = computed(() => girisListesi.value.reduce((sum, item) => sum + Number(item.miktar || 0), 0));
 const toplamTutar = computed(() => girisListesi.value.reduce((sum, item) => sum + (item.tutar || 0), 0));
 const secilenAnlasmaTipi = computed(() => {
   if (!genelBilgiler.value.anlasma_id) return null;
@@ -458,7 +453,7 @@ const secilenAnlasmaTipi = computed(() => {
   return anlasma ? anlasma.tip : null;
 });
 const urunAramaPlaceholder = computed(() => {
-  if (anlasmaDahilinde.value && !genelBilgiler.value.anlasma_id) {
+  if (anlasmaDahilinde.value && secilenAnlasmaTipi.value === 'Ürün Bazlı' && !genelBilgiler.value.anlasma_id) {
     return 'Önce anlaşma seçiniz...';
   }
   return 'Ürün kodu veya açıklama...';
@@ -471,7 +466,7 @@ onMounted(async () => {
   await verileriGetir();
 });
 
-// --- ARAMA & FİLTRELEME (DEBOUNCE) ---
+// --- ARAMA & FİLTRELEME ---
 watch(() => filtreler.value.urunArama, () => {
   clearTimeout(filtreDebounceTimer);
   filtreDebounceTimer = setTimeout(() => {
@@ -480,104 +475,38 @@ watch(() => filtreler.value.urunArama, () => {
   }, 500);
 });
 
-const filtrele = () => {
-  mevcutSayfa.value = 1;
-  verileriGetir();
-};
+const filtrele = () => { mevcutSayfa.value = 1; verileriGetir(); };
+const filtreleriTemizle = () => { filtreler.value = { urunArama: '', depoId: null, baslangicTarihi: '', bitisTarihi: '' }; mevcutSayfa.value = 1; verileriGetir(); };
+const sayfaDegistir = (sayfa) => { if (sayfa < 1) return; mevcutSayfa.value = sayfa; verileriGetir(); };
 
-const filtreleriTemizle = () => {
-  filtreler.value = { urunArama: '', depoId: null, baslangicTarihi: '', bitisTarihi: '' };
-  mevcutSayfa.value = 1;
-  verileriGetir();
-};
-
-const sayfaDegistir = (sayfa) => {
-  if (sayfa < 1) return;
-  mevcutSayfa.value = sayfa;
-  verileriGetir();
-};
-
-// --- DATA FETCHING (RPC ENTEGRASYONU) ---
+// --- DATA FETCHING ---
 const verileriGetir = async () => {
   loading.value = true;
   acikGruplar.value.clear();
   gruplar.value = [];
-
   try {
-    // 1. Adım: RPC ile Benzersiz Grupları Çek
-    // SQL Fonksiyonu: get_stok_giris_gruplari_v2
     const offset = (mevcutSayfa.value - 1) * sayfaBasinaGrup;
-    
     const { data: grupData, error: rpcError } = await supabase.rpc('get_stok_giris_gruplari_v2', {
-      p_limit: sayfaBasinaGrup,
-      p_offset: offset,
-      p_arama_metni: filtreler.value.urunArama || null,
-      p_depo_id: filtreler.value.depoId || null,
-      p_baslangic_tarihi: filtreler.value.baslangicTarihi || null,
+      p_limit: sayfaBasinaGrup, p_offset: offset, p_arama_metni: filtreler.value.urunArama || null,
+      p_depo_id: filtreler.value.depoId || null, p_baslangic_tarihi: filtreler.value.baslangicTarihi || null,
       p_bitis_tarihi: filtreler.value.bitisTarihi || null
     });
-
     if (rpcError) throw rpcError;
-
-    if (!grupData || grupData.length === 0) {
-      gruplar.value = [];
-      // Toplam sayıyı sıfırla veya güncelle (RPC'den count gelmiyor, tahmini bırakıyoruz)
-      return; 
-    }
-    
-    // Geçici olarak toplam sayıyı artırıyoruz (Pagination aktif kalsın diye)
-    // Gerçek count için ayrı bir sorgu gerekir ama performans için atlıyoruz.
-    toplamGrupSayisi.value = grupData.length < sayfaBasinaGrup 
-      ? (mevcutSayfa.value - 1) * sayfaBasinaGrup + grupData.length 
-      : (mevcutSayfa.value * sayfaBasinaGrup) + 10; // "Daha fazla var" varsayımı
-
-    // 2. Adım: Bu Grupların Detaylarını Çek
+    if (!grupData || grupData.length === 0) { gruplar.value = []; return; }
+    toplamGrupSayisi.value = grupData.length < sayfaBasinaGrup ? (mevcutSayfa.value - 1) * sayfaBasinaGrup + grupData.length : (mevcutSayfa.value * sayfaBasinaGrup) + 1;
     const grupIdleri = grupData.map(g => g.grup_id);
-    
-    const { data: detaylar, error: detayError } = await supabase
-      .from('stok_hareketleri')
-      .select(`
-        *,
-        urunler (urun_kodu, aciklama, ana_birim),
-        depolar (ad),
-        anlasmalar (ad, tedarikciler(ad))
-      `)
-      .in('grup_id', grupIdleri)
-      .eq('hareket_tipi', 'giris');
-
+    const { data: detaylar, error: detayError } = await supabase.from('stok_hareketleri').select(`*, urunler (urun_kodu, aciklama, ana_birim), depolar (ad), anlasmalar (ad, tedarikciler(ad))`).in('grup_id', grupIdleri).eq('hareket_tipi', 'giris');
     if (detayError) throw detayError;
-
-    // 3. Adım: Detayları Gruplarla Eşleştir
-    // gruplar.value = grupData, ama içine detayları ve toplamları ekleyeceğiz
     const gruplanmis = grupData.map(g => {
       const buGrubunDetaylari = detaylar.filter(d => d.grup_id === g.grup_id);
-      
-      // Toplamları hesapla
       const toplamMiktar = buGrubunDetaylari.reduce((acc, curr) => acc + curr.miktar, 0);
       const toplamTutar = buGrubunDetaylari.reduce((acc, curr) => acc + (curr.tutar || 0), 0);
-      
-      // İlk detaydan genel bilgileri al (Depo adı, anlaşma adı vb.)
       const ilkDetay = buGrubunDetaylari[0] || {};
-      
-      return {
-        id: g.grup_id,
-        tarih: g.islem_tarihi, // RPC'den gelen tarih
-        depo_ad: ilkDetay.depolar?.ad || '-',
-        anlasma_ad: ilkDetay.anlasmalar?.ad || null,
-        toplam_miktar: toplamMiktar,
-        toplam_tutar: toplamTutar,
-        detaylar: buGrubunDetaylari
-      };
+      return { id: g.grup_id, tarih: g.islem_tarihi, depo_ad: ilkDetay.depolar?.ad || '-', anlasma_ad: ilkDetay.anlasmalar?.ad || null, toplam_miktar: toplamMiktar, toplam_tutar: toplamTutar, detaylar: buGrubunDetaylari };
     });
-
     gruplar.value = gruplanmis;
-
-  } catch (error) {
-    console.error('Veri çekme hatası:', error);
-    alert('Veriler yüklenirken hata oluştu: ' + error.message);
-  } finally {
-    loading.value = false;
-  }
+  } catch (error) { console.error('Veri çekme hatası:', error); alert('Veriler yüklenirken hata oluştu: ' + error.message);
+  } finally { loading.value = false; }
 };
 
 // --- MODAL İŞLEMLERİ ---
@@ -586,12 +515,7 @@ const formModaliniAc = async () => {
   girisListesi.value = [];
   temizleAktifSatir();
   anlasmaDahilinde.value = false;
-  
-  const { data } = await supabase
-    .from('anlasmalar')
-    .select('*, tedarikciler(ad), anlasma_kalemleri(urun_id)')
-    .eq('aktif_mi', true);
-  
+  const { data } = await supabase.from('anlasmalar').select('*, tedarikciler(ad), anlasma_kalemleri(urun_id)').eq('aktif_mi', true);
   aktifAnlasmalar.value = data || [];
   formModalGoster.value = true;
 };
@@ -603,28 +527,42 @@ const temizleAktifSatir = () => {
   duzenlenenIndex.value = null;
 };
 
+// !!! DÜZELTİLMİŞ FONKSİYON !!!
 const urunAraModal = () => {
   aktifSatir.value.urun_id = null;
   clearTimeout(modalAramaDebounce);
   
   modalAramaDebounce = setTimeout(async () => {
-    if (modalUrunAramaMetni.value.length < 2) { modalUrunAramaSonuclari.value = []; return; }
+    const aramaMetni = modalUrunAramaMetni.value.trim();
+    if (aramaMetni.length < 2) {
+      modalUrunAramaSonuclari.value = [];
+      return;
+    }
     
-    const arama = modalUrunAramaMetni.value;
-    let query = supabase.from('urunler').select('id, urun_kodu, aciklama, ana_birim').limit(10);
-    
-    // Anlaşma filtresi varsa
+    let filterIds = null;
     if (anlasmaDahilinde.value && genelBilgiler.value.anlasma_id) {
       const secilenAnlasma = aktifAnlasmalar.value.find(a => a.id === genelBilgiler.value.anlasma_id);
-      if (secilenAnlasma && secilenAnlasma.tip === 'Ürün Bazlı') {
-        const urunIds = secilenAnlasma.anlasma_kalemleri.map(k => k.urun_id);
-        query = query.in('id', urunIds);
+      if (secilenAnlasma && secilenAnlasma.tip === 'Ürün Bazlı' && secilenAnlasma.anlasma_kalemleri) {
+        filterIds = secilenAnlasma.anlasma_kalemleri.map(k => k.urun_id);
+        if (filterIds.length === 0) {
+          modalUrunAramaSonuclari.value = [];
+          return;
+        }
       }
     }
     
-    query = query.or(`urun_kodu.ilike.%${arama}%,aciklama.ilike.%${arama}%`);
-    const { data } = await query;
-    modalUrunAramaSonuclari.value = data || [];
+    try {
+      const { data, error } = await supabase.rpc('urun_ara', {
+        arama_metni: aramaMetni,
+        filtre_ids: filterIds,
+        limit_val: 15
+      });
+      if (error) throw error;
+      modalUrunAramaSonuclari.value = data || [];
+    } catch (err) {
+      console.error("Modal ürün arama hatası:", err);
+      modalUrunAramaSonuclari.value = [];
+    }
   }, 300);
 };
 
@@ -638,108 +576,47 @@ const urunSec = (urun) => {
 const satirIslemi = () => {
   if (!aktifSatir.value.urun_id) { alert("Lütfen bir ürün seçin."); return; }
   if (!aktifSatir.value.miktar || aktifSatir.value.miktar <= 0) { alert("Geçerli bir miktar girin."); return; }
-
-  if (duzenlemeModu.value) {
-    girisListesi.value[duzenlenenIndex.value] = { ...aktifSatir.value };
-  } else {
-    girisListesi.value.unshift({ ...aktifSatir.value });
-  }
+  if (duzenlemeModu.value) { girisListesi.value[duzenlenenIndex.value] = { ...aktifSatir.value }; } 
+  else { girisListesi.value.unshift({ ...aktifSatir.value }); }
   temizleAktifSatir();
 };
 
-const satirDuzenle = (index) => {
-  const item = girisListesi.value[index];
-  aktifSatir.value = { ...item };
-  modalUrunAramaMetni.value = item.urun_adi;
-  duzenlenenIndex.value = index;
-};
-
-const satirSil = (index) => {
-  if (duzenlenenIndex.value === index) temizleAktifSatir();
-  girisListesi.value.splice(index, 1);
-};
+const satirDuzenle = (index) => { const item = girisListesi.value[index]; aktifSatir.value = { ...item }; modalUrunAramaMetni.value = item.urun_adi; duzenlenenIndex.value = index; };
+const satirSil = (index) => { if (duzenlenenIndex.value === index) temizleAktifSatir(); girisListesi.value.splice(index, 1); };
 
 const topluKaydet = async () => {
   if (!genelBilgiler.value.depo_id) { alert('Lütfen bir depo seçin.'); return; }
   if (anlasmaDahilinde.value && !genelBilgiler.value.anlasma_id) { alert('Lütfen bir anlaşma seçin.'); return; }
   if (girisListesi.value.length === 0) { alert('Listeye en az bir ürün eklemelisiniz.'); return; }
-
   try {
     kayitYapiliyor.value = true;
     const grupId = self.crypto.randomUUID(); 
     const islemZamani = new Date().toISOString(); 
-
     for (const satir of girisListesi.value) {
-      // 1. Stok Hareketi Ekle
       const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
-          urun_id: satir.urun_id,
-          depo_id: genelBilgiler.value.depo_id,
-          hareket_tipi: 'giris',
-          miktar: satir.miktar,
-          aciklama: satir.aciklama || null,
-          kullanici_id: userStore.user?.id || null,
-          anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
-          tutar: satir.tutar || 0,
-          olusturulma_tarihi: islemZamani, 
-          grup_id: grupId 
+          urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, hareket_tipi: 'giris', miktar: satir.miktar,
+          aciklama: satir.aciklama || null, kullanici_id: userStore.user?.id || null, anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
+          tutar: satir.tutar || 0, olusturulma_tarihi: islemZamani, grup_id: grupId 
       }]);
       if (hareketError) throw hareketError;
-
-      // 2. Stok Seviyesi Güncelle (Upsert)
-      // Supabase'de upsert için conflict key belirtmek gerekebilir veya 2 adımda yapılır.
-      // Basit olması için Select -> Update/Insert
-      const { data: mevcutStok } = await supabase
-        .from('stok_seviyeleri')
-        .select('*')
-        .eq('urun_id', satir.urun_id)
-        .eq('depo_id', genelBilgiler.value.depo_id)
-        .single();
-
-      if (mevcutStok) {
-        await supabase.from('stok_seviyeleri').update({ miktar: mevcutStok.miktar + satir.miktar }).eq('id', mevcutStok.id);
-      } else {
-        await supabase.from('stok_seviyeleri').insert([{ urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, miktar: satir.miktar }]);
-      }
-      
-      // 3. Ürün tablosundaki fiili stoğu da güncelle
+      const { data: mevcutStok } = await supabase.from('stok_seviyeleri').select('*').eq('urun_id', satir.urun_id).eq('depo_id', genelBilgiler.value.depo_id).single();
+      if (mevcutStok) { await supabase.from('stok_seviyeleri').update({ miktar: mevcutStok.miktar + satir.miktar }).eq('id', mevcutStok.id); } 
+      else { await supabase.from('stok_seviyeleri').insert([{ urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, miktar: satir.miktar }]); }
       const { data: urun } = await supabase.from('urunler').select('fiili_stok').eq('id', satir.urun_id).single();
-      if (urun) {
-         await supabase.from('urunler').update({ fiili_stok: (urun.fiili_stok || 0) + satir.miktar }).eq('id', satir.urun_id);
-      }
+      if (urun) { await supabase.from('urunler').update({ fiili_stok: (urun.fiili_stok || 0) + satir.miktar }).eq('id', satir.urun_id); }
     }
-
     alert('Stok girişi başarıyla kaydedildi!');
     formModalGoster.value = false;
-    mevcutSayfa.value = 1; // İlk sayfaya dön
+    mevcutSayfa.value = 1;
     await verileriGetir(); 
-
-  } catch (err) {
-    console.error("Stok girişi hatası:", err);
-    alert('Hata: ' + err.message);
-  } finally {
-    kayitYapiliyor.value = false;
-  }
+  } catch (err) { console.error("Stok girişi hatası:", err); alert('Hata: ' + err.message);
+  } finally { kayitYapiliyor.value = false; }
 };
 
-const toggleGrup = (grupId) => {
-  if (acikGruplar.value.has(grupId)) {
-    acikGruplar.value.delete(grupId);
-  } else {
-    acikGruplar.value.add(grupId);
-  }
-};
-
-const formatTarih = (tarih) => {
-  if (!tarih) return '-';
-  return new Date(tarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
+const toggleGrup = (grupId) => { if (acikGruplar.value.has(grupId)) { acikGruplar.value.delete(grupId); } else { acikGruplar.value.add(grupId); } };
+const formatTarih = (tarih) => { if (!tarih) return '-'; return new Date(tarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
 const formatPara = (val) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(val || 0);
 
-watch(anlasmaDahilinde, (val) => {
-  if (!val) genelBilgiler.value.anlasma_id = null;
-  temizleAktifSatir();
-});
-watch(() => genelBilgiler.value.anlasma_id, () => {
-  temizleAktifSatir();
-});
+watch(anlasmaDahilinde, (val) => { if (!val) genelBilgiler.value.anlasma_id = null; temizleAktifSatir(); });
+watch(() => genelBilgiler.value.anlasma_id, () => { temizleAktifSatir(); });
 </script>
