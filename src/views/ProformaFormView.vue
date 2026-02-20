@@ -212,7 +212,8 @@ const GENEL_SARTLAR = `GENEL ŞARTLAR
 • Stoklarımız günlük olarak değiştiği için lütfen sipariş esnasında stokları kontrol ettiriniz.
 • Ödeme nakit veya Kredi Kartı ile siparişe istinaden ödenecektir.
 • Opsiyon 7 gün
-• Cihazlarımız malzeme ve işçilik hatalarına karşı fatura tarihinden itibaren bireysel klimalar 3 yıl geri kalan ürünlerimiz 2 yıl firmamız garantisi altındadır. Elektrik arızaları, voltaj farklılıkları ile kullanım ve bakım hatalarından dolayı kaynaklanan arızalar garanti kapsamı dışındadır.`;
+• Cihazlarımız malzeme ve işçilik hatalarına karşı fatura tarihinden itibaren bireysel klimalar 3 yıl geri kalan ürünlerimiz 2 yıl firmamız garantisi altındadır. Elektrik arızaları, voltaj farklılıkları ile kullanım ve bakım hatalarından dolayı kaynaklanan arızalar garanti kapsamı dışındadır.
+• Salon, kaset, yer tavan, kanal tip klimalarda borulama dahil değildir.`;
 
 const KATEGORI_SARTLARI = {
   'KLİMA': `\nKLİMA\n• Nakliye ve montaj dahildir.\n• Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.\n• İç ve dış ünitelerde duvarın mukavemeti olmadığı durumlarda konsol tarafımıza ait değildir.\n• Borulama 4 mt. kadar olup 4 mt.’den sonra ek ücret alınır.`,

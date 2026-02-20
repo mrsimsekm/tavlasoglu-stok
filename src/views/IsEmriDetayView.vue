@@ -160,7 +160,7 @@
         </div>
       </div>
 
-      <!-- 5. TOPLAMLAR -->
+      <!-- 5. TOPLAMLAR ve KÂRLILIK -->
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex flex-col items-end space-y-2">
            <div class="flex justify-between w-64 text-gray-600">
@@ -176,7 +176,32 @@
               <span class="text-blue-600">{{ formatParaBirimi(toplamlar.genelToplam, isEmri.para_birimi) }}</span>
            </div>
            
-           <div class="w-64 border-t my-2"></div>
+           <!-- KÂRLILIK ANALİZİ (YÖNETİCİ/MUHASEBE) -->
+           <div v-if="userStore.isYonetici || userStore.isMuhasebeci" class="w-64 mt-4 p-3 rounded-md border" 
+                :class="finansalAnaliz.netKar >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
+             <h3 class="text-xs font-bold uppercase tracking-wider mb-2 text-center" 
+                 :class="finansalAnaliz.netKar >= 0 ? 'text-green-800' : 'text-red-800'">Operasyonel Kârlılık</h3>
+             
+             <div class="flex justify-between text-xs mb-1 text-gray-600">
+               <span>Ciro (KDV dahil):</span>
+               <span>{{ formatParaBirimi(toplamlar.genelToplam, isEmri.para_birimi) }}</span>
+             </div>
+             <div class="flex justify-between text-xs mb-2 text-red-600">
+               <span>Toplam Maliyet:</span>
+               <span>- {{ formatParaBirimi(hesaplananMaliyet, isEmri.para_birimi) }}</span>
+             </div>
+             
+             <div class="flex justify-between text-sm font-bold border-t pt-2 border-dashed border-gray-300"
+                  :class="finansalAnaliz.netKar >= 0 ? 'text-green-700' : 'text-red-700'">
+               <span>Net Kâr:</span>
+               <span>{{ formatParaBirimi(finansalAnaliz.netKar, isEmri.para_birimi) }}</span>
+             </div>
+             <div class="text-[10px] text-right mt-1 opacity-70">
+               Marj: %{{ finansalAnaliz.oran.toFixed(2) }}
+             </div>
+           </div>
+
+           <div class="w-64 border-t my-4 border-gray-200"></div>
 
            <div class="flex justify-between w-64 text-sm">
              <span>Ödenen:</span>
@@ -329,6 +354,21 @@ const kalanBakiye = computed(() => {
 const hesaplananMaliyet = computed(() => {
   const liste = isEditing.value ? duzenlemeMaliyetListesi.value : maliyetListesi.value;
   return liste.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
+});
+
+// KÂRLILIK HESAPLAMA (Yeni)
+const finansalAnaliz = computed(() => {
+  const gelir = toplamlar.value.genelToplam; // KDV Hariç Satış Geliri
+  const gider = hesaplananMaliyet.value; // Operasyonel Maliyetler
+  const netKar = gelir - gider;
+  
+  // Eğer gelir 0 ise (bölme hatasını önlemek için) oran 0 olsun
+  const oran = gelir > 0 ? (netKar / gelir) * 100 : 0;
+  
+  return {
+    netKar,
+    oran
+  };
 });
 
 const tahsilatEkleModaliniAc = () => { 

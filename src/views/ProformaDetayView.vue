@@ -10,11 +10,18 @@
           No: <span class="font-mono font-semibold text-indigo-600">{{ proforma.proforma_no }}</span>
         </p>
       </div>
-      <div class="flex items-center space-x-4">
-        <!-- YAZDIR BUTONU -->
-        <button v-if="!isEditing" type="button" @click="yazdir" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg flex items-center shadow-sm">
+      <div class="flex items-center space-x-3">
+        
+        <!-- STANDART YAZDIR BUTONU -->
+        <button v-if="!isEditing" type="button" @click="yazdir" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded-lg flex items-center shadow-sm transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-          Yazdır
+          Proforma Yazdır
+        </button>
+
+        <!-- YENİ TEKLİF YAZDIR BUTONU -->
+        <button v-if="!isEditing" type="button" @click="showTeklifModal = true" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Teklif Hazırla
         </button>
 
         <!-- AKSİYON BUTONLARI -->
@@ -25,7 +32,7 @@
             <button 
               type="button"
               @click="openConvertModal" 
-              class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm transition"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -33,7 +40,7 @@
               İş Emrine Dönüştür
             </button>
 
-            <button type="button" @click="baslaDuzenle" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm">
+            <button type="button" @click="baslaDuzenle" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-sm transition">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
               Düzenle
             </button>
@@ -60,8 +67,17 @@
         <h2 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Belge Bilgileri</h2>
         
         <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <!-- MÜŞTERİ -->
           <div><p class="label-style">Müşteri</p><p class="font-semibold text-lg">{{ proforma.musteriler?.unvan }}</p></div>
+          
+          <!-- YENİ: PROJE ADI GÖRÜNTÜLEME -->
+          <div class="md:col-span-2">
+            <p class="label-style">Proje Adı</p>
+            <p class="font-semibold text-gray-800">{{ proforma.proje_adi || '-' }}</p>
+          </div>
+
           <div><p class="label-style">İlgili Kişi</p><p class="font-semibold">{{ proforma.ilgili_kisi || proforma.musteriler?.ilgili_kisi || '-' }}</p></div>
+          
           <div><p class="label-style">Oluşturma Tarihi</p><p class="font-semibold">{{ formatTarih(proforma.olusturma_tarihi) }}</p></div>
           <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ proforma.para_birimi || 'TRY' }}</p></div>
           <div>
@@ -91,10 +107,31 @@
 
         <!-- Düzenleme Modu -->
         <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <p class="label-style">Müşteri</p>
-            <p class="font-semibold p-2 bg-gray-100 rounded border">{{ proforma.musteriler?.unvan }}</p>
+          
+          <!-- Müşteri Değiştirme Alanı -->
+          <div class="relative">
+             <label class="label-style">Müşteri</label>
+             <input 
+                type="text" 
+                v-model="musteriAramaMetni" 
+                @input="musteriAra"
+                class="form-input bg-yellow-50" 
+                placeholder="Müşteri Değiştir..."
+             >
+             <div v-if="musteriAramaSonuclari.length > 0" class="absolute z-50 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto mt-1">
+                 <div v-for="m in musteriAramaSonuclari" :key="m.id" @click="musteriSec(m)" class="p-2 hover:bg-gray-100 cursor-pointer text-sm border-b">
+                     {{ m.unvan }}
+                 </div>
+             </div>
+             <p class="text-xs text-green-600 font-bold mt-1" v-if="secilenMusteriAdi">Seçili: {{ secilenMusteriAdi }}</p>
           </div>
+
+          <!-- YENİ: PROJE ADI DÜZENLEME -->
+          <div class="md:col-span-2">
+             <label class="label-style">Proje Adı</label>
+             <input v-model="form.proje_adi" type="text" class="form-input" placeholder="Örn: Erzurum Hastane Projesi">
+          </div>
+
           <div>
              <label class="label-style">İlgili Kişi</label>
              <input v-model="form.ilgili_kisi" type="text" class="form-input">
@@ -143,30 +180,59 @@
            @kalemler-guncellendi="handleKalemlerGuncellendi"
         />
 
-        <!-- Detay Tablosu (YENİ SÜTUNLAR) -->
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full leading-normal">
-            <thead>
-              <tr>
-                <th class="th-style text-center w-12">#</th>
-                <th class="th-style">Açıklama</th>
-                <th class="th-style text-center">Miktar</th>
-                <th class="th-style text-center">Birim</th>
-                <th class="th-style text-right">Birim Fiyat (KDV Hariç)</th>
-                <th class="th-style text-right">Tutar (KDV Hariç)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(kalem, index) in proforma.proforma_kalemleri" :key="kalem.id">
-                <td class="td-style text-center">{{ index + 1 }}</td>
-                <td class="td-style font-medium">{{ kalem.aciklama }}</td>
-                <td class="td-style text-center font-bold">{{ kalem.miktar }}</td>
-                <td class="td-style text-center text-xs">{{ kalem.birim }}</td>
-                <td class="td-style text-right font-mono">{{ formatPara(kalem.birim_fiyat, proforma.para_birimi) }}</td>
-                <td class="td-style text-right font-bold text-gray-800 font-mono">{{ formatPara(kalem.miktar * kalem.birim_fiyat, proforma.para_birimi) }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Düzenleme Modunda Toplamları Göster -->
+        <div v-if="isEditing" class="mt-4 flex justify-end bg-yellow-50 p-4 rounded border border-yellow-200">
+             <div class="w-full max-w-sm space-y-2">
+               <div class="flex justify-between text-gray-600">
+                  <span>Ara Toplam:</span>
+                  <span class="font-semibold">{{ formatPara(toplamlarDuzenleme.araToplam, form.para_birimi) }}</span>
+               </div>
+               <div class="flex justify-between text-gray-600">
+                  <span>KDV (%20):</span>
+                  <span class="font-semibold">{{ formatPara(toplamlarDuzenleme.kdv, form.para_birimi) }}</span>
+               </div>
+               <div class="flex justify-between text-xl font-bold text-gray-800 border-t pt-2 border-yellow-300">
+                  <span>GENEL TOPLAM:</span>
+                  <span class="text-indigo-600">{{ formatPara(toplamlarDuzenleme.genelToplam, form.para_birimi) }}</span>
+               </div>
+            </div>
+        </div>
+
+        <!-- Detay Tablosu (GÖRÜNTÜLEME MODU) -->
+        <div v-if="!isEditing" class="space-y-6">
+          <div v-for="(grup, gIndex) in gruplanmisKalemlerGoruntuleme" :key="gIndex" class="border rounded-lg overflow-hidden">
+             <!-- Grup Başlığı -->
+             <div class="bg-gray-50 px-4 py-2 border-b font-bold text-gray-700 text-sm uppercase tracking-wider flex justify-between">
+                <span>{{ grup.ad }}</span>
+                <span class="text-xs text-gray-500 font-normal">Ara Toplam: {{ formatPara(grup.araToplam, proforma.para_birimi) }}</span>
+             </div>
+             
+             <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
+                    <tr>
+                        <th class="th-style text-center w-12">#</th>
+                        <th class="th-style">Açıklama</th>
+                        <th class="th-style text-center">Miktar</th>
+                        <th class="th-style text-center">Birim</th>
+                        <th class="th-style text-right">Birim Fiyat</th>
+                        <th class="th-style text-right">Tutar</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(kalem, index) in grup.kalemler" :key="kalem.id">
+                        <td class="td-style text-center">{{ index + 1 }}</td>
+                        <td class="td-style font-medium">{{ kalem.aciklama }}</td>
+                        <td class="td-style text-center font-bold">{{ kalem.miktar }}</td>
+                        <td class="td-style text-center text-xs">{{ kalem.birim }}</td>
+                        <td class="td-style text-right font-mono">{{ formatPara(kalem.birim_fiyat, proforma.para_birimi) }}</td>
+                        <td class="td-style text-right font-bold text-gray-800 font-mono">{{ formatPara(kalem.miktar * kalem.birim_fiyat, proforma.para_birimi) }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+             </div>
+          </div>
+
           
           <!-- Toplamlar Bölümü -->
           <div class="flex justify-end mt-4">
@@ -197,8 +263,9 @@
       <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4 border-b pb-2">
             <h2 class="text-xl font-semibold text-gray-700">Şartlar ve Koşullar</h2>
-            <button v-if="!isEditing" @click="showSartlarModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-bold border border-blue-200 bg-blue-50 px-3 py-1 rounded">
-                Şartları Düzenle
+            <button v-if="!isEditing" @click="showSartlarModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-bold border border-blue-200 bg-blue-50 px-3 py-1 rounded flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                Düzenle
             </button>
         </div>
         <div class="bg-gray-50 p-4 rounded border text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto font-mono">
@@ -206,6 +273,50 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- MARKAYA GÖRE TEKLİF YAZDIRMA MODALI -->
+    <div v-if="showTeklifModal" class="fixed inset-0 z-[10000] overflow-y-auto bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all scale-100">
+            <div class="px-6 py-4 border-b bg-gray-50 rounded-t-xl flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800">Teklif İçin Marka Seçiniz</h3>
+                <button @click="showTeklifModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-sm text-gray-500 mb-4">Lütfen teklif formunda kullanılacak markayı seçiniz. Seçime göre form tasarımı düzenlenecektir.</p>
+                
+                <div class="space-y-3">
+                    <label 
+                        v-for="marka in markaListesi" 
+                        :key="marka"
+                        class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition-all group"
+                        :class="{'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500': secilenMarka === marka}"
+                    >
+                        <div class="flex items-center justify-center h-5 w-5 mr-3">
+                            <input 
+                                type="radio" 
+                                name="markaSecimi"
+                                :value="marka" 
+                                v-model="secilenMarka"
+                                class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                            >
+                        </div>
+                        <span class="font-medium text-gray-700 group-hover:text-indigo-700">{{ marka }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end space-x-3 rounded-b-xl">
+                <button @click="showTeklifModal = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition">Vazgeç</button>
+                <button @click="teklifYazdir" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-md flex items-center transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Teklifi Oluştur
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ŞARTLARI DÜZENLEME MODALI -->
@@ -305,7 +416,7 @@
 </style>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabase } from '../supabase.js';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
@@ -326,11 +437,21 @@ const converting = ref(false);
 const convertItems = ref([]);
 const workOrderNote = ref('');
 
+// --- TEKLİF YAZDIRMA STATE ---
+const showTeklifModal = ref(false);
+const secilenMarka = ref('HAIER');
+const markaListesi = ['HAIER', 'MITSUBISHI HEAVY', 'MITSUBISHI ELECTRIC', 'NIVA', 'OLEFINI', 'ENDÜSTRİYEL MUTFAK'];
+
 const form = ref({});
 const guncelKalemler = ref([]);
 const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
+
+// MÜŞTERİ DEĞİŞTİRME STATE
+const musteriAramaMetni = ref('');
+const musteriAramaSonuclari = ref([]);
+const secilenMusteriAdi = ref('');
 
 const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'ISI POMPASI', 'DX', 'İŞÇİLİK', 'YEDEK PARÇA'];
 
@@ -340,13 +461,14 @@ const getDetay = async () => {
   try {
     const { data, error } = await supabase
       .from('proformalar')
-      .select(`*, musteriler(*), proforma_kalemleri(*)`) // Basitleştirilmiş sorgu, ilişkiler artık kalem ekle'de
+      .select(`*, musteriler(*), proforma_kalemleri(*)`) 
       .eq('id', id)
       .single();
 
     if (error) throw error;
     proforma.value = data;
     tempSartlar.value = data.sartlar || '';
+    secilenMusteriAdi.value = data.musteriler?.unvan || '';
 
     const [depolarRes, tedarikcilerRes, anlasmalarRes] = await Promise.all([
       supabase.from('depolar').select('*'),
@@ -384,21 +506,60 @@ const toplamlarDuzenleme = computed(() => {
     return { araToplam, kdv, genelToplam };
 });
 
+const gruplanmisKalemlerGoruntuleme = computed(() => {
+    if (!proforma.value || !proforma.value.proforma_kalemleri) return [];
+    
+    const gruplar = {};
+    proforma.value.proforma_kalemleri.forEach(kalem => {
+        const grupAdi = kalem.grup_adi || 'Genel';
+        if (!gruplar[grupAdi]) gruplar[grupAdi] = [];
+        gruplar[grupAdi].push(kalem);
+    });
+
+    return Object.keys(gruplar).sort().map(key => {
+        const kalemler = gruplar[key];
+        const araToplam = kalemler.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+        return { ad: key, kalemler, araToplam };
+    });
+});
+
 // --- DÜZENLEME MODU ---
 const baslaDuzenle = () => {
   form.value = {
+    musteri_id: proforma.value.musteri_id,
     gecerlilik_tarihi: proforma.value.gecerlilik_tarihi,
     ilgili_kisi: proforma.value.ilgili_kisi || proforma.value.musteriler?.ilgili_kisi || '',
+    proje_adi: proforma.value.proje_adi, // YENİ: PROJE ADI
     notlar: proforma.value.notlar,
     para_birimi: proforma.value.para_birimi || 'TRY',
     kategoriler: proforma.value.kategoriler || [] 
   };
   guncelKalemler.value = (proforma.value.proforma_kalemleri || []).map(k => ({ ...k }));
+  musteriAramaMetni.value = proforma.value.musteriler?.unvan || '';
   isEditing.value = true;
 };
 
 const iptalEt = () => { isEditing.value = false; getDetay(); };
 const handleKalemlerGuncellendi = (liste) => { guncelKalemler.value = liste; };
+
+// MÜŞTERİ DEĞİŞTİRME MANTIĞI
+let musteriDebounce;
+const musteriAra = () => {
+    clearTimeout(musteriDebounce);
+    if(musteriAramaMetni.value.length < 2) { musteriAramaSonuclari.value = []; return; }
+    
+    musteriDebounce = setTimeout(async () => {
+        const { data, error } = await supabase.from('musteriler').select('id, unvan').ilike('unvan', `%${musteriAramaMetni.value}%`).limit(10);
+        if(!error) musteriAramaSonuclari.value = data;
+    }, 300);
+};
+
+const musteriSec = (m) => {
+    form.value.musteri_id = m.id;
+    secilenMusteriAdi.value = m.unvan;
+    musteriAramaMetni.value = m.unvan;
+    musteriAramaSonuclari.value = [];
+};
 
 const sartlariKaydet = async () => {
     try {
@@ -417,8 +578,10 @@ const kaydet = async () => {
   loading.value = true;
   try {
     const { error: mainError } = await supabase.from('proformalar').update({
+        musteri_id: form.value.musteri_id,
         gecerlilik_tarihi: form.value.gecerlilik_tarihi,
         ilgili_kisi: form.value.ilgili_kisi,
+        proje_adi: form.value.proje_adi, // YENİ: KAYDETME
         notlar: form.value.notlar,
         toplam_tutar: toplamlarDuzenleme.value.genelToplam,
         para_birimi: form.value.para_birimi,
@@ -433,8 +596,9 @@ const kaydet = async () => {
       urun_id: k.urun_id || null,
       aciklama: k.aciklama,
       miktar: k.miktar,
-      birim: k.birim, // BİRİM EKLENDİ
-      birim_fiyat: k.birim_fiyat
+      birim: k.birim, 
+      birim_fiyat: k.birim_fiyat,
+      grup_adi: k.grup_adi || 'Genel' 
     }));
 
     const { error: insertError } = await supabase.from('proforma_kalemleri').insert(kalemlerToInsert);
@@ -523,7 +687,7 @@ const convertToWorkOrder = async () => {
       is_emri_id: isEmri.id,
       urun_id: item.urun_id,
       miktar: item.miktar,
-      birim: item.birim, // BİRİM EKLENDİ
+      birim: item.birim,
       birim_fiyat: item.birim_fiyat,
       aciklama: item.aciklama,
       kaynak_depo_id: item.sourceType === 'depo' ? item.selectedSourceId : null,
@@ -557,7 +721,17 @@ const getDurumBadge = (durum) => {
 const formatTarih = (t) => t ? new Date(t).toLocaleDateString('tr-TR') : '-';
 const formatPara = (val, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(val || 0);
 
-// --- YAZDIRMA FONKSİYONU ---
+const getGruplanmisKalemler = (kalemler) => {
+    const gruplar = {};
+    kalemler.forEach(k => {
+        const g = k.grup_adi || 'Genel';
+        if(!gruplar[g]) gruplar[g] = [];
+        gruplar[g].push(k);
+    });
+    return gruplar;
+};
+
+// --- STANDART PROFORMA YAZDIRMA (GRUPLU) ---
 const yazdir = () => {
   if (!proforma.value) return;
   const p = proforma.value;
@@ -567,24 +741,228 @@ const yazdir = () => {
   const ilgiliKisi = p.ilgili_kisi || musteri.ilgili_kisi || '-';
   const pb = p.para_birimi || 'TRY';
 
-  const kalemlerHTML = p.proforma_kalemleri.map((kalem, index) => {
-      let tutar = kalem.miktar * kalem.birim_fiyat;
-      return `
-        <tr>
-          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
-          <td style="padding: 6px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
-          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
-          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
-          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
-          <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
-        </tr>
-      `;
-  }).join('');
+  const gruplar = getGruplanmisKalemler(p.proforma_kalemleri);
+  const grupKeys = Object.keys(gruplar).sort();
+
+  let kalemlerHTML = '';
+  let counter = 1;
+
+  grupKeys.forEach(grupAdi => {
+     // Grup Başlığı Satırı
+     if(grupKeys.length > 1 || grupAdi !== 'Genel') {
+         kalemlerHTML += `
+            <tr style="background-color: #f3f4f6;">
+                <td colspan="6" style="padding: 6px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #ddd;">
+                    ${grupAdi}
+                </td>
+            </tr>
+         `;
+     }
+
+     gruplar[grupAdi].forEach(kalem => {
+        let tutar = kalem.miktar * kalem.birim_fiyat;
+        kalemlerHTML += `
+            <tr>
+            <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${counter++}</td>
+            <td style="padding: 6px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
+            <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
+            <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
+            <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
+            <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
+            </tr>
+        `;
+     });
+  });
 
   const htmlContent = `
       <!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Proforma - ${p.proforma_no}</title>
         <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap'); @page { margin: 1cm; size: A4; } body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.4; margin: 0; padding: 0; font-size: 11px; } .container { max-width: 210mm; margin: 0 auto; background: white; padding-bottom: 20px; } .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; } .logo-area img { height: 80px; object-fit: contain; } .company-details { text-align: right; font-size: 10px; color: #555; } .company-name { font-size: 14px; font-weight: bold; color: #111; } .doc-no { font-weight: bold; font-size: 12px; color: #333; } .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; margin-top: 10px; } .info-box { width: 48%; border: 1px solid #eee; padding: 10px; border-radius: 4px; } .box-title { font-size: 11px; font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 5px; padding-bottom: 2px; color: #4f46e5; } .row { display: flex; justify-content: space-between; margin-bottom: 3px; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } th { background: #f9fafb; padding: 6px; border-bottom: 2px solid #ddd; text-align: left; font-size: 10px; font-weight: bold; } .totals { display: flex; justify-content: flex-end; } .total-wrapper { width: 200px; } .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; } .total-row.final { font-weight: bold; font-size: 12px; border-top: 2px solid #333; margin-top: 3px; padding-top: 5px; } .footer-note { position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 9px; color: #999; padding: 5px; }
         </style></head><body><div class="container"><div class="header"><div class="logo-area"><img src="${logoUrl}" alt="Logo"></div><div class="company-details"><div class="company-name">Tavlaşoğlu Isıtma Soğutma</div><div class="company-name">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div><div>Lalapaşa Mah. Samih Kobal Cad. İnanoğlu Apt. No:16/2 Yakutiye / Erzurum</div><div>Tel: 0(442) 238 83 83 | V.D: Aziziye | V.No: 8300346377</div></div></div><div class="info-grid"><div class="info-box"><div class="box-title">SAYIN / MÜŞTERİ</div><div class="row"><strong>${musteri.unvan || '-'}</strong></div><div class="row"><span>İlgili:</span> <span>${ilgiliKisi}</span></div><div class="row"><span>Adres:</span> <span>${musteri.adres || '-'}</span></div><div class="row"><span>V.No:</span> <span>${musteri.vergi_no || '-'}</span></div></div><div class="info-box"><div class="box-title">BELGE BİLGİLERİ</div><div class="row"><span>Tarih:</span> <span>${tarih}</span></div><div class="row"><span>Proforma No:</span> <span class="doc-no">${p.proforma_no}</span></div></div></div><table><thead><tr><th style="text-align: center; width: 30px;">#</th><th>Açıklama</th><th style="text-align: center; width: 60px;">Miktar</th><th style="text-align: center; width: 60px;">Birim</th><th style="text-align: right; width: 100px;">Birim Fiyat</th><th style="text-align: right; width: 100px;">Tutar</th></tr></thead><tbody>${kalemlerHTML}</tbody></table><div class="totals"><div class="total-wrapper"><div class="total-row"><span>Ara Toplam:</span><span>${formatPara(toplamlar.value.araToplam, pb)}</span></div><div class="total-row"><span>KDV (%20):</span><span>${formatPara(toplamlar.value.kdv, pb)}</span></div><div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatPara(toplamlar.value.genelToplam, pb)}</span></div></div></div><div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;"><h4 style="margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase;">Şartlar ve Koşullar</h4><div style="white-space: pre-wrap; font-size: 9px; color: #444; line-height: 1.3;">${p.sartlar || 'Şart belirtilmemiş.'}</div></div>${p.notlar ? `<div style="margin-top:10px; padding:10px; background:#f9fafb; font-size:9px;"><strong>NOTLAR:</strong><br>${p.notlar}</div>` : ''}<div class="footer-note">Bu belge bilgilendirme amaçlıdır. Proforma Fatura.</div></div></body></html>`;
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => { printWindow.print(); }, 500);
+};
+
+// --- MARKALI TEKLİF YAZDIRMA (GRUPLU) ---
+const teklifYazdir = () => {
+    if (!proforma.value || !secilenMarka.value) return;
+    
+    showTeklifModal.value = false;
+
+    const p = proforma.value;
+    const marka = secilenMarka.value;
+    const tarih = formatTarih(p.olusturma_tarihi);
+    const musteri = p.musteriler || {};
+    const ilgiliKisi = p.ilgili_kisi || musteri.ilgili_kisi || '-';
+    const pb = p.para_birimi || 'TRY';
+
+    // Marka Ayarları
+    let brandHeaderHtml = '';
+    let brandColor = '#333'; 
+
+    switch(marka) {
+        case 'HAIER':
+            brandColor = '#005BBB'; 
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:28px; font-weight:800; letter-spacing:1px;">Haier</h1><div style="font-size:10px; letter-spacing:3px; color:#555;">INSPIRED LIVING</div>`;
+            break;
+        case 'MITSUBISHI HEAVY':
+            brandColor = '#002E6D';
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:24px; font-weight:800;">MITSUBISHI HEAVY INDUSTRIES</h1><div style="font-size:10px; color:#555;">AIR CONDITIONING</div>`;
+            break;
+        case 'MITSUBISHI ELECTRIC':
+            brandColor = '#E60012';
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:24px; font-weight:800;">MITSUBISHI ELECTRIC</h1><div style="font-size:10px; color:#555;">Changes for the Better</div>`;
+            break;
+        case 'NIVA':
+            brandColor = '#FF6600';
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:26px; font-weight:800;">NIVA</h1>`;
+            break;
+        case 'OLEFINI':
+            brandColor = '#009933';
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:26px; font-weight:800;">OLEFINI</h1><div style="font-size:10px; color:#555;">AIR CURTAINS</div>`;
+            break;
+        case 'ENDÜSTRİYEL MUTFAK':
+            brandColor = '#4B5563';
+            brandHeaderHtml = `<h1 style="color:${brandColor}; margin:0; font-size:22px; font-weight:800;">ENDÜSTRİYEL MUTFAK</h1><div style="font-size:10px; color:#555;">PROFESYONEL ÇÖZÜMLER</div>`;
+            break;
+        default:
+            brandColor = '#333';
+            brandHeaderHtml = `<h1>${marka}</h1>`;
+    }
+
+    const gruplar = getGruplanmisKalemler(p.proforma_kalemleri);
+    const grupKeys = Object.keys(gruplar).sort();
+
+    let tablesHtml = '';
+
+    grupKeys.forEach(grupAdi => {
+        let grupRows = '';
+        let counter = 1;
+        gruplar[grupAdi].forEach(kalem => {
+            let tutar = kalem.miktar * kalem.birim_fiyat;
+            grupRows += `
+                <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${counter++}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                    <div style="font-weight:bold; color:${brandColor}">${kalem.aciklama}</div>
+                </td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
+                </tr>
+            `;
+        });
+
+        // Her grup için ayrı tablo bloğu
+        tablesHtml += `
+            <div style="margin-bottom: 25px;">
+                <div style="background-color: #f3f4f6; padding: 8px 10px; border-left: 4px solid ${brandColor}; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; color: #374151;">
+                    ${grupAdi === 'Genel' ? 'Ürün ve Hizmetler' : grupAdi}
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center; border-radius: 4px 0 0 0;">#</th>
+                            <th>Açıklama</th>
+                            <th style="width: 60px; text-align: center;">Miktar</th>
+                            <th style="width: 60px; text-align: center;">Birim</th>
+                            <th style="width: 100px; text-align: right;">Birim Fiyat</th>
+                            <th style="width: 100px; text-align: right; border-radius: 0 4px 0 0;">Tutar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${grupRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="tr">
+      <head>
+        <meta charset="UTF-8">
+        <title>Teklif - ${p.proforma_no}</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            @page { margin: 1cm; size: A4; }
+            body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0; font-size: 11px; }
+            .container { max-width: 210mm; margin: 0 auto; background: white; }
+            .brand-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 3px solid ${brandColor}; margin-bottom: 20px; }
+            .brand-logo-area { width: 50%; }
+            .doc-title { text-align: right; width: 50%; }
+            .doc-title h2 { margin: 0; font-size: 20px; color: #333; text-transform: uppercase; }
+            .doc-title .sub { font-size: 12px; color: #666; margin-top: 4px; }
+            .info-grid { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+            .info-card { flex: 1; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
+            .info-label { font-size: 10px; color: #6b7280; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+            .info-val { font-size: 12px; font-weight: 600; color: #111827; }
+            .info-val-sm { font-size: 11px; color: #374151; display: block; margin-top: 2px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+            th { background: ${brandColor}; color: white; padding: 10px 8px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+            td { font-size: 11px; color: #333; }
+            .totals-area { display: flex; justify-content: flex-end; margin-top: 10px; }
+            .totals-box { width: 250px; background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 4px; }
+            .t-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px; }
+            .t-row.last { font-weight: bold; font-size: 14px; color: ${brandColor}; border-top: 2px solid #eee; padding-top: 5px; margin-top: 5px; }
+            .footer-info { margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px; font-size: 10px; color: #666; display: flex; justify-content: space-between; }
+            .provider { font-weight: bold; color: #000; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+            <div class="brand-header">
+                <div class="brand-logo-area">${brandHeaderHtml}</div>
+                <div class="doc-title"><h2>SATIŞ TEKLİFİ</h2><div class="sub">Tarih: ${tarih} &nbsp;|&nbsp; No: ${p.proforma_no}</div></div>
+            </div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">SAYIN</div>
+                    <div class="info-val">${musteri.unvan || 'BELİRSİZ'}</div>
+                    <span class="info-val-sm">İlgili: ${ilgiliKisi}</span>
+                    <span class="info-val-sm">${musteri.adres || ''}</span>
+                    <span class="info-val-sm">${musteri.vergi_no ? 'V.No: ' + musteri.vergi_no : ''}</span>
+                </div>
+                <div class="info-card" style="text-align:right;">
+                    <div class="info-label">TEKLİF VEREN</div>
+                    <div class="info-val">Tavlaşoğlu Isıtma Soğutma</div>
+                    <span class="info-val-sm">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</span>
+                    <span class="info-val-sm">Lalapaşa Mah. Samih Kobal Cad.</span>
+                    <span class="info-val-sm">Tel: 0(442) 238 83 83</span>
+                </div>
+            </div>
+
+            <!-- DİNAMİK GRUPLU TABLOLAR -->
+            ${tablesHtml}
+
+            <div class="totals-area">
+                <div class="totals-box">
+                    <div class="t-row"><span>Ara Toplam:</span> <span>${formatPara(toplamlar.value.araToplam, pb)}</span></div>
+                    <div class="t-row"><span>KDV (%20):</span> <span>${formatPara(toplamlar.value.kdv, pb)}</span></div>
+                    <div class="t-row last"><span>GENEL TOPLAM:</span> <span>${formatPara(toplamlar.value.genelToplam, pb)}</span></div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <div style="font-size: 11px; font-weight: bold; color: ${brandColor}; text-transform: uppercase; margin-bottom: 5px;">Teklif Şartları</div>
+                <div style="font-size: 10px; color: #444; white-space: pre-wrap; line-height: 1.4; background: #fafafa; padding: 10px; border-left: 3px solid ${brandColor};">${p.sartlar || 'Özel şart belirtilmemiştir.'}</div>
+            </div>
+            
+            ${p.notlar ? `<div style="margin-top: 15px;"><div style="font-size: 10px; font-weight: bold; color: #333;">NOTLAR:</div><div style="font-size: 10px; color: #555;">${p.notlar}</div></div>` : ''}
+
+            <div class="footer-info">
+                <div>Bu teklif ${formatTarih(p.gecerlilik_tarihi)} tarihine kadar geçerlidir.</div>
+                <div class="provider">Tavlaşoğlu Isıtma Soğutma - Mühendislik Çözümleri</div>
+            </div>
+        </div>
+      </body>
+      </html>
+    `;
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(htmlContent);
