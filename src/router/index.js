@@ -119,7 +119,22 @@ const router = createRouter({
           path: 'proformalar/:id',
           name: 'proforma-detay',
           component: () => import('../views/ProformaDetayView.vue')
-        }
+        },
+        {
+          path: '/app/emanetler',
+          name: 'emanetler',
+          component: () => import('../views/EmanetlerView.vue')
+        },
+        {
+          path: '/app/stok/cikis-log',
+          name: 'stok-cikis-log',
+          component: () => import('../views/StokCikisLogView.vue')
+        },
+        {
+          path: '/app/stok/rezerve',
+          name: 'stok-rezerve',
+          component: () => import('../views/RezerveStokView.vue')
+        },
       ]
     },
     { path: '/', redirect: '/app/is-emirleri' }

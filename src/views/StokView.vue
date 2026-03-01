@@ -62,7 +62,6 @@
           placeholder="Ürün Kodu, Açıklama, Grup Kodu..." 
           class="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border py-2"
         >
-        <!-- Loading Spinner (Input içi) -->
         <div v-if="loading && aramaMetni" class="absolute inset-y-0 right-0 pr-3 flex items-center">
           <svg class="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -86,7 +85,6 @@
               >
                 <div class="flex items-center space-x-1">
                   <span>{{ kolon.label }}</span>
-                  <!-- Sıralama İkonları -->
                   <span v-if="sortBy === kolon.key" class="text-indigo-600">
                     <svg v-if="sortDirection === 'asc'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
@@ -108,7 +106,6 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <!-- Loading Durumu -->
             <tr v-if="loading && urunler.length === 0">
               <td :colspan="gorunurKolonlar.length + 1" class="px-6 py-10 text-center text-gray-500">
                 <div class="flex flex-col items-center justify-center">
@@ -121,14 +118,12 @@
               </td>
             </tr>
 
-            <!-- Veri Yok Durumu -->
             <tr v-else-if="!loading && urunler.length === 0">
               <td :colspan="gorunurKolonlar.length + 1" class="px-6 py-10 text-center text-gray-500 italic">
                 {{ aramaMetni ? 'Arama kriterlerinize uygun stok kartı bulunamadı.' : 'Henüz kayıtlı stok kartı yok.' }}
               </td>
             </tr>
 
-            <!-- Veri Listesi -->
             <tr v-else v-for="urun in urunler" :key="urun.id" class="hover:bg-gray-50 transition-colors">
               <td v-for="kolon in gorunurKolonlar" :key="kolon.key" class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ formatDeger(urun[kolon.key], kolon.key) }}
@@ -152,45 +147,53 @@
         </table>
       </div>
 
-      <!-- Sayfalama (Pagination) -->
-      <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p class="text-sm text-gray-700">
-              Toplam <span class="font-medium">{{ toplamKayitSayisi }}</span> kayıttan 
-              <span class="font-medium">{{ baslangicKayit }}</span> - <span class="font-medium">{{ bitisKayit }}</span> arası gösteriliyor
-            </p>
-          </div>
-          <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button 
-                @click="sayfaDegistir(mevcutSayfa - 1)" 
-                :disabled="mevcutSayfa === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-              >
-                <span class="sr-only">Önceki</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              
-              <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                Sayfa {{ mevcutSayfa }} / {{ toplamSayfaSayisi }}
-              </span>
-
-              <button 
-                @click="sayfaDegistir(mevcutSayfa + 1)"
-                :disabled="mevcutSayfa >= toplamSayfaSayisi"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-              >
-                <span class="sr-only">Sonraki</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </nav>
+      <!-- Sayfalama -->
+      <div class="bg-gray-50 px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 gap-3">
+        <div class="flex items-center gap-4">
+          <p class="text-sm text-gray-700">
+            Toplam <span class="font-medium">{{ toplamKayitSayisi }}</span> kayıttan 
+            <span class="font-medium">{{ baslangicKayit }}</span> - <span class="font-medium">{{ bitisKayit }}</span> arası gösteriliyor
+          </p>
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-gray-500">Sayfa başına:</span>
+            <select v-model.number="sayfaBasinaKayit" @change="sayfaBasinaKayitDegistir" class="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-indigo-500 focus:border-indigo-500">
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+            </select>
           </div>
         </div>
+
+        <nav class="flex items-center gap-1">
+          <button @click="sayfaDegistir(1)" :disabled="mevcutSayfa === 1"
+            class="inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm rounded-md text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="İlk Sayfa">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+          </button>
+          <button @click="sayfaDegistir(mevcutSayfa - 1)" :disabled="mevcutSayfa === 1"
+            class="inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm rounded-md text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Önceki">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+
+          <template v-for="item in sayfaNumaralari" :key="item">
+            <span v-if="item === '...'" class="px-3 py-2 text-sm text-gray-400 select-none">...</span>
+            <button v-else @click="sayfaDegistir(item)"
+              class="inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md transition-colors min-w-[38px] justify-center"
+              :class="item === mevcutSayfa
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'">
+              {{ item }}
+            </button>
+          </template>
+
+          <button @click="sayfaDegistir(mevcutSayfa + 1)" :disabled="mevcutSayfa >= toplamSayfaSayisi"
+            class="inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm rounded-md text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Sonraki">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+          </button>
+          <button @click="sayfaDegistir(toplamSayfaSayisi)" :disabled="mevcutSayfa >= toplamSayfaSayisi"
+            class="inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm rounded-md text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" title="Son Sayfa">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+          </button>
+        </nav>
       </div>
     </div>
 
@@ -304,10 +307,10 @@ const birimler = ref(['Adet', 'm', 'm2', 'm3', 'kg', 'lt', 'Paket', 'Kutu']);
 
 // --- Sıralama ve Sayfalama ---
 const mevcutSayfa = ref(1);
-const sayfaBasinaKayit = 10;
+const sayfaBasinaKayit = ref(parseInt(localStorage.getItem('stok_sayfaBasina')) || 10);
 const toplamKayitSayisi = ref(0);
-const sortBy = ref('urun_kodu'); // Varsayılan sıralama kolonu
-const sortDirection = ref('asc'); // Varsayılan yön
+const sortBy = ref('urun_kodu');
+const sortDirection = ref('asc');
 
 // --- Modal & Form ---
 const formModalGoster = ref(false);
@@ -335,7 +338,6 @@ const kolonlar = ref([]);
 onMounted(() => {
   const kayitliAyarlar = localStorage.getItem(localStorageKey);
   kolonlar.value = kayitliAyarlar ? JSON.parse(kayitliAyarlar) : JSON.parse(JSON.stringify(varsayilanKolonlar));
-  
   document.addEventListener('mousedown', handleClickOutside);
   getUrunler();
 });
@@ -346,9 +348,24 @@ onBeforeUnmount(() => {
 
 // --- Computed Properties ---
 const gorunurKolonlar = computed(() => kolonlar.value.filter(k => k.gorunur));
-const toplamSayfaSayisi = computed(() => Math.ceil(toplamKayitSayisi.value / sayfaBasinaKayit) || 1);
-const baslangicKayit = computed(() => toplamKayitSayisi.value === 0 ? 0 : ((mevcutSayfa.value - 1) * sayfaBasinaKayit) + 1);
-const bitisKayit = computed(() => Math.min(mevcutSayfa.value * sayfaBasinaKayit, toplamKayitSayisi.value));
+const toplamSayfaSayisi = computed(() => Math.ceil(toplamKayitSayisi.value / sayfaBasinaKayit.value) || 1);
+const baslangicKayit = computed(() => toplamKayitSayisi.value === 0 ? 0 : ((mevcutSayfa.value - 1) * sayfaBasinaKayit.value) + 1);
+const bitisKayit = computed(() => Math.min(mevcutSayfa.value * sayfaBasinaKayit.value, toplamKayitSayisi.value));
+
+const sayfaNumaralari = computed(() => {
+  const toplam = toplamSayfaSayisi.value;
+  const mevcut = mevcutSayfa.value;
+  if (toplam <= 7) return Array.from({ length: toplam }, (_, i) => i + 1);
+  const sayfalar = [];
+  const bas = Math.max(2, mevcut - 2);
+  const bitis = Math.min(toplam - 1, mevcut + 2);
+  sayfalar.push(1);
+  if (bas > 2) sayfalar.push('...');
+  for (let i = bas; i <= bitis; i++) sayfalar.push(i);
+  if (bitis < toplam - 1) sayfalar.push('...');
+  sayfalar.push(toplam);
+  return sayfalar;
+});
 
 // --- Arama (Debounce) ---
 let debounceTimeout;
@@ -379,38 +396,54 @@ const sayfaDegistir = (sayfa) => {
   getUrunler();
 };
 
-// --- Veri Çekme (Server-Side) ---
+// --- Sayfa Başına Kayıt Değiştirme ---
+const sayfaBasinaKayitDegistir = () => {
+  localStorage.setItem('stok_sayfaBasina', sayfaBasinaKayit.value);
+  mevcutSayfa.value = 1;
+  getUrunler();
+};
+
+// --- Veri Çekme ---
 const getUrunler = async () => {
   loading.value = true;
   try {
-    const from = (mevcutSayfa.value - 1) * sayfaBasinaKayit;
-    const to = from + sayfaBasinaKayit - 1;
+    const kayitSayisi = parseInt(sayfaBasinaKayit.value);
+    const offset = (mevcutSayfa.value - 1) * kayitSayisi;
 
     let query = supabase
       .from('urunler')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .order(sortBy.value, { ascending: sortDirection.value === 'asc' })
+      .limit(kayitSayisi)
+      .range(offset, offset + kayitSayisi - 1);
 
-    // Arama
-    if (aramaMetni.value) {
+    if (aramaMetni.value && aramaMetni.value.trim().length > 0) {
       const arama = aramaMetni.value.trim();
-      // String alanlarda arama
-      query = query.or(`urun_kodu.ilike.%${arama}%,aciklama.ilike.%${arama}%,aciklama_2.ilike.%${arama}%,aciklama_3.ilike.%${arama}%,grup_kodu.ilike.%${arama}%,ozel_kod.ilike.%${arama}%`);
+      // urun_kodu sayısal bir değerse direkt eşitlik, değilse text kolonlarda ara
+      const aramaFiltreleri = [
+        `aciklama.ilike.%${arama}%`,
+        `aciklama_2.ilike.%${arama}%`,
+        `aciklama_3.ilike.%${arama}%`,
+        `grup_kodu.ilike.%${arama}%`,
+        `ozel_kod.ilike.%${arama}%`
+      ];
+      // Eğer arama metni sayıysa urun_kodu'nu da ekle
+      if (!isNaN(arama) && arama !== '') {
+        aramaFiltreleri.push(`urun_kodu.eq.${parseInt(arama)}`);
+      }
+      query = query.or(aramaFiltreleri.join(','));
     }
 
-    // Sıralama
-    query = query
-      .order(sortBy.value, { ascending: sortDirection.value === 'asc' })
-      .range(from, to);
-
     const { data, count, error } = await query;
-
     if (error) throw error;
 
-    urunler.value = data;
-    toplamKayitSayisi.value = count;
+    urunler.value = data || [];
+    toplamKayitSayisi.value = count || 0;
 
   } catch (error) {
     console.error('Veri çekme hatası:', error.message);
+    urunler.value = [];
+    toplamKayitSayisi.value = 0;
   } finally {
     loading.value = false;
   }
@@ -491,7 +524,6 @@ const urunSil = async (urun) => {
       const { error } = await supabase.from('urunler').delete().match({ id: urun.id });
       if (error) throw error;
       
-      // Sayfa boşaldıysa geri git
       if (urunler.value.length === 1 && mevcutSayfa.value > 1) {
         mevcutSayfa.value--;
       }

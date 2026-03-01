@@ -64,6 +64,8 @@
               <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ isEmri.para_birimi || 'TRY' }}</p></div>
               <div><p class="label-style">KDV Durumu</p><p class="font-semibold text-gray-800">Hariç</p></div>
               <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
+              <!-- YENİ: Sevk Durumu -->
+              <div><p class="label-style">Sevk Durumu</p><p class="font-semibold" :class="isEmri.sevk_edildi ? 'text-indigo-600' : 'text-orange-500'">{{ isEmri.sevk_edildi ? '🚚 Sevk Edildi' : '⏳ Bekliyor' }}</p></div>
             </div>
             <div class="border-t border-gray-100 pt-3"><p class="label-style mb-1">Sevk Adresi</p><p v-if="isEmri.sevk_adresi" class="text-gray-800 whitespace-pre-wrap font-medium">{{ isEmri.sevk_adresi }}</p><p v-else class="text-gray-400 italic text-sm">Sevk adresi belirtilmemiş.</p></div>
           </div>
@@ -72,7 +74,18 @@
               <div><label class="label-style">Satışçı</label><select v-model="duzenlemeFormu.satisci_id" class="form-input"><option :value="null">Satışçı Seçin</option><option v-for="satisci in satiscilar" :key="satisci.id" :value="satisci.id">{{ satisci.ad_soyad }}</option></select></div>
               <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
               <div><label class="label-style">Para Birimi</label><select v-model="duzenlemeFormu.para_birimi" class="form-input font-bold"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
-              <div class="flex items-center pt-6"><label class="flex items-center cursor-pointer"><input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded"><span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span></label></div>
+              
+              <!-- DÜZENLEME MODU CHECKBOX'LAR -->
+              <div class="flex flex-col justify-center space-y-3 pt-4 border border-gray-200 rounded-md p-2 bg-gray-50">
+                <label class="flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="duzenlemeFormu.sevk_edildi" class="h-5 w-5 text-indigo-600 rounded">
+                  <span class="ml-3 text-sm font-medium text-gray-700">Sevk Edildi</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="duzenlemeFormu.is_tamamlandi" class="h-5 w-5 text-green-600 rounded">
+                  <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
+                </label>
+              </div>
             </div>
             <div><label class="label-style">Sevk Adresi</label><textarea v-model="duzenlemeFormu.sevk_adresi" rows="2" class="form-input" placeholder="Teslimat adresi..."></textarea></div>
           </div>
@@ -325,6 +338,7 @@ const duzenlemeFormu = ref({
     satisci_id: null, 
     fatura_no: '', 
     is_tamamlandi: false, 
+    sevk_edildi: false, // Yeni Eklendi
     is_emri_tipi: 'SİPARİŞ', 
     sevk_adresi: '', 
     para_birimi: 'TRY',
@@ -553,6 +567,7 @@ const getGerekliVeriler = async () => {
       satisci_id: isEmri.value.satisci_id || null,
       fatura_no: isEmri.value.fatura_no || '',
       is_tamamlandi: isEmri.value.is_tamamlandi || false,
+      sevk_edildi: isEmri.value.sevk_edildi || false, // Yeni Eklendi
       is_emri_tipi: isEmri.value.is_emri_tipi || 'SİPARİŞ',
       sevk_adresi: isEmri.value.sevk_adresi || '',
       para_birimi: isEmri.value.para_birimi || 'TRY',
@@ -575,6 +590,7 @@ const guncelle = async () => {
         fatura_no: duzenlemeFormu.value.fatura_no, 
         maliyet: yeniToplamMaliyet, 
         is_tamamlandi: duzenlemeFormu.value.is_tamamlandi, 
+        sevk_edildi: duzenlemeFormu.value.sevk_edildi, // Yeni Eklendi
         is_emri_tipi: duzenlemeFormu.value.is_emri_tipi, 
         sevk_adresi: duzenlemeFormu.value.sevk_adresi, 
         para_birimi: duzenlemeFormu.value.para_birimi,

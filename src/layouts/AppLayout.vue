@@ -93,7 +93,18 @@
               </li>
               <li>
                 <RouterLink to="/app/stok/depolar" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
-                  Depo Stokları
+                  Depo Stokları (Mevcut)
+                </RouterLink>
+              </li>
+              <!-- YENİ LİNKLER -->
+              <li>
+                <RouterLink to="/app/stok/rezerve" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
+                  Rezerve Detayları
+                </RouterLink>
+              </li>
+              <li>
+                <RouterLink to="/app/stok/cikis-log" class="link-style-sub" active-class="bg-gray-600 text-white" @click="sidebarAcik = false">
+                  Stok Çıkış Günlüğü
                 </RouterLink>
               </li>
             </ul>
@@ -128,7 +139,7 @@
             </ul>
           </li>
 
-          <!-- PROFORMALAR (YENİ EKLENDİ) -->
+          <!-- PROFORMALAR -->
           <li class="mb-4">
             <RouterLink to="/app/proformalar" class="link-style" active-class="bg-gray-600">
               <div class="flex items-center">
@@ -144,6 +155,19 @@
             </RouterLink>
           </li>
           
+          <!-- YENİ EKLENEN: EMANET YÖNETİMİ -->
+          <li class="mb-4">
+            <RouterLink to="/app/emanetler" class="link-style" active-class="bg-gray-600">
+              <div class="flex items-center">
+                <!-- Arşiv/Kutu İkonu -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                </svg>
+                Emanetler (Stok Borç)
+              </div>
+            </RouterLink>
+          </li>
+
           <!-- FİNANS / ALACAKLAR -->
           <li v-if="userStore.isYonetici || userStore.isMuhasebeci" class="mb-4">
             <RouterLink to="/app/alacaklar" class="link-style" active-class="bg-gray-600">

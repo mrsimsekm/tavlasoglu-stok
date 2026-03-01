@@ -83,7 +83,7 @@
               >
                 <td class="px-2 py-4 text-center">
                   <div v-if="!filtreler.depoId" class="flex items-center justify-center h-full">
-                    <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" :class="{'rotate-90 text-indigo-600': acikUrunler.has(urun.urun_id)}"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" :class="{'rotate-90 text-indigo-600': acikUrunler.has(urun.urun_id)}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                   </div>
                 </td>
                 <td class="px-5 py-4 text-sm font-bold text-gray-900">{{ urun.urun_kodu }}</td>
@@ -214,13 +214,21 @@ const verileriGetir = async () => {
     if (rpcError) throw rpcError;
     if (!urunIdData || urunIdData.length === 0) return;
 
-    // 2. Aşama: Gelen ürün ID'lerine ait tüm stok seviyesi detaylarını çek
+    // 2. Aşama: Gelen ürün ID'lerine ait stok seviyesi detaylarını çek
+    // Depo filtresi varsa SADECE o depoya ait kayıtları getir
     const urunIdleri = urunIdData.map(u => u.urun_id);
     
-    const { data: detaylar, error: detayError } = await supabase
+    let detayQuery = supabase
       .from('stok_seviyeleri')
       .select('*, urunler(urun_kodu, aciklama, ana_birim), depolar(ad)')
       .in('urun_id', urunIdleri);
+
+    // *** DÜZELTME: Depo filtresi seçiliyse sadece o depoya ait satırları çek ***
+    if (filtreler.value.depoId) {
+      detayQuery = detayQuery.eq('depo_id', filtreler.value.depoId);
+    }
+
+    const { data: detaylar, error: detayError } = await detayQuery;
 
     if (detayError) throw detayError;
 

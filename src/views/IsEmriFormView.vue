@@ -79,11 +79,11 @@
               </select>
             </div>
 
-            <!-- İŞ TAMAMLANDI CHECKBOX -->
-            <div class="flex flex-col h-[42px] justify-center mt-7"> 
+            <!-- DURUM CHECKBOX'I -->
+            <div class="flex flex-col justify-center mt-6 border p-3 rounded-md bg-gray-50 h-[42px]"> 
               <label class="flex items-center cursor-pointer">
                 <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
-                <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı</span>
+                <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı (Hizmet/Montaj Bitti)</span>
               </label>
             </div>
 
@@ -202,8 +202,9 @@ const isEmri = ref({
   notlar: '',
   satisci_id: null,
   fatura_no: '',
-  numara: null, // Artık metin (text) olarak gelecek
+  numara: null,
   is_tamamlandi: false,
+  sevk_edildi: false, // Yeni Kayıtlar Her Zaman False (Sevk Edilmemiş) başlar
   kdv_dahil: false, 
   maliyet: 0, 
   is_emri_tipi: 'SİPARİŞ',
@@ -285,60 +286,95 @@ const kaydet = async () => {
   if (!isEmri.value.numara) { alert('Lütfen iş emri numarası giriniz.'); return; }
 
   await withLoading(async () => {
-    // 1. İş Emri Başlığını Kaydet
-    isEmri.value.toplam_tutar = toplamlar.value.genelToplam; 
-    isEmri.value.maliyet = toplamMaliyet.value; 
-    
-    const { data: isEmriData, error: isEmriError } = await supabase
-      .from('is_emirleri')
-      .insert([{ ...isEmri.value }])
-      .select('id')
-      .single();
-    
-    if (isEmriError) {
-      if (isEmriError.code === '23505') { // Unique constraint violation code
-         alert(`Bu numara (${isEmri.value.numara}) zaten kullanımda. Lütfen başka bir numara girin.`);
-         return;
+    try {
+      // 1. İş Emri Başlığını Kaydet
+      isEmri.value.toplam_tutar = toplamlar.value.genelToplam; 
+      isEmri.value.maliyet = toplamMaliyet.value; 
+      
+      const { data: isEmriData, error: isEmriError } = await supabase
+        .from('is_emirleri')
+        .insert([{ ...isEmri.value }])
+        .select('id')
+        .single();
+      
+      if (isEmriError) {
+        if (isEmriError.code === '23505') { 
+           alert(`Bu numara (${isEmri.value.numara}) zaten kullanımda. Lütfen başka bir numara girin.`);
+           return;
+        }
+        throw isEmriError;
       }
-      throw isEmriError;
+
+      const newIsEmriId = isEmriData.id;
+
+      // 2. Ürün Kalemlerini Hazırla ve Kaydet (Emanet Kontrolü Dahil)
+      // Promise.all ile emanet kayıtlarını asenkron oluşturup id'lerini alacağız
+      const kalemlerPromises = isEmriKalemleri.value.map(async (kalem) => {
+          let emanetId = null;
+
+          // EĞER KALEM EMANET İSE: Önce Emanetler tablosuna kayıt aç
+          if (kalem.is_emanet) {
+             const { data: emanetData, error: emanetError } = await supabase
+               .from('emanetler')
+               .insert({
+                  urun_id: kalem.urun_id,
+                  is_emri_id: newIsEmriId,
+                  tedarikci_adi_notu: kalem.emanet_tedarikci_notu,
+                  miktar: kalem.miktar,
+                  kalan_miktar: kalem.miktar, // Başlangıçta hepsi açık
+                  birim_maliyet: parseFloat(kalem.birim_fiyat || 0),
+                  durum: 'Bekliyor'
+               })
+               .select('id')
+               .single();
+
+             if (emanetError) throw emanetError;
+             emanetId = emanetData.id;
+          }
+
+          return {
+            is_emri_id: newIsEmriId,
+            urun_id: kalem.urun_id || null,
+            aciklama: kalem.aciklama,
+            miktar: parseInt(kalem.miktar, 10),
+            birim: kalem.birim || 'Adet',
+            birim_fiyat: parseFloat(kalem.birim_fiyat || 0),
+            // Emanet ise depo/tedarikçi null olmalı, emanet_id dolu olmalı
+            kaynak_depo_id: kalem.is_emanet ? null : (kalem.kaynak_depo_id || null),
+            kaynak_tedarikci_id: kalem.is_emanet ? null : (kalem.kaynak_tedarikci_id || null),
+            anlasma_id: kalem.anlasma_id || null,
+            emanet_id: emanetId 
+          };
+      });
+
+      const kalemlerToInsert = await Promise.all(kalemlerPromises);
+      
+      if (kalemlerToInsert.length > 0) {
+        const { error: kalemlerError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
+        if (kalemlerError) throw kalemlerError;
+      }
+
+      // 3. Maliyet Kalemlerini Kaydet
+      const maliyetlerToInsert = maliyetListesi.value
+        .filter(m => m.aciklama && m.tutar > 0)
+        .map(m => ({
+          is_emri_id: newIsEmriId,
+          aciklama: m.aciklama,
+          tutar: parseFloat(m.tutar)
+        }));
+
+      if (maliyetlerToInsert.length > 0) {
+        const { error: maliyetError } = await supabase.from('is_emri_maliyetleri').insert(maliyetlerToInsert);
+        if (maliyetError) throw maliyetError;
+      }
+
+      alert(`İş emri başarıyla kaydedildi! Numara: ${isEmri.value.numara}`);
+      router.push('/app/is-emirleri');
+
+    } catch (error) {
+      console.error('Kayıt hatası:', error);
+      alert('İş emri kaydedilirken bir hata oluştu: ' + error.message);
     }
-
-    const newIsEmriId = isEmriData.id;
-
-    // 2. Ürün Kalemlerini Kaydet
-    const kalemlerToInsert = isEmriKalemleri.value.map(kalem => ({
-      is_emri_id: newIsEmriId,
-      urun_id: kalem.urun_id || null,
-      aciklama: kalem.aciklama,
-      miktar: kalem.miktar,
-      birim: kalem.birim,
-      birim_fiyat: kalem.birim_fiyat,
-      kaynak_depo_id: kalem.kaynak_depo_id || null,
-      kaynak_tedarikci_id: kalem.kaynak_tedarikci_id || null,
-      anlasma_id: kalem.anlasma_id || null,
-    }));
-    
-    if (kalemlerToInsert.length > 0) {
-      const { error: kalemlerError } = await supabase.from('is_emri_kalemleri').insert(kalemlerToInsert);
-      if (kalemlerError) throw kalemlerError;
-    }
-
-    // 3. Maliyet Kalemlerini Kaydet
-    const maliyetlerToInsert = maliyetListesi.value
-      .filter(m => m.aciklama && m.tutar > 0)
-      .map(m => ({
-        is_emri_id: newIsEmriId,
-        aciklama: m.aciklama,
-        tutar: m.tutar
-      }));
-
-    if (maliyetlerToInsert.length > 0) {
-      const { error: maliyetError } = await supabase.from('is_emri_maliyetleri').insert(maliyetlerToInsert);
-      if (maliyetError) throw maliyetError;
-    }
-
-    alert(`İş emri başarıyla kaydedildi! No: ${isEmri.value.numara}`);
-    router.push('/app/is-emirleri');
   });
 };
 </script>

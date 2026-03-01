@@ -66,18 +66,19 @@
           <thead>
             <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
               <th class="px-4 py-3 w-10 text-center"></th>
-              <th class="px-6 py-3 w-48 text-left">Tarih</th>
-              <th class="px-6 py-3 w-40 text-left">İşlem ID (Grup)</th>
+              <th class="px-6 py-3 w-40 text-left">Tarih</th>
+              <th class="px-6 py-3 w-32 text-left">İşlem ID</th>
               <th class="px-6 py-3 text-left">Depo / Anlaşma</th>
-              <th class="px-6 py-3 w-24 text-center">Kalem</th>
-              <th class="px-6 py-3 w-32 text-right">Top. Miktar</th>
-              <th class="px-6 py-3 w-32 text-right">Top. Tutar</th>
+              <th class="px-6 py-3 w-20 text-center">Kalem</th>
+              <th class="px-6 py-3 w-28 text-right">Miktar</th>
+              <th class="px-6 py-3 w-32 text-right">Tutar</th>
+              <th class="px-6 py-3 w-28 text-center">İşlemler</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <!-- Loading -->
             <tr v-if="loading && gruplar.length === 0">
-              <td colspan="7" class="px-6 py-10 text-center text-gray-500">
+              <td colspan="8" class="px-6 py-10 text-center text-gray-500">
                 <div class="flex flex-col items-center justify-center">
                   <svg class="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -90,7 +91,7 @@
 
             <!-- Veri Yok -->
             <tr v-else-if="!loading && gruplar.length === 0">
-              <td colspan="7" class="px-6 py-10 text-center text-gray-500 italic">
+              <td colspan="8" class="px-6 py-10 text-center text-gray-500 italic">
                 Arama kriterlerinize uygun stok girişi bulunamadı.
               </td>
             </tr>
@@ -137,11 +138,26 @@
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-mono text-gray-700">
                   {{ formatPara(grup.toplam_tutar) }}
                 </td>
+                <!-- Aksiyon Butonları -->
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                  <div class="flex justify-center space-x-3">
+                    <button @click.stop="formModaliniAc(grup)" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Düzenle">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button @click.stop="grupSil(grup)" class="text-red-600 hover:text-red-900 transition-colors" title="Sil">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
               </tr>
               
               <!-- Detay Satırı (Accordion) -->
               <tr v-if="acikGruplar.has(grup.id)" class="bg-gray-50 border-b border-gray-200">
-                <td colspan="7" class="p-0">
+                <td colspan="8" class="p-0">
                   <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 shadow-inner">
                     <table class="min-w-full divide-y divide-gray-200 bg-white rounded-lg border border-gray-200 overflow-hidden">
                       <thead class="bg-gray-100">
@@ -228,14 +244,28 @@
       </div>
     </div>
 
-    <!-- YENİ STOK GİRİŞİ MODAL'I -->
-    <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-5xl">
-      <template #header>Yeni Stok Girişi (Toplu)</template>
+    <!-- YENİ/DÜZENLE STOK GİRİŞİ MODAL'I -->
+    <BaseModal :show="formModalGoster" @close="formModalGoster = false" max-width="max-w-6xl">
+      <template #header>
+        {{ islemGrupId ? 'Stok Girişini Düzenle' : 'Yeni Stok Girişi (Toplu)' }}
+        <span v-if="islemGrupId" class="ml-2 text-sm font-normal text-gray-500 font-mono">#{{ islemGrupId.slice(0,8).toUpperCase() }}</span>
+      </template>
       <template #body>
          <div class="space-y-4">
             
             <!-- 1. GENEL BİLGİLER -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- İşlem Tarihi -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">İşlem Tarihi (*)</label>
+                <input 
+                  type="datetime-local" 
+                  v-model="genelBilgiler.islem_tarihi" 
+                  class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white"
+                />
+                <p class="text-xs text-gray-500 mt-1">Geçmişe dönük giriş için değiştirebilirsiniz.</p>
+              </div>
+
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Hangi Depoya Giriş Yapılacak? (*)</label>
                 <select v-model="genelBilgiler.depo_id" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
@@ -262,16 +292,16 @@
             <div class="border-t border-gray-200 pt-4">
               <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-bold text-gray-700">
-                  {{ duzenlemeModu ? 'Satırı Düzenle' : 'Listeye Ürün Ekle' }}
+                  {{ satirDuzenlemeModu ? 'Satırı Düzenle' : 'Listeye Ürün Ekle' }}
                 </h3>
-                <button v-if="duzenlemeModu" @click="temizleAktifSatir" class="text-xs text-red-600 hover:text-red-800 underline font-medium">
+                <button v-if="satirDuzenlemeModu" @click="temizleAktifSatir" class="text-xs text-red-600 hover:text-red-800 underline font-medium">
                   Düzenlemeyi İptal Et
                 </button>
               </div>
 
-              <div class="flex flex-col md:flex-row gap-3 items-end bg-blue-50 p-4 rounded-lg border border-blue-100 transition-colors duration-300" :class="{'bg-orange-50 border-orange-200': duzenlemeModu}">
+              <div class="flex flex-col md:flex-row gap-3 items-end bg-blue-50 p-4 rounded-lg border border-blue-100 transition-colors duration-300" :class="{'bg-orange-50 border-orange-200': satirDuzenlemeModu}">
                 <!-- Ürün Arama -->
-                <div class="w-full md:w-4/12 relative">
+                <div class="w-full md:w-6/12 relative">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Ürün (*)</label>
                   <input 
                     type="text" 
@@ -298,14 +328,14 @@
                 </div>
 
                 <!-- Miktar -->
-                <div class="w-full md:w-2/12">
+                <div class="w-full md:w-1/12">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Miktar (*)</label>
                   <input v-model.number="aktifSatir.miktar" type="number" min="1" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-right" placeholder="0">
                 </div>
 
                 <!-- Tutar -->
-                <div class="w-full md:w-2/12">
-                  <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Top. Tutar (TL)</label>
+                <div class="w-full md:w-1/12">
+                  <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Top. Tutar</label>
                   <input v-model.number="aktifSatir.tutar" type="number" min="0" step="0.01" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-right" placeholder="0.00">
                 </div>
 
@@ -320,9 +350,9 @@
                   <button 
                     @click="satirIslemi" 
                     class="w-full font-bold py-2 rounded-md shadow-sm h-[38px] flex items-center justify-center transition-all transform active:scale-95"
-                    :class="duzenlemeModu ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'"
+                    :class="satirDuzenlemeModu ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'"
                   >
-                     <span v-if="duzenlemeModu" class="text-sm">OK</span>
+                     <span v-if="satirDuzenlemeModu" class="text-sm">OK</span>
                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                      </svg>
@@ -335,8 +365,8 @@
             <div class="border border-gray-200 rounded-lg overflow-hidden flex flex-col mt-4">
                <!-- Başlık -->
                <div class="bg-gray-100 border-b border-gray-200 px-4 py-2 grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  <div class="col-span-4">Ürün</div>
-                  <div class="col-span-2 text-right">Miktar</div>
+                  <div class="col-span-5">Ürün</div>
+                  <div class="col-span-1 text-right">Miktar</div>
                   <div class="col-span-2 text-right">Tutar</div>
                   <div class="col-span-3">Açıklama</div>
                   <div class="col-span-1 text-center">İşlem</div>
@@ -354,8 +384,8 @@
                     class="border-b last:border-0 border-gray-100 hover:bg-gray-50 px-4 py-3 grid grid-cols-12 gap-2 text-sm items-center transition duration-150"
                     :class="{'bg-orange-50': duzenlenenIndex === index}"
                   >
-                      <div class="col-span-4 font-medium text-gray-900 truncate" :title="item.urun_adi">{{ item.urun_adi }}</div>
-                      <div class="col-span-2 text-right font-bold text-gray-800">{{ item.miktar }}</div>
+                      <div class="col-span-5 font-medium text-gray-900 truncate" :title="item.urun_adi">{{ item.urun_adi }}</div>
+                      <div class="col-span-1 text-right font-bold text-gray-800">{{ item.miktar }}</div>
                       <div class="col-span-2 text-right text-gray-600 font-mono">{{ formatPara(item.tutar) }}</div>
                       <div class="col-span-3 text-gray-500 truncate text-xs" :title="item.aciklama">{{ item.aciklama || '-' }}</div>
                       
@@ -377,8 +407,8 @@
 
                <!-- Toplam Footer -->
                <div class="bg-gray-50 border-t border-gray-200 px-4 py-3 grid grid-cols-12 gap-2 text-sm font-bold text-gray-800 shadow-inner">
-                  <div class="col-span-4">TOPLAM</div>
-                  <div class="col-span-2 text-right">{{ toplamMiktar }}</div>
+                  <div class="col-span-5">TOPLAM</div>
+                  <div class="col-span-1 text-right">{{ toplamMiktar }}</div>
                   <div class="col-span-2 text-right font-mono">{{ formatPara(toplamTutar) }}</div>
                   <div class="col-span-4"></div>
                </div>
@@ -398,7 +428,11 @@
           :disabled="kayitYapiliyor || girisListesi.length === 0" 
           class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:bg-indigo-300 disabled:cursor-not-allowed"
         >
-          {{ kayitYapiliyor ? 'Kaydediliyor...' : 'Tümünü Kaydet' }}
+          <svg v-if="kayitYapiliyor" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ kayitYapiliyor ? 'Kaydediliyor...' : (islemGrupId ? 'Güncelle' : 'Tümünü Kaydet') }}
         </button>
       </template>
     </BaseModal>
@@ -434,7 +468,23 @@ const kayitYapiliyor = ref(false);
 const aktifAnlasmalar = ref([]);
 const anlasmaDahilinde = ref(false);
 
-const genelBilgiler = ref({ depo_id: null, anlasma_id: null });
+const islemGrupId = ref(null); // Düzenlenen ana grup ID'si (null ise Yeni Kayıt)
+
+// datetime-local formatı için yardımcı fonksiyon
+const getCurrentDateTimeLocal = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 16);
+};
+
+const formatToDateTimeLocal = (isoString) => {
+  if (!isoString) return getCurrentDateTimeLocal();
+  const date = new Date(isoString);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
+const genelBilgiler = ref({ depo_id: null, anlasma_id: null, islem_tarihi: getCurrentDateTimeLocal() });
 const aktifSatir = ref({ urun_id: null, urun_adi: '', miktar: '', tutar: '', aciklama: '' });
 const girisListesi = ref([]);
 const duzenlenenIndex = ref(null);
@@ -444,7 +494,7 @@ const modalUrunAramaSonuclari = ref([]);
 let modalAramaDebounce;
 
 // --- COMPUTED ---
-const duzenlemeModu = computed(() => duzenlenenIndex.value !== null);
+const satirDuzenlemeModu = computed(() => duzenlenenIndex.value !== null);
 const toplamMiktar = computed(() => girisListesi.value.reduce((sum, item) => sum + Number(item.miktar || 0), 0));
 const toplamTutar = computed(() => girisListesi.value.reduce((sum, item) => sum + (item.tutar || 0), 0));
 const secilenAnlasmaTipi = computed(() => {
@@ -463,16 +513,17 @@ const urunAramaPlaceholder = computed(() => {
 onMounted(async () => {
   const { data: depolarData } = await supabase.from('depolar').select('*');
   depolar.value = depolarData || [];
+  
+  const { data: anlasmalarData } = await supabase.from('anlasmalar').select('*, tedarikciler(ad), anlasma_kalemleri(urun_id)').eq('aktif_mi', true);
+  aktifAnlasmalar.value = anlasmalarData || [];
+
   await verileriGetir();
 });
 
 // --- ARAMA & FİLTRELEME ---
 watch(() => filtreler.value.urunArama, () => {
   clearTimeout(filtreDebounceTimer);
-  filtreDebounceTimer = setTimeout(() => {
-    mevcutSayfa.value = 1;
-    verileriGetir();
-  }, 500);
+  filtreDebounceTimer = setTimeout(() => { mevcutSayfa.value = 1; verileriGetir(); }, 500);
 });
 
 const filtrele = () => { mevcutSayfa.value = 1; verileriGetir(); };
@@ -493,30 +544,70 @@ const verileriGetir = async () => {
     });
     if (rpcError) throw rpcError;
     if (!grupData || grupData.length === 0) { gruplar.value = []; return; }
+    
     toplamGrupSayisi.value = grupData.length < sayfaBasinaGrup ? (mevcutSayfa.value - 1) * sayfaBasinaGrup + grupData.length : (mevcutSayfa.value * sayfaBasinaGrup) + 1;
+    
     const grupIdleri = grupData.map(g => g.grup_id);
-    const { data: detaylar, error: detayError } = await supabase.from('stok_hareketleri').select(`*, urunler (urun_kodu, aciklama, ana_birim), depolar (ad), anlasmalar (ad, tedarikciler(ad))`).in('grup_id', grupIdleri).eq('hareket_tipi', 'giris');
+    const { data: detaylar, error: detayError } = await supabase.from('stok_hareketleri')
+      .select(`*, urunler (urun_kodu, aciklama, ana_birim), depolar (ad), anlasmalar (ad, tedarikciler(ad))`)
+      .in('grup_id', grupIdleri)
+      .eq('hareket_tipi', 'giris');
+      
     if (detayError) throw detayError;
+    
     const gruplanmis = grupData.map(g => {
       const buGrubunDetaylari = detaylar.filter(d => d.grup_id === g.grup_id);
       const toplamMiktar = buGrubunDetaylari.reduce((acc, curr) => acc + curr.miktar, 0);
       const toplamTutar = buGrubunDetaylari.reduce((acc, curr) => acc + (curr.tutar || 0), 0);
       const ilkDetay = buGrubunDetaylari[0] || {};
-      return { id: g.grup_id, tarih: g.islem_tarihi, depo_ad: ilkDetay.depolar?.ad || '-', anlasma_ad: ilkDetay.anlasmalar?.ad || null, toplam_miktar: toplamMiktar, toplam_tutar: toplamTutar, detaylar: buGrubunDetaylari };
+      return { 
+        id: g.grup_id, 
+        tarih: g.islem_tarihi, 
+        depo_ad: ilkDetay.depolar?.ad || '-', 
+        anlasma_ad: ilkDetay.anlasmalar?.ad || null, 
+        toplam_miktar: toplamMiktar, 
+        toplam_tutar: toplamTutar, 
+        detaylar: buGrubunDetaylari 
+      };
     });
     gruplar.value = gruplanmis;
-  } catch (error) { console.error('Veri çekme hatası:', error); alert('Veriler yüklenirken hata oluştu: ' + error.message);
+  } catch (error) { 
+    console.error('Veri çekme hatası:', error); 
+    alert('Veriler yüklenirken hata oluştu: ' + error.message);
   } finally { loading.value = false; }
 };
 
-// --- MODAL İŞLEMLERİ ---
-const formModaliniAc = async () => {
-  genelBilgiler.value = { depo_id: null, anlasma_id: null };
-  girisListesi.value = [];
+// --- MODAL & FORM İŞLEMLERİ ---
+const formModaliniAc = (grup = null) => {
   temizleAktifSatir();
-  anlasmaDahilinde.value = false;
-  const { data } = await supabase.from('anlasmalar').select('*, tedarikciler(ad), anlasma_kalemleri(urun_id)').eq('aktif_mi', true);
-  aktifAnlasmalar.value = data || [];
+  
+  if (grup) {
+    // DÜZENLEME MODU
+    islemGrupId.value = grup.id;
+    const ilkDetay = grup.detaylar[0];
+    
+    genelBilgiler.value = {
+      depo_id: ilkDetay?.depo_id || null,
+      anlasma_id: ilkDetay?.anlasma_id || null,
+      islem_tarihi: formatToDateTimeLocal(grup.tarih)
+    };
+    anlasmaDahilinde.value = !!genelBilgiler.value.anlasma_id;
+    
+    girisListesi.value = grup.detaylar.map(d => ({
+      urun_id: d.urun_id,
+      urun_adi: `${d.urunler?.urun_kodu} - ${d.urunler?.aciklama}`,
+      miktar: d.miktar,
+      tutar: d.tutar,
+      aciklama: d.aciklama
+    }));
+  } else {
+    // YENİ KAYIT MODU
+    islemGrupId.value = null;
+    genelBilgiler.value = { depo_id: null, anlasma_id: null, islem_tarihi: getCurrentDateTimeLocal() };
+    girisListesi.value = [];
+    anlasmaDahilinde.value = false;
+  }
+  
   formModalGoster.value = true;
 };
 
@@ -527,7 +618,6 @@ const temizleAktifSatir = () => {
   duzenlenenIndex.value = null;
 };
 
-// !!! DÜZELTİLMİŞ FONKSİYON !!!
 const urunAraModal = () => {
   aktifSatir.value.urun_id = null;
   clearTimeout(modalAramaDebounce);
@@ -576,41 +666,167 @@ const urunSec = (urun) => {
 const satirIslemi = () => {
   if (!aktifSatir.value.urun_id) { alert("Lütfen bir ürün seçin."); return; }
   if (!aktifSatir.value.miktar || aktifSatir.value.miktar <= 0) { alert("Geçerli bir miktar girin."); return; }
-  if (duzenlemeModu.value) { girisListesi.value[duzenlenenIndex.value] = { ...aktifSatir.value }; } 
-  else { girisListesi.value.unshift({ ...aktifSatir.value }); }
+  
+  if (satirDuzenlemeModu.value) { 
+    girisListesi.value[duzenlenenIndex.value] = { ...aktifSatir.value }; 
+  } else { 
+    girisListesi.value.unshift({ ...aktifSatir.value }); 
+  }
   temizleAktifSatir();
 };
 
-const satirDuzenle = (index) => { const item = girisListesi.value[index]; aktifSatir.value = { ...item }; modalUrunAramaMetni.value = item.urun_adi; duzenlenenIndex.value = index; };
-const satirSil = (index) => { if (duzenlenenIndex.value === index) temizleAktifSatir(); girisListesi.value.splice(index, 1); };
+const satirDuzenle = (index) => { 
+  const item = girisListesi.value[index]; 
+  aktifSatir.value = { ...item }; 
+  modalUrunAramaMetni.value = item.urun_adi; 
+  duzenlenenIndex.value = index; 
+};
 
+const satirSil = (index) => { 
+  if (duzenlenenIndex.value === index) temizleAktifSatir(); 
+  girisListesi.value.splice(index, 1); 
+};
+
+// --- YARDIMCI: STOK SEVİYELERİNİ GERİ ALMA ---
+const stokSeviyeleriniGeriAl = async (grupId) => {
+  // Eski kayıtları bul
+  const { data: eskiHareketler, error: fetchErr } = await supabase
+    .from('stok_hareketleri')
+    .select('urun_id, depo_id, miktar')
+    .eq('grup_id', grupId);
+    
+  if (fetchErr) throw fetchErr;
+  
+  if (eskiHareketler && eskiHareketler.length > 0) {
+    for (const hareket of eskiHareketler) {
+      // Stok seviyesini bul ve miktar kadar düş
+      const { data: mevcutStok } = await supabase
+        .from('stok_seviyeleri')
+        .select('id, miktar')
+        .eq('urun_id', hareket.urun_id)
+        .eq('depo_id', hareket.depo_id)
+        .single();
+        
+      if (mevcutStok) {
+        await supabase
+          .from('stok_seviyeleri')
+          .update({ miktar: mevcutStok.miktar - hareket.miktar })
+          .eq('id', mevcutStok.id);
+      }
+    }
+  }
+};
+
+// --- SİLME İŞLEMİ ---
+const grupSil = async (grup) => {
+  if (!confirm(`Bu stok giriş işlemini silmek istediğinize emin misiniz?\n\nSilinen kalemlerin miktarları depodan otomatik olarak düşülecektir.`)) {
+    return;
+  }
+  
+  try {
+    loading.value = true;
+    
+    // 1. Stok seviyelerindeki rakamları eski haline getir (Düş)
+    await stokSeviyeleriniGeriAl(grup.id);
+    
+    // 2. Hareket kayıtlarını sil
+    const { error: delErr } = await supabase
+      .from('stok_hareketleri')
+      .delete()
+      .eq('grup_id', grup.id);
+      
+    if (delErr) throw delErr;
+    
+    alert('Stok girişi başarıyla silindi ve stoklar güncellendi.');
+    await verileriGetir();
+    
+  } catch (err) {
+    console.error("Silme hatası:", err);
+    alert('İşlem silinirken bir hata oluştu: ' + err.message);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// --- KAYDET / GÜNCELLE İŞLEMİ ---
 const topluKaydet = async () => {
   if (!genelBilgiler.value.depo_id) { alert('Lütfen bir depo seçin.'); return; }
   if (anlasmaDahilinde.value && !genelBilgiler.value.anlasma_id) { alert('Lütfen bir anlaşma seçin.'); return; }
+  if (!genelBilgiler.value.islem_tarihi) { alert('Lütfen işlem tarihi girin.'); return; }
   if (girisListesi.value.length === 0) { alert('Listeye en az bir ürün eklemelisiniz.'); return; }
+  
   try {
     kayitYapiliyor.value = true;
-    const grupId = self.crypto.randomUUID(); 
-    const islemZamani = new Date().toISOString(); 
+    
+    // İşlem tarihini veritabanı formatına çevir (UTC)
+    const islemTarihiDate = new Date(genelBilgiler.value.islem_tarihi);
+    const islemZamani = islemTarihiDate.toISOString(); 
+    
+    let grupId;
+    
+    if (islemGrupId.value) {
+      // DÜZENLEME MODU: Eski verileri temizle ve stokları geri al
+      grupId = islemGrupId.value;
+      await stokSeviyeleriniGeriAl(grupId);
+      
+      const { error: delErr } = await supabase
+        .from('stok_hareketleri')
+        .delete()
+        .eq('grup_id', grupId);
+      if (delErr) throw delErr;
+      
+    } else {
+      // YENİ KAYIT MODU
+      grupId = self.crypto.randomUUID(); 
+    }
+
+    // YENİ / GÜNCELLENMİŞ KAYITLARI EKLE
     for (const satir of girisListesi.value) {
+      // 1. Hareketi Ekle
       const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
-          urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, hareket_tipi: 'giris', miktar: satir.miktar,
-          aciklama: satir.aciklama || null, kullanici_id: userStore.user?.id || null, anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
-          tutar: satir.tutar || 0, olusturulma_tarihi: islemZamani, grup_id: grupId 
+          urun_id: satir.urun_id, 
+          depo_id: genelBilgiler.value.depo_id, 
+          hareket_tipi: 'giris', 
+          miktar: satir.miktar,
+          aciklama: satir.aciklama || null, 
+          kullanici_id: userStore.user?.id || null, 
+          anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
+          tutar: satir.tutar || 0, 
+          olusturulma_tarihi: islemZamani, // MANUEL TARİH BURADA KULLANILIYOR
+          grup_id: grupId 
       }]);
       if (hareketError) throw hareketError;
-      const { data: mevcutStok } = await supabase.from('stok_seviyeleri').select('*').eq('urun_id', satir.urun_id).eq('depo_id', genelBilgiler.value.depo_id).single();
-      if (mevcutStok) { await supabase.from('stok_seviyeleri').update({ miktar: mevcutStok.miktar + satir.miktar }).eq('id', mevcutStok.id); } 
-      else { await supabase.from('stok_seviyeleri').insert([{ urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, miktar: satir.miktar }]); }
-      const { data: urun } = await supabase.from('urunler').select('fiili_stok').eq('id', satir.urun_id).single();
-      if (urun) { await supabase.from('urunler').update({ fiili_stok: (urun.fiili_stok || 0) + satir.miktar }).eq('id', satir.urun_id); }
+      
+      // 2. Stok Seviyesini Güncelle (Sadece stok_seviyeleri tablosu!)
+      const { data: mevcutStok } = await supabase
+        .from('stok_seviyeleri')
+        .select('*')
+        .eq('urun_id', satir.urun_id)
+        .eq('depo_id', genelBilgiler.value.depo_id)
+        .single();
+        
+      if (mevcutStok) { 
+        await supabase
+          .from('stok_seviyeleri')
+          .update({ miktar: mevcutStok.miktar + satir.miktar })
+          .eq('id', mevcutStok.id); 
+      } else { 
+        await supabase
+          .from('stok_seviyeleri')
+          .insert([{ urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, miktar: satir.miktar }]); 
+      }
     }
-    alert('Stok girişi başarıyla kaydedildi!');
+    
+    alert(islemGrupId.value ? 'Stok girişi başarıyla güncellendi!' : 'Stok girişi başarıyla kaydedildi!');
     formModalGoster.value = false;
-    mevcutSayfa.value = 1;
     await verileriGetir(); 
-  } catch (err) { console.error("Stok girişi hatası:", err); alert('Hata: ' + err.message);
-  } finally { kayitYapiliyor.value = false; }
+    
+  } catch (err) { 
+    console.error("Kaydetme hatası:", err); 
+    alert('Hata: ' + err.message);
+  } finally { 
+    kayitYapiliyor.value = false; 
+  }
 };
 
 const toggleGrup = (grupId) => { if (acikGruplar.value.has(grupId)) { acikGruplar.value.delete(grupId); } else { acikGruplar.value.add(grupId); } };

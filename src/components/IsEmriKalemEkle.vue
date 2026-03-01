@@ -44,7 +44,7 @@
         </div>
 
         <!-- 2. MALZEME / HİZMET SEÇİMİ -->
-        <div :class="proformaModu ? 'col-span-12 md:col-span-4 lg:col-span-5' : 'col-span-12 md:col-span-4 lg:col-span-3'">
+        <div :class="genislikAyari.urunInputClass">
           <label class="label-style">{{ yeniKalemTipi === 'malzeme' ? 'Malzeme Seç' : 'Hizmet Açıklaması' }}</label>
           
           <div v-if="yeniKalemTipi === 'malzeme'" class="relative mt-1">
@@ -88,14 +88,27 @@
             <optgroup label="Depolar">
               <option v-for="depo in props.depolar" :key="depo.id" :value="{ tip: 'depo', id: depo.id, ad: depo.ad }">{{ depo.ad }}</option>
             </optgroup>
-            <optgroup label="Tedarikçiler">
-              <option v-for="tedarikci in props.tedarikciler" :key="tedarikci.id" :value="{ tip: 'tedarikci', id: tedarikci.id, ad: tedarikci.ad }">{{ tedarikci.ad }}</option>
+            <optgroup label="Dış Kaynaklar">
+              <option v-for="tedarikci in props.tedarikciler" :key="tedarikci.id" :value="{ tip: 'tedarikci', id: tedarikci.id, ad: tedarikci.ad }">Tedarikçi: {{ tedarikci.ad }}</option>
+              <!-- YENİ: EMANET SEÇENEĞİ -->
+              <option :value="{ tip: 'emanet', id: 'emanet', ad: 'Emanet (Stok Borç)' }">Emanet (Stok Borçlanma)</option>
             </optgroup>
           </select>
         </div>
 
-        <!-- 4. ANLAŞMA SEÇİMİ -->
-        <div v-if="!proformaModu" class="col-span-6 md:col-span-2 lg:col-span-2">
+        <!-- 4.A EMANET - KİMDEN ALINDI? (Sadece Emanet seçiliyse görünür) -->
+        <div v-if="!proformaModu && secilenKaynak?.tip === 'emanet'" class="col-span-6 md:col-span-2 lg:col-span-2">
+           <label class="label-style text-orange-600">Kimden Alındı? (Not)</label>
+           <input 
+            v-model="emanetKisiNotu"
+            type="text" 
+            placeholder="Örn: Ahmet Usta" 
+            class="form-input mt-1 border-orange-300 focus:ring-orange-500"
+           />
+        </div>
+
+        <!-- 4.B ANLAŞMA SEÇİMİ (Emanet seçili DEĞİLSE görünür) -->
+        <div v-else-if="!proformaModu" class="col-span-6 md:col-span-2 lg:col-span-2">
           <label class="label-style">Anlaşma</label>
           <select 
             v-model="yeniKalem.anlasma_id" 
@@ -132,15 +145,19 @@
           </datalist>
         </div>
 
-        <!-- 7. BİRİM FİYAT -->
+        <!-- 7. BİRİM FİYAT / MALİYET -->
         <div class="col-span-6 md:col-span-2 lg:col-span-1">
-          <label class="label-style truncate" title="KDV Hariç">Birim Fiyat <span class="text-[9px] font-normal text-gray-500">(KDV'siz)</span></label>
+          <label class="label-style truncate" :title="secilenKaynak?.tip === 'emanet' ? 'Bu emanet kaydı için esas alınacak maliyet' : 'KDV Hariç'">
+            {{ secilenKaynak?.tip === 'emanet' ? 'Maliyet' : 'Birim Fiyat' }} 
+            <span class="text-[9px] font-normal text-gray-500" v-if="secilenKaynak?.tip !== 'emanet'">(KDV'siz)</span>
+          </label>
           <div class="relative mt-1 rounded-md shadow-sm">
               <input 
                   v-model.number="yeniKalem.birim_fiyat" 
                   type="number" 
                   step="0.01" 
                   class="form-input no-spinner form-input pr-10 font-mono text-sm" 
+                  :class="{'border-orange-300': secilenKaynak?.tip === 'emanet'}"
                   placeholder="0"
               />
               <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
@@ -155,7 +172,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
           </button>
           <button @click="kalemEkle" type="button" class="w-full font-bold py-2 px-1 rounded-lg text-xs shadow transition-colors h-[38px] flex items-center justify-center" 
-            :class="duzenlemeModu ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'"
+            :class="duzenlemeModu ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : (secilenKaynak?.tip === 'emanet' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white')"
             :disabled="!proformaModu && stokYetersiz">
             {{ duzenlemeModu ? 'Güncelle' : 'Ekle' }}
           </button>
@@ -191,11 +208,24 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
                     <tr v-for="(kalem) in grup.kalemler" :key="kalem._originalIndex" class="hover:bg-gray-50 transition-colors" :class="{'bg-yellow-50': duzenlemeIndex === kalem._originalIndex}">
-                        <td class="td-style pl-4 font-medium text-gray-700">{{ kalem.aciklama }}</td>
+                        <td class="td-style pl-4 font-medium text-gray-700">
+                          {{ kalem.aciklama }}
+                          <span v-if="kalem.is_emanet" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800">
+                             Emanet
+                          </span>
+                        </td>
                         
                         <td v-if="!proformaModu" class="td-style text-center text-xs text-gray-500">
-                            <div v-if="kalem.kaynak_adi">{{ kalem.kaynak_adi }}</div>
-                            <div v-if="kalem.anlasma_id" class="text-indigo-600 font-medium">{{ anlasmaAdiBul(kalem.anlasma_id) }}</div>
+                            <!-- Emanet Gösterimi -->
+                            <div v-if="kalem.is_emanet">
+                              <span class="text-orange-600 font-bold block">Emanet</span>
+                              <span class="text-gray-400 italic">{{ kalem.emanet_tedarikci_notu }}</span>
+                            </div>
+                            <!-- Normal Gösterim -->
+                            <div v-else>
+                              <div v-if="kalem.kaynak_adi">{{ kalem.kaynak_adi }}</div>
+                              <div v-if="kalem.anlasma_id" class="text-indigo-600 font-medium">{{ anlasmaAdiBul(kalem.anlasma_id) }}</div>
+                            </div>
                         </td>
                         
                         <td class="td-style text-center font-bold text-gray-800">{{ kalem.miktar }}</td>
@@ -260,6 +290,7 @@ const emit = defineEmits(['kalemler-guncellendi']);
 const kalemler = ref([]);
 const yeniKalem = ref({});
 const secilenKaynak = ref(null);
+const emanetKisiNotu = ref(''); // YENİ: Emanet alınan kişi
 const yeniKalemTipi = ref('malzeme');
 const urunAramaMetni = ref('');
 const urunAramaSonuclari = ref([]);
@@ -281,6 +312,12 @@ const mevcutGruplar = computed(() => {
     return Array.from(set).sort();
 });
 
+// Responsive Grid Ayarı (Emanet seçiliyse input alanı değişir)
+const genislikAyari = computed(() => {
+  if (props.proformaModu) return { urunInputClass: 'col-span-12 md:col-span-4 lg:col-span-5' };
+  return { urunInputClass: 'col-span-12 md:col-span-4 lg:col-span-3' };
+});
+
 const gruplanmisKalemlerListesi = computed(() => {
     const gruplar = {};
     kalemler.value.forEach((kalem, index) => {
@@ -297,6 +334,8 @@ const gruplanmisKalemlerListesi = computed(() => {
 
 const stokYetersiz = computed(() => {
   if (props.proformaModu) return false;
+  // Emanet ise stok kontrolü yok
+  if (secilenKaynak.value?.tip === 'emanet') return false; 
   return yeniKalem.value.miktar > mevcutStok.value;
 });
 
@@ -310,7 +349,10 @@ const bosKalemOlustur = () => ({
   kaynak_tedarikci_id: null, 
   kaynak_adi: '', 
   anlasma_id: props.varsayilanAnlasma?.id || null,
-  grup_adi: aktifGrup.value 
+  grup_adi: aktifGrup.value,
+  // YENİ ALANLAR
+  is_emanet: false,
+  emanet_tedarikci_notu: ''
 });
 
 const formatPara = (val) => {
@@ -353,12 +395,13 @@ const secilenAnlasmaTipi = computed(() => {
 
 const urunBazliAnlasmaVeAnlasmaYok = computed(() => {
   if (props.proformaModu) return false;
+  // Emanet ise anlaşma zorunluluğu yok
+  if (secilenKaynak.value?.tip === 'emanet') return false;
+  
   if (props.varsayilanAnlasma && props.varsayilanAnlasma.tip === 'Ürün Bazlı' && !yeniKalem.value.anlasma_id) return true;
   if (secilenAnlasmaTipi.value === 'Ürün Bazlı' && !yeniKalem.value.anlasma_id) return true;
   return false;
 });
-
-const filtrelenmisUrunAramaSonuclari = computed(() => urunAramaSonuclari.value);
 
 let debounceTimer;
 const urunAra = () => {
@@ -407,6 +450,9 @@ const urunAra = () => {
 
 const stokKontrolEt = async () => {
   if (props.proformaModu) { mevcutStok.value = Infinity; return; }
+  // Emanet ise stok kontrolü pas geç
+  if (secilenKaynak.value?.tip === 'emanet') { mevcutStok.value = Infinity; return; }
+
   if (!yeniKalem.value.urun_id || !secilenKaynak.value || secilenKaynak.value.tip !== 'depo') { mevcutStok.value = Infinity; return; }
   try {
     const { data, error } = await supabase.from('stok_seviyeleri').select('miktar, rezerve_miktar').eq('urun_id', yeniKalem.value.urun_id).eq('depo_id', secilenKaynak.value.id).single();
@@ -429,29 +475,54 @@ const urunSec = (urun) => {
 const kalemEkle = () => {
   if (!yeniKalem.value.aciklama || yeniKalem.value.miktar <= 0) { alert('Lütfen açıklama ve miktar giriniz.'); return; }
   
-  // (Validasyonlar korundu)
+  // VALIDASYONLAR
   if (!props.proformaModu) {
-    if (yeniKalemTipi.value === 'malzeme' && secilenAnlasmaTipi.value === 'Ürün Bazlı' && !yeniKalem.value.anlasma_id) { alert('Anlaşma seçmelisiniz.'); return; }
-    if (yeniKalemTipi.value === 'malzeme' && secilenKaynak.value?.tip === 'depo' && yeniKalem.value.miktar > mevcutStok.value) { alert(`Yetersiz stok! Mevcut: ${mevcutStok.value}`); return; }
+    // Malzeme Seçimi Kontrolleri
     if (yeniKalemTipi.value === 'malzeme') {
-        if (!secilenKaynak.value) { alert('Malzeme için kaynak seçiniz.'); return; }
-        if(secilenKaynak.value.tip === 'depo') { 
-            yeniKalem.value.kaynak_depo_id = secilenKaynak.value.id; 
-            yeniKalem.value.kaynak_tedarikci_id = null; 
-            yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
-            yeniKalem.value.anlasma_id = null;
-        } else { 
-            yeniKalem.value.kaynak_depo_id = null; 
-            yeniKalem.value.kaynak_tedarikci_id = secilenKaynak.value.id; 
-            yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
-        }
-    } else { 
+       if (!secilenKaynak.value) { alert('Malzeme için kaynak seçiniz.'); return; }
+       
+       // 1. EMANET DURUMU
+       if (secilenKaynak.value.tip === 'emanet') {
+          if (!emanetKisiNotu.value.trim()) { alert('Lütfen kimden emanet alındığını (Not) giriniz.'); return; }
+          
+          yeniKalem.value.is_emanet = true;
+          yeniKalem.value.emanet_tedarikci_notu = emanetKisiNotu.value;
+          yeniKalem.value.kaynak_depo_id = null;
+          yeniKalem.value.kaynak_tedarikci_id = null;
+          yeniKalem.value.kaynak_adi = 'Emanet';
+          yeniKalem.value.anlasma_id = null;
+       } 
+       // 2. NORMAL DEPO DURUMU
+       else if (secilenKaynak.value.tip === 'depo') {
+          if (yeniKalem.value.miktar > mevcutStok.value) { alert(`Yetersiz stok! Mevcut: ${mevcutStok.value}`); return; }
+          
+          yeniKalem.value.is_emanet = false;
+          yeniKalem.value.kaynak_depo_id = secilenKaynak.value.id; 
+          yeniKalem.value.kaynak_tedarikci_id = null; 
+          yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
+          yeniKalem.value.anlasma_id = null;
+       } 
+       // 3. TEDARİKÇİ DURUMU
+       else { 
+          if (secilenAnlasmaTipi.value === 'Ürün Bazlı' && !yeniKalem.value.anlasma_id) { alert('Anlaşma seçmelisiniz.'); return; }
+          
+          yeniKalem.value.is_emanet = false;
+          yeniKalem.value.kaynak_depo_id = null; 
+          yeniKalem.value.kaynak_tedarikci_id = secilenKaynak.value.id; 
+          yeniKalem.value.kaynak_adi = secilenKaynak.value.ad; 
+       }
+    } 
+    // HİZMET DURUMU
+    else { 
+        yeniKalem.value.is_emanet = false;
         yeniKalem.value.kaynak_depo_id = null; 
         yeniKalem.value.kaynak_tedarikci_id = null; 
         yeniKalem.value.anlasma_id = null; 
         yeniKalem.value.kaynak_adi = 'Hizmet'; 
     }
   } else {
+    // PROFORMA MODU
+    yeniKalem.value.is_emanet = false;
     yeniKalem.value.kaynak_depo_id = null;
     yeniKalem.value.kaynak_tedarikci_id = null;
     yeniKalem.value.kaynak_adi = null;
@@ -471,6 +542,7 @@ const kalemEkle = () => {
   yeniKalem.value = bosKalemOlustur();
   urunAramaMetni.value = '';
   secilenKaynak.value = null;
+  emanetKisiNotu.value = ''; // Notu temizle
   mevcutStok.value = Infinity;
 };
 
@@ -490,7 +562,19 @@ const kalemDuzenle = (index) => {
         yeniKalemTipi.value = 'hizmet';
     }
 
-    // Grubu ayarla ki yanlış gruba gitmesin
+    // Emanet durumu kontrolü ve kaynak seçimi simülasyonu
+    if (kalem.is_emanet) {
+       secilenKaynak.value = { tip: 'emanet', id: 'emanet', ad: 'Emanet (Stok Borç)' };
+       emanetKisiNotu.value = kalem.emanet_tedarikci_notu;
+    } else if (kalem.kaynak_depo_id) {
+       const depo = props.depolar?.find(d => d.id === kalem.kaynak_depo_id);
+       if (depo) secilenKaynak.value = { tip: 'depo', id: depo.id, ad: depo.ad };
+    } else if (kalem.kaynak_tedarikci_id) {
+       const ted = props.tedarikciler?.find(t => t.id === kalem.kaynak_tedarikci_id);
+       if (ted) secilenKaynak.value = { tip: 'tedarikci', id: ted.id, ad: ted.ad };
+    }
+
+    // Grubu ayarla
     if(kalem.grup_adi) {
         aktifGrup.value = kalem.grup_adi;
     }
@@ -503,6 +587,8 @@ const kalemDuzenlemeyiIptalEt = () => {
     duzenlemeIndex.value = null;
     yeniKalem.value = bosKalemOlustur();
     urunAramaMetni.value = '';
+    secilenKaynak.value = null;
+    emanetKisiNotu.value = '';
 };
 
 const kalemSil = (index) => { 
@@ -513,21 +599,32 @@ const kalemSil = (index) => {
 watch(() => props.varsayilanAnlasma, (newAnlasma) => { 
   if (props.proformaModu) return;
   if (!secilenKaynak.value || secilenKaynak.value.tip !== 'depo') {
-    yeniKalem.value.anlasma_id = newAnlasma?.id || null; 
+    // Eğer Emanet seçiliyse anlaşma set etme
+    if(secilenKaynak.value?.tip === 'emanet') {
+        yeniKalem.value.anlasma_id = null;
+    } else {
+        yeniKalem.value.anlasma_id = newAnlasma?.id || null; 
+    }
   }
 });
 
 watch(secilenKaynak, (newKaynak) => {
   if (props.proformaModu) return;
   stokKontrolEt();
-  if (newKaynak && newKaynak.tip === 'depo') {
-    yeniKalem.value.anlasma_id = null; 
+  
+  if (newKaynak) {
+      if (newKaynak.tip === 'depo' || newKaynak.tip === 'emanet') {
+        yeniKalem.value.anlasma_id = null; 
+      }
+      
+      // Kaynak değişince emanet notunu temizle (eğer emanet değilse)
+      if (newKaynak.tip !== 'emanet') {
+          emanetKisiNotu.value = '';
+      }
   }
 });
 
 watch(aktifGrup, (newVal) => {
-    // Aktif grup değişince, eğer düzenleme yapmıyorsak yeni kalemin grubunu güncelle
-    // Düzenleme yapıyorsak da güncelleyebiliriz, kullanıcı grubunu değiştirmek istiyor olabilir.
     yeniKalem.value.grup_adi = newVal;
 });
 
