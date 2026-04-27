@@ -528,13 +528,19 @@ const verileriGetir = async () => {
     
     toplamGrupSayisi.value = grupData.length < sayfaBasinaGrup ? (mevcutSayfa.value - 1) * sayfaBasinaGrup + grupData.length : (mevcutSayfa.value * sayfaBasinaGrup) + 1;
     
-    const grupIdleri = grupData.map(g => g.grup_id);
-    const { data: detaylar, error: detayError } = await supabase.from('stok_hareketleri')
-      .select(`*, urunler (urun_kodu, aciklama, ana_birim), depolar (ad), anlasmalar (ad, tedarikciler(ad))`)
-      .in('grup_id', grupIdleri)
-      .eq('hareket_tipi', 'giris');
-      
-    if (detayError) throw detayError;
+    // Null olan id'leri filtrele (Eski/Bozuk veriler için çözüm)
+    const grupIdleri = grupData.map(g => g.grup_id).filter(id => id !== null && id !== undefined);
+    
+    let detaylar = [];
+    if (grupIdleri.length > 0) {
+      const { data: d, error: detayError } = await supabase.from('stok_hareketleri')
+        .select(`*, urunler (urun_kodu, aciklama, ana_birim), depolar (ad), anlasmalar (ad, tedarikciler(ad))`)
+        .in('grup_id', grupIdleri)
+        .eq('hareket_tipi', 'giris');
+        
+      if (detayError) throw detayError;
+      detaylar = d || [];
+    }
     
     const gruplanmis = grupData.map(g => {
       const buGrubunDetaylari = detaylar.filter(d => d.grup_id === g.grup_id);
