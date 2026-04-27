@@ -79,10 +79,14 @@
               </select>
             </div>
 
-            <!-- DURUM CHECKBOX'I -->
-            <div class="flex flex-col justify-center mt-6 border p-3 rounded-md bg-gray-50 h-[42px]"> 
+            <!-- DURUM VE REZERVE CHECKBOX'LARI -->
+            <div class="flex flex-col justify-center space-y-2 mt-4 border p-3 rounded-md bg-gray-50"> 
+              <label class="flex items-center cursor-pointer" title="Seçilirse ürünler stoktan düşmez, rezerve edilir.">
+                <input type="checkbox" v-model="isEmri.rezerve_edildi" class="h-5 w-5 text-orange-600 rounded border-gray-300 focus:ring-orange-500">
+                <span class="ml-3 text-sm font-bold text-orange-700">Rezerve Et (Stoktan Düşme)</span>
+              </label>
               <label class="flex items-center cursor-pointer">
-                <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300">
+                <input type="checkbox" v-model="isEmri.is_tamamlandi" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
                 <span class="ml-3 text-sm font-medium text-gray-700">İş Tamamlandı (Hizmet/Montaj Bitti)</span>
               </label>
             </div>
@@ -102,7 +106,7 @@
           </div>
         </div>
 
-        <!-- YENİ BÖLÜM: MALİYET KALEMLERİ -->
+        <!-- MALİYET KALEMLERİ -->
         <div class="border-b pb-6">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-700">Maliyet Kalemleri</h2>
@@ -204,7 +208,7 @@ const isEmri = ref({
   fatura_no: '',
   numara: null,
   is_tamamlandi: false,
-  sevk_edildi: false, // Yeni Kayıtlar Her Zaman False (Sevk Edilmemiş) başlar
+  rezerve_edildi: false, // YENİ: Varsayılan olarak stoktan DÜŞER
   kdv_dahil: false, 
   maliyet: 0, 
   is_emri_tipi: 'SİPARİŞ',
@@ -232,12 +236,10 @@ const handleKalemlerGuncellendi = (yeniListe) => {
   isEmriKalemleri.value = yeniListe;
 };
 
-// Maliyet işlemleri
 const maliyetEkle = () => {
   maliyetListesi.value.push({ aciklama: '', tutar: 0 });
 };
 
-// --- HESAPLAMA ---
 const toplamlar = computed(() => {
     const araToplam = isEmriKalemleri.value.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
     const kdv = araToplam * 0.20;
@@ -263,7 +265,6 @@ onMounted(async () => {
   satiscilar.value = satiscilarRes.data || [];
   kaynaklarHazir.value = true;
 
-  // --- SAYAÇTAN NUMARA ÇEKME ---
   try {
     const { data, error } = await supabase.rpc('bir_sonraki_is_emri_numarasi');
     if (error) throw error;
@@ -272,7 +273,6 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error("Yeni iş emri numarası alınamadı:", err);
-    alert("Otomatik iş emri numarası alınırken bir hata oluştu. Lütfen manuel olarak girin.");
   }
 });
 
@@ -287,7 +287,6 @@ const kaydet = async () => {
 
   await withLoading(async () => {
     try {
-      // 1. İş Emri Başlığını Kaydet
       isEmri.value.toplam_tutar = toplamlar.value.genelToplam; 
       isEmri.value.maliyet = toplamMaliyet.value; 
       
@@ -299,7 +298,7 @@ const kaydet = async () => {
       
       if (isEmriError) {
         if (isEmriError.code === '23505') { 
-           alert(`Bu numara (${isEmri.value.numara}) zaten kullanımda. Lütfen başka bir numara girin.`);
+           alert(`Bu numara (${isEmri.value.numara}) zaten kullanımda.`);
            return;
         }
         throw isEmriError;
@@ -307,12 +306,9 @@ const kaydet = async () => {
 
       const newIsEmriId = isEmriData.id;
 
-      // 2. Ürün Kalemlerini Hazırla ve Kaydet (Emanet Kontrolü Dahil)
-      // Promise.all ile emanet kayıtlarını asenkron oluşturup id'lerini alacağız
       const kalemlerPromises = isEmriKalemleri.value.map(async (kalem) => {
           let emanetId = null;
 
-          // EĞER KALEM EMANET İSE: Önce Emanetler tablosuna kayıt aç
           if (kalem.is_emanet) {
              const { data: emanetData, error: emanetError } = await supabase
                .from('emanetler')
@@ -321,7 +317,7 @@ const kaydet = async () => {
                   is_emri_id: newIsEmriId,
                   tedarikci_adi_notu: kalem.emanet_tedarikci_notu,
                   miktar: kalem.miktar,
-                  kalan_miktar: kalem.miktar, // Başlangıçta hepsi açık
+                  kalan_miktar: kalem.miktar, 
                   birim_maliyet: parseFloat(kalem.birim_fiyat || 0),
                   durum: 'Bekliyor'
                })
@@ -339,7 +335,6 @@ const kaydet = async () => {
             miktar: parseInt(kalem.miktar, 10),
             birim: kalem.birim || 'Adet',
             birim_fiyat: parseFloat(kalem.birim_fiyat || 0),
-            // Emanet ise depo/tedarikçi null olmalı, emanet_id dolu olmalı
             kaynak_depo_id: kalem.is_emanet ? null : (kalem.kaynak_depo_id || null),
             kaynak_tedarikci_id: kalem.is_emanet ? null : (kalem.kaynak_tedarikci_id || null),
             anlasma_id: kalem.anlasma_id || null,
@@ -354,7 +349,6 @@ const kaydet = async () => {
         if (kalemlerError) throw kalemlerError;
       }
 
-      // 3. Maliyet Kalemlerini Kaydet
       const maliyetlerToInsert = maliyetListesi.value
         .filter(m => m.aciklama && m.tutar > 0)
         .map(m => ({
@@ -373,7 +367,7 @@ const kaydet = async () => {
 
     } catch (error) {
       console.error('Kayıt hatası:', error);
-      alert('İş emri kaydedilirken bir hata oluştu: ' + error.message);
+      alert('Hata oluştu: ' + error.message);
     }
   });
 };

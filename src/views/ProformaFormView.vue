@@ -25,7 +25,6 @@
               </div>
             </div>
 
-            <!-- PROFORMAYA ÖZEL İLGİLİ KİŞİ -->
             <div class="mt-4">
                <label class="label-style">İlgili Kişi (Bu Proforma İçin)</label>
                <input 
@@ -40,7 +39,8 @@
             <!-- KATEGORİ SEÇİMİ -->
             <div class="mt-6">
               <h3 class="text-sm font-semibold text-gray-700 mb-2">Sınıflandırma / Etiketler</h3>
-              <div class="grid grid-cols-2 gap-2">
+              <div v-if="loadingAyarlar" class="text-xs text-indigo-600 animate-pulse">Kategoriler yükleniyor...</div>
+              <div v-else class="grid grid-cols-2 gap-2">
                 <label v-for="kat in kategoriListesi" :key="kat" class="flex items-center space-x-2 cursor-pointer bg-gray-50 p-2 rounded border hover:bg-gray-100 transition">
                   <input type="checkbox" :value="kat" v-model="form.kategoriler" @change="guncelleSartlarMetni" class="h-4 w-4 text-indigo-600 rounded">
                   <span class="text-sm text-gray-700">{{ kat }}</span>
@@ -59,7 +59,6 @@
                 <input v-else v-model="form.proforma_no" type="text" class="form-input bg-gray-100 font-mono font-bold text-indigo-700" readonly>
               </div>
               
-              <!-- PARA BİRİMİ SEÇİMİ -->
               <div>
                 <label class="label-style">Para Birimi</label>
                 <select v-model="form.para_birimi" class="form-input font-bold text-gray-700">
@@ -70,7 +69,17 @@
                 </select>
               </div>
 
-              <div>
+              <div class="col-span-2">
+                <label class="label-style">Proje Adı</label>
+                <input 
+                  v-model="form.proje_adi" 
+                  type="text" 
+                  class="form-input" 
+                  placeholder="Örn: Erzurum Şehir Hastanesi İklimlendirme Projesi"
+                >
+              </div>
+
+              <div class="col-span-2">
                 <label class="label-style">Geçerlilik Tarihi (*)</label>
                 <input v-model="form.gecerlilik_tarihi" type="date" required class="form-input">
               </div>
@@ -205,30 +214,12 @@ import { supabase } from '../supabase.js';
 import MusteriAramaInput from '../components/MusteriAramaInput.vue';
 import IsEmriKalemEkle from '../components/IsEmriKalemEkle.vue';
 
-// --- SABİT METİNLER ---
-const GENEL_SARTLAR = `GENEL ŞARTLAR
-• Fiyatlarımıza KDV (%20) dahil değildir.
-• Yasa gereği ödenmesi gereken her türlü ötv, harç, fon, vergi mevzuatlarındaki değişikliklerin getireceği munzam yükler alıcıya ait olacaktır.
-• Stoklarımız günlük olarak değiştiği için lütfen sipariş esnasında stokları kontrol ettiriniz.
-• Ödeme nakit veya Kredi Kartı ile siparişe istinaden ödenecektir.
-• Opsiyon 7 gün
-• Cihazlarımız malzeme ve işçilik hatalarına karşı fatura tarihinden itibaren bireysel klimalar 3 yıl geri kalan ürünlerimiz 2 yıl firmamız garantisi altındadır. Elektrik arızaları, voltaj farklılıkları ile kullanım ve bakım hatalarından dolayı kaynaklanan arızalar garanti kapsamı dışındadır.
-• Salon, kaset, yer tavan, kanal tip klimalarda borulama dahil değildir.`;
-
-const KATEGORI_SARTLARI = {
-  'KLİMA': `\nKLİMA\n• Nakliye ve montaj dahildir.\n• Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.\n• İç ve dış ünitelerde duvarın mukavemeti olmadığı durumlarda konsol tarafımıza ait değildir.\n• Borulama 4 mt. kadar olup 4 mt.’den sonra ek ücret alınır.`,
-  'HAVA PERDESİ': `\nHAVA PERDESİ\n• Nakliye ve montaj dahildir.\n• Elektrik tesisatı, inşai işler hariçtir.\n• Konsol hariçtir.`,
-  'VRF': `\nVRF\n• Nakliye ve montaj dahildir. Şantiye teslim olup vinç ve hammaliye hariçtir.\n• Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.\n• Projeye istinaden fiyat verilmiş olup değişikliklerin tarafımıza bildirilmesi gerekmektedir.`,
-  'SOĞUK ODA': `\nSOĞUK ODA\n• Nakliye ve montaj dahildir.\n• Elektrik tesisatı, drenaj, karot ve inşai işler hariçtir.`,
-  'ISI POMPASI': `\nISI POMPASI\n• Nakliye ve devreye alım dahildir.\n• Elektrik tesisatı, inşai işler ve montaj hariçtir.`,
-  'YEDEK PARÇA': `\nYEDEK PARÇA\n• Nakliye dahildir.`,
-  'İŞÇİLİK': `\nİŞÇİLİK\n• Nakliye ve montaj dahildir.`
-};
-
 const router = useRouter();
 const loading = ref(false);
 const loadingNo = ref(true);
 const loadingResources = ref(true);
+const loadingAyarlar = ref(true); // YENİ: Ayarlar yüklenirken
+
 const secilenMusteri = ref(null);
 const kalemler = ref([]);
 
@@ -240,18 +231,22 @@ const depolar = ref([]);
 const tedarikciler = ref([]);
 const anlasmalar = ref([]);
 
-const kategoriListesi = Object.keys(KATEGORI_SARTLARI);
+// YENİ: DB'den gelecek değişkenler
+const genelSartlarDB = ref('');
+const kategoriSartlariDB = ref({});
+const kategoriListesi = ref([]);
 
 const form = ref({
   musteri_id: null,
   proforma_no: '',
-  ilgili_kisi: '', // YENİ
+  ilgili_kisi: '', 
+  proje_adi: '', 
   gecerlilik_tarihi: '', 
   notlar: '',
   para_birimi: 'TRY',
-  kdv_dahil: false, // ARTIK HEP FALSE
+  kdv_dahil: false, 
   kategoriler: [],
-  sartlar: GENEL_SARTLAR
+  sartlar: '' // Artık boş başlıyor, DB'den gelince dolacak
 });
 
 const manuelDuzenlemeyiAc = () => { manuelDuzenlemeAktif.value = true; };
@@ -264,9 +259,9 @@ const otomatikModaDon = () => {
 
 const guncelleSartlarMetni = () => {
   if (manuelDuzenlemeYapildi.value) return;
-  let metin = GENEL_SARTLAR;
+  let metin = genelSartlarDB.value;
   form.value.kategoriler.forEach(kat => {
-    if (KATEGORI_SARTLARI[kat]) metin += KATEGORI_SARTLARI[kat];
+    if (kategoriSartlariDB.value[kat]) metin += "\n" + kategoriSartlariDB.value[kat];
   });
   form.value.sartlar = metin;
 };
@@ -290,7 +285,30 @@ const yeniNumaraOlustur = async () => {
   }
 };
 
+const fetchAyarlar = async () => {
+  loadingAyarlar.value = true;
+  try {
+    const { data, error } = await supabase.from('proforma_ayarlari').select('*');
+    if (error) throw error;
+    
+    data.forEach(ayar => {
+      if (ayar.kategori_adi === 'GENEL') {
+        genelSartlarDB.value = ayar.sart_metni;
+        form.value.sartlar = ayar.sart_metni; // İlk yüklemede geneli bas
+      } else {
+        kategoriSartlariDB.value[ayar.kategori_adi] = ayar.sart_metni;
+        kategoriListesi.value.push(ayar.kategori_adi);
+      }
+    });
+  } catch (err) {
+    console.error("Ayarlar çekilemedi:", err.message);
+  } finally {
+    loadingAyarlar.value = false;
+  }
+};
+
 onMounted(async () => {
+  await fetchAyarlar(); // Önce ayarları (metinleri) çek
   await yeniNumaraOlustur();
   const nextWeek = new Date();
   nextWeek.setDate(nextWeek.getDate() + 7);
@@ -311,13 +329,11 @@ onMounted(async () => {
 const handleMusteriSecildi = (m) => { 
     secilenMusteri.value = m; 
     form.value.musteri_id = m.id;
-    // Müşterinin ilgili kişisini forma taşı, ama formda editable olsun
     form.value.ilgili_kisi = m.ilgili_kisi || '';
 };
 
 const handleKalemler = (l) => { kalemler.value = l; };
 
-// --- YENİ HESAPLAMA MANTIĞI ---
 const toplamlar = computed(() => {
     const araToplam = kalemler.value.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
     const kdv = araToplam * 0.20;
@@ -332,13 +348,14 @@ const kaydet = async () => {
       musteri_id: form.value.musteri_id,
       proforma_no: form.value.proforma_no,
       gecerlilik_tarihi: form.value.gecerlilik_tarihi,
-      ilgili_kisi: form.value.ilgili_kisi, // YENİ ALAN EKLENDİ
+      ilgili_kisi: form.value.ilgili_kisi, 
+      proje_adi: form.value.proje_adi, 
       notlar: form.value.notlar,
       sartlar: form.value.sartlar,
-      toplam_tutar: toplamlar.value.genelToplam, // KDV DAHİL SON RAKAM
+      toplam_tutar: toplamlar.value.genelToplam,
       para_birimi: form.value.para_birimi,
       durum: 'Taslak',
-      kdv_dahil: false, // ARTIK HEP FALSE
+      kdv_dahil: false, 
       kategoriler: form.value.kategoriler 
     }]).select().single();
 
@@ -352,7 +369,7 @@ const kaydet = async () => {
       urun_id: k.urun_id || null, 
       aciklama: k.aciklama, 
       miktar: k.miktar, 
-      birim: k.birim, // YENİ ALAN
+      birim: k.birim, 
       birim_fiyat: k.birim_fiyat,
       kaynak_depo_id: null, 
       kaynak_tedarikci_id: null, 
@@ -376,22 +393,19 @@ const taslakYazdir = () => {
   const logoUrl = window.location.origin + '/logo11.png';
   const tarih = new Date().toLocaleDateString('tr-TR');
   const musteri = secilenMusteri.value || {};
-  
-  // Proforma özelindeki ilgili kişiyi kullan
   const ilgiliKisi = form.value.ilgili_kisi || musteri.ilgili_kisi || '-';
-  
   const pb = form.value.para_birimi;
   
   const kalemlerHTML = kalemler.value.map((kalem, index) => {
     const satirTutar = kalem.miktar * kalem.birim_fiyat;
     return `
       <tr>
-        <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(satirTutar, pb)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: 500;">${kalem.aciklama}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700;">${formatPara(satirTutar, pb)}</td>
       </tr>
     `;
   }).join('');
@@ -403,62 +417,67 @@ const taslakYazdir = () => {
         <meta charset="UTF-8">
         <title>Proforma - ${form.value.proforma_no}</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
           @page { margin: 1cm; size: A4; }
           body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.4; margin: 0; padding: 0; font-size: 11px; }
           .container { max-width: 210mm; margin: 0 auto; background: white; padding-bottom: 20px; }
-          .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-          .logo-area img { height: 80px; object-fit: contain; }
-          .company-details { text-align: right; font-size: 10px; color: #555; }
-          .company-name { font-size: 14px; font-weight: bold; color: #111; }
           
-          /* BAŞLIĞI GİZLEDİK / KÜÇÜLTTÜK */
-          .doc-info { text-align: right; font-size: 10px; color: #666; margin-top: 10px; }
-          .doc-no { font-weight: bold; font-size: 12px; color: #333; }
-
-          .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; margin-top: 10px; }
-          .info-box { width: 48%; border: 1px solid #eee; padding: 10px; border-radius: 4px; }
-          .box-title { font-size: 11px; font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 5px; padding-bottom: 2px; color: #4f46e5; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+          /* HEADER */
+          .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; border-bottom: 2px solid #005BBB; padding-bottom: 15px; }
+          .logo-area img { height: 75px; object-fit: contain; }
+          .doc-title { text-align: right; }
+          .doc-title h2 { margin: 0; font-size: 22px; color: #005BBB; font-weight: 800; letter-spacing: 0.5px; }
+          .doc-title .sub { font-size: 11px; color: #666; margin-top: 5px; font-weight: 500; }
           
+          /* INFO GRID */
+          .info-grid { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 20px; }
+          .info-box { flex: 1; border: 1px solid #e5e7eb; background: #f9fafb; padding: 12px; border-radius: 6px; }
+          .box-title { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+          .info-text { font-size: 11.5px; color: #111827; margin-bottom: 3px; }
+          .info-text strong { color: #000; }
+          
+          /* TABLE */
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th { background: #f9fafb; padding: 6px; border-bottom: 2px solid #ddd; text-align: left; font-size: 10px; font-weight: bold; }
+          th { background: #005BBB; color: white; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+          th:first-child { border-radius: 4px 0 0 0; }
+          th:last-child { border-radius: 0 4px 0 0; }
           
-          .totals { display: flex; justify-content: flex-end; }
-          .total-wrapper { width: 200px; }
-          .total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 10px; }
-          .total-row.final { font-weight: bold; font-size: 12px; border-top: 2px solid #333; margin-top: 3px; padding-top: 5px; }
+          /* TOTALS */
+          .totals { display: flex; justify-content: flex-end; margin-top: 15px; }
+          .total-wrapper { width: 250px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+          .total-row { display: flex; justify-content: space-between; padding: 6px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6; }
+          .total-row.final { background: #005BBB; color: white; font-weight: bold; font-size: 13px; border-bottom: none; }
           
-          .footer-note {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            text-align: center; font-size: 9px; color: #999; padding: 5px;
-          }
+          /* FOOTER */
+          .footer-note { position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 9px; color: #999; padding: 5px; border-top: 1px solid #eee; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo-area"><img src="${logoUrl}" alt="Logo"></div>
-            <div class="company-details">
-                <div class="company-name">Tavlaşoğlu Isıtma Soğutma</div>
-                <div class="company-name">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div>
-                <div>Lalapaşa Mah. Samih Kobal Cad. İnanoğlu Apt. No:16/2 Yakutiye / Erzurum</div>
-                <div>Tel: 0(442) 238 83 83 | V.D: Aziziye | V.No: 8300346377</div>
+            <div class="logo-area"><img src="${logoUrl}" alt="Tavlaşoğlu"></div>
+            <div class="doc-title">
+                <h2>PROFORMA FATURA</h2>
+                <div class="sub">Tarih: ${tarih} &nbsp;|&nbsp; No: ${form.value.proforma_no}</div>
             </div>
           </div>
 
           <div class="info-grid">
             <div class="info-box">
-              <div class="box-title">SAYIN / MÜŞTERİ</div>
-              <div class="row"><strong>${musteri.unvan || '-'}</strong></div>
-              <div class="row"><span>İlgili:</span> <span>${ilgiliKisi}</span></div>
-              <div class="row"><span>Adres:</span> <span>${musteri.adres || '-'}</span></div>
-              <div class="row"><span>V.No:</span> <span>${musteri.vergi_no || '-'}</span></div>
+              <div class="box-title">MÜŞTERİ BİLGİLERİ</div>
+              <div class="info-text"><strong>${musteri.unvan || '-'}</strong></div>
+              <div class="info-text">İlgili: ${ilgiliKisi}</div>
+              <div class="info-text">${musteri.adres || '-'}</div>
+              <div class="info-text">${musteri.vergi_dairesi ? 'V.D: ' + musteri.vergi_dairesi : ''} ${musteri.vergi_no ? 'V.No: ' + musteri.vergi_no : ''}</div>
             </div>
-            <div class="info-box">
-              <div class="box-title">BELGE BİLGİLERİ</div>
-              <div class="row"><span>Tarih:</span> <span>${tarih}</span></div>
-              <div class="row"><span>Proforma No:</span> <span class="doc-no">${form.value.proforma_no}</span></div>
+            
+            <div class="info-box" style="text-align: right;">
+              <div class="box-title">TEKLİF VEREN</div>
+              <div class="info-text"><strong>Tavlaşoğlu Isıtma Soğutma</strong></div>
+              <div class="info-text">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div>
+              <div class="info-text">Lalapaşa Mah. Samih Kobal Cad.</div>
+              <div class="info-text">Tel: 0(442) 238 83 83</div>
+              ${form.value.proje_adi ? `<div style="margin-top:8px; padding-top:8px; border-top: 1px solid #e5e7eb; color:#005BBB; font-weight:700; font-size:12px;">PROJE: ${form.value.proje_adi}</div>` : ''}
             </div>
           </div>
 
@@ -486,15 +505,15 @@ const taslakYazdir = () => {
             </div>
           </div>
           
-          <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase;">Şartlar ve Koşullar</h4>
-            <div style="white-space: pre-wrap; font-size: 9px; color: #444; line-height: 1.3;">${form.value.sartlar || 'Şart belirtilmemiş.'}</div>
+          <div style="margin-top: 25px;">
+            <div style="font-size: 11px; font-weight: bold; color: #005BBB; text-transform: uppercase; margin-bottom: 5px;">Şartlar ve Koşullar</div>
+            <div style="white-space: pre-wrap; font-size: 10px; color: #444; line-height: 1.4; background: #fafafa; padding: 10px; border-left: 3px solid #005BBB;">${form.value.sartlar || 'Şart belirtilmemiş.'}</div>
           </div>
 
-          ${form.value.notlar ? `<div style="margin-top:10px; padding:10px; background:#f9fafb; font-size:9px;"><strong>NOTLAR:</strong><br>${form.value.notlar}</div>` : ''}
+          ${form.value.notlar ? `<div style="margin-top:15px;"><div style="font-size: 10px; font-weight: bold; color: #333;">NOTLAR:</div><div style="font-size: 10px; color: #555;">${form.value.notlar}</div></div>` : ''}
           
           <div class="footer-note">
-            Bu belge bilgilendirme amaçlıdır. Proforma Fatura (Taslak)
+            Bu belge bilgilendirme amaçlıdır. (Taslak)
           </div>
         </div>
       </body>

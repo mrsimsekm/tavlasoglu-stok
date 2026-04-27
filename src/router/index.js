@@ -135,6 +135,12 @@ const router = createRouter({
           name: 'stok-rezerve',
           component: () => import('../views/RezerveStokView.vue')
         },
+        {
+          path: '/app/proformalar/ayarlar',
+          name: 'ProformaAyarlari',
+          component: () => import('../views/ProformaAyarlariView.vue'),
+          meta: { requiresAuth: true }
+        },
       ]
     },
     { path: '/', redirect: '/app/is-emirleri' }

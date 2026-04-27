@@ -76,7 +76,6 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <!-- Loading -->
             <tr v-if="loading && gruplar.length === 0">
               <td colspan="8" class="px-6 py-10 text-center text-gray-500">
                 <div class="flex flex-col items-center justify-center">
@@ -89,14 +88,12 @@
               </td>
             </tr>
 
-            <!-- Veri Yok -->
             <tr v-else-if="!loading && gruplar.length === 0">
               <td colspan="8" class="px-6 py-10 text-center text-gray-500 italic">
                 Arama kriterlerinize uygun stok girişi bulunamadı.
               </td>
             </tr>
 
-            <!-- Veri Listesi -->
             <template v-else v-for="grup in gruplar" :key="grup.id">
               <tr 
                 class="hover:bg-gray-50 transition-colors cursor-pointer group"
@@ -138,7 +135,6 @@
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-mono text-gray-700">
                   {{ formatPara(grup.toplam_tutar) }}
                 </td>
-                <!-- Aksiyon Butonları -->
                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                   <div class="flex justify-center space-x-3">
                     <button @click.stop="formModaliniAc(grup)" class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Düzenle">
@@ -155,7 +151,6 @@
                 </td>
               </tr>
               
-              <!-- Detay Satırı (Accordion) -->
               <tr v-if="acikGruplar.has(grup.id)" class="bg-gray-50 border-b border-gray-200">
                 <td colspan="8" class="p-0">
                   <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 shadow-inner">
@@ -253,9 +248,7 @@
       <template #body>
          <div class="space-y-4">
             
-            <!-- 1. GENEL BİLGİLER -->
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <!-- İşlem Tarihi -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">İşlem Tarihi (*)</label>
                 <input 
@@ -288,7 +281,6 @@
               </div>
             </div>
 
-            <!-- 2. KALEM EKLEME / DÜZENLEME ALANI -->
             <div class="border-t border-gray-200 pt-4">
               <div class="flex justify-between items-center mb-2">
                 <h3 class="text-sm font-bold text-gray-700">
@@ -300,7 +292,6 @@
               </div>
 
               <div class="flex flex-col md:flex-row gap-3 items-end bg-blue-50 p-4 rounded-lg border border-blue-100 transition-colors duration-300" :class="{'bg-orange-50 border-orange-200': satirDuzenlemeModu}">
-                <!-- Ürün Arama -->
                 <div class="w-full md:w-6/12 relative">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Ürün (*)</label>
                   <input 
@@ -312,7 +303,6 @@
                     :disabled="anlasmaDahilinde && !genelBilgiler.anlasma_id && secilenAnlasmaTipi === 'Ürün Bazlı'"
                     autocomplete="off"
                   />
-                  <!-- Arama Sonuçları Dropdown -->
                   <div v-if="modalUrunAramaSonuclari.length > 0" class="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                     <ul class="py-1">
                       <li 
@@ -327,25 +317,21 @@
                   </div>
                 </div>
 
-                <!-- Miktar -->
                 <div class="w-full md:w-1/12">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Miktar (*)</label>
                   <input v-model.number="aktifSatir.miktar" type="number" min="1" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-right" placeholder="0">
                 </div>
 
-                <!-- Tutar -->
                 <div class="w-full md:w-1/12">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Top. Tutar</label>
                   <input v-model.number="aktifSatir.tutar" type="number" min="0" step="0.01" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-right" placeholder="0.00">
                 </div>
 
-                <!-- Açıklama -->
                 <div class="w-full md:w-3/12">
                   <label class="text-xs font-semibold text-gray-500 mb-1 block uppercase tracking-wide">Açıklama</label>
                   <input v-model="aktifSatir.aciklama" type="text" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Not...">
                 </div>
 
-                <!-- Ekle / Güncelle Butonu -->
                 <div class="w-full md:w-1/12">
                   <button 
                     @click="satirIslemi" 
@@ -363,7 +349,6 @@
 
             <!-- 3. EKLENEN LİSTE -->
             <div class="border border-gray-200 rounded-lg overflow-hidden flex flex-col mt-4">
-               <!-- Başlık -->
                <div class="bg-gray-100 border-b border-gray-200 px-4 py-2 grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   <div class="col-span-5">Ürün</div>
                   <div class="col-span-1 text-right">Miktar</div>
@@ -372,7 +357,6 @@
                   <div class="col-span-1 text-center">İşlem</div>
                </div>
                
-               <!-- Scroll Edilebilir İçerik -->
                <div class="overflow-y-auto max-h-[300px] bg-white">
                   <div v-if="girisListesi.length === 0" class="text-center py-10 text-gray-400 text-sm italic">
                     Henüz ürün eklenmedi. Yukarıdan ürün seçip ekleyebilirsiniz.
@@ -389,7 +373,6 @@
                       <div class="col-span-2 text-right text-gray-600 font-mono">{{ formatPara(item.tutar) }}</div>
                       <div class="col-span-3 text-gray-500 truncate text-xs" :title="item.aciklama">{{ item.aciklama || '-' }}</div>
                       
-                      <!-- İşlemler -->
                       <div class="col-span-1 flex justify-center space-x-2">
                          <button @click="satirDuzenle(index)" class="text-orange-500 hover:text-orange-700 p-1 rounded hover:bg-orange-100 transition-colors" title="Düzenle">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -405,7 +388,6 @@
                   </div>
                </div>
 
-               <!-- Toplam Footer -->
                <div class="bg-gray-50 border-t border-gray-200 px-4 py-3 grid grid-cols-12 gap-2 text-sm font-bold text-gray-800 shadow-inner">
                   <div class="col-span-5">TOPLAM</div>
                   <div class="col-span-1 text-right">{{ toplamMiktar }}</div>
@@ -468,9 +450,8 @@ const kayitYapiliyor = ref(false);
 const aktifAnlasmalar = ref([]);
 const anlasmaDahilinde = ref(false);
 
-const islemGrupId = ref(null); // Düzenlenen ana grup ID'si (null ise Yeni Kayıt)
+const islemGrupId = ref(null);
 
-// datetime-local formatı için yardımcı fonksiyon
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -582,7 +563,6 @@ const formModaliniAc = (grup = null) => {
   temizleAktifSatir();
   
   if (grup) {
-    // DÜZENLEME MODU
     islemGrupId.value = grup.id;
     const ilkDetay = grup.detaylar[0];
     
@@ -601,7 +581,6 @@ const formModaliniAc = (grup = null) => {
       aciklama: d.aciklama
     }));
   } else {
-    // YENİ KAYIT MODU
     islemGrupId.value = null;
     genelBilgiler.value = { depo_id: null, anlasma_id: null, islem_tarihi: getCurrentDateTimeLocal() };
     girisListesi.value = [];
@@ -687,37 +666,7 @@ const satirSil = (index) => {
   girisListesi.value.splice(index, 1); 
 };
 
-// --- YARDIMCI: STOK SEVİYELERİNİ GERİ ALMA ---
-const stokSeviyeleriniGeriAl = async (grupId) => {
-  // Eski kayıtları bul
-  const { data: eskiHareketler, error: fetchErr } = await supabase
-    .from('stok_hareketleri')
-    .select('urun_id, depo_id, miktar')
-    .eq('grup_id', grupId);
-    
-  if (fetchErr) throw fetchErr;
-  
-  if (eskiHareketler && eskiHareketler.length > 0) {
-    for (const hareket of eskiHareketler) {
-      // Stok seviyesini bul ve miktar kadar düş
-      const { data: mevcutStok } = await supabase
-        .from('stok_seviyeleri')
-        .select('id, miktar')
-        .eq('urun_id', hareket.urun_id)
-        .eq('depo_id', hareket.depo_id)
-        .single();
-        
-      if (mevcutStok) {
-        await supabase
-          .from('stok_seviyeleri')
-          .update({ miktar: mevcutStok.miktar - hareket.miktar })
-          .eq('id', mevcutStok.id);
-      }
-    }
-  }
-};
-
-// --- SİLME İŞLEMİ ---
+// --- YENİ YAPI: SİLME İŞLEMİ (GÜVENLİ RPC ÇAĞRISI) ---
 const grupSil = async (grup) => {
   if (!confirm(`Bu stok giriş işlemini silmek istediğinize emin misiniz?\n\nSilinen kalemlerin miktarları depodan otomatik olarak düşülecektir.`)) {
     return;
@@ -726,16 +675,16 @@ const grupSil = async (grup) => {
   try {
     loading.value = true;
     
-    // 1. Stok seviyelerindeki rakamları eski haline getir (Düş)
-    await stokSeviyeleriniGeriAl(grup.id);
+    // YENİ: SQL'de yazdığımız stok iade ve silme fonksiyonunu çağır
+    const { data, error } = await supabase.rpc('stok_giris_grubu_sil', {
+       p_grup_id: grup.id
+    });
     
-    // 2. Hareket kayıtlarını sil
-    const { error: delErr } = await supabase
-      .from('stok_hareketleri')
-      .delete()
-      .eq('grup_id', grup.id);
-      
-    if (delErr) throw delErr;
+    if (error) throw error;
+    
+    if (data && !data.success) {
+        throw new Error(data.message);
+    }
     
     alert('Stok girişi başarıyla silindi ve stoklar güncellendi.');
     await verileriGetir();
@@ -758,22 +707,19 @@ const topluKaydet = async () => {
   try {
     kayitYapiliyor.value = true;
     
-    // İşlem tarihini veritabanı formatına çevir (UTC)
     const islemTarihiDate = new Date(genelBilgiler.value.islem_tarihi);
     const islemZamani = islemTarihiDate.toISOString(); 
     
     let grupId;
     
     if (islemGrupId.value) {
-      // DÜZENLEME MODU: Eski verileri temizle ve stokları geri al
+      // DÜZENLEME MODU
       grupId = islemGrupId.value;
-      await stokSeviyeleriniGeriAl(grupId);
       
-      const { error: delErr } = await supabase
-        .from('stok_hareketleri')
-        .delete()
-        .eq('grup_id', grupId);
+      // Eski kaydı sil (stokları iade al)
+      const { data, error: delErr } = await supabase.rpc('stok_giris_grubu_sil', { p_grup_id: grupId });
       if (delErr) throw delErr;
+      if (data && !data.success) throw new Error(data.message);
       
     } else {
       // YENİ KAYIT MODU
@@ -782,7 +728,6 @@ const topluKaydet = async () => {
 
     // YENİ / GÜNCELLENMİŞ KAYITLARI EKLE
     for (const satir of girisListesi.value) {
-      // 1. Hareketi Ekle
       const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
           urun_id: satir.urun_id, 
           depo_id: genelBilgiler.value.depo_id, 
@@ -792,12 +737,11 @@ const topluKaydet = async () => {
           kullanici_id: userStore.user?.id || null, 
           anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
           tutar: satir.tutar || 0, 
-          olusturulma_tarihi: islemZamani, // MANUEL TARİH BURADA KULLANILIYOR
+          olusturulma_tarihi: islemZamani, 
           grup_id: grupId 
       }]);
       if (hareketError) throw hareketError;
       
-      // 2. Stok Seviyesini Güncelle (Sadece stok_seviyeleri tablosu!)
       const { data: mevcutStok } = await supabase
         .from('stok_seviyeleri')
         .select('*')

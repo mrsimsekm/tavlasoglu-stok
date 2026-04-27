@@ -30,17 +30,6 @@
           </div>
         </div>
 
-        <!-- SEVK EDİLMEDİ UYARISI (YENİ EKLENDİ) -->
-        <div v-if="!isEmri.sevk_edildi" class="border-2 border-blue-200 bg-blue-50 p-4 rounded-lg flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p class="text-sm font-bold text-blue-800">İş Emri Henüz Sevk Edilmedi</p>
-            <p class="text-xs text-blue-700 mt-1">Bu iş emrini kapatıyorsunuz ancak ürünler "Sevk Edildi" olarak işaretlenmemiş. İlgili malzemeler <b>gerçek stoktan düşmeyecek</b>, deponuzda rezerve olarak görünmeye devam edecektir.</p>
-          </div>
-        </div>
-
         <!-- ZORUNLU ALANLAR -->
         <div class="border-2 border-orange-200 bg-orange-50 p-4 rounded-lg">
           <h3 class="font-bold text-lg mb-3 text-orange-800 flex items-center">
@@ -72,12 +61,10 @@
         <div class="border p-4 rounded-lg">
            <h3 class="font-semibold text-md mb-3 text-gray-700">İsteğe Bağlı Bilgiler</h3>
            <div class="space-y-3">
-            <!-- Fatura No -->
             <div>
               <label class="label-style">Fatura No</label>
               <input v-model="kapanisFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası girilebilir">
             </div>
-            <!-- Maliyet -->
             <div>
               <label class="label-style">Maliyet</label>
               <input v-model.number="kapanisFormu.maliyet" type="number" step="0.01" class="form-input" placeholder="0.00">

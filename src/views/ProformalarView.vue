@@ -7,6 +7,12 @@
       <!-- AKSİYON BUTONLARI GRUBU -->
       <div class="flex items-center space-x-3">
         
+        <!-- YENİ: AYARLAR BUTONU -->
+        <RouterLink to="/app/proformalar/ayarlar" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-lg border border-gray-300 shadow-sm transition duration-150 flex items-center text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          Ayarlar
+        </RouterLink>
+
         <!-- 1. GÜVENLİK KİLİDİ BUTONU -->
         <button 
           @click="silmeModuAktif = !silmeModuAktif"
@@ -200,7 +206,7 @@ const limit = 10;
 const sortBy = ref('olusturma_tarihi');
 const sortDirection = ref('desc');
 
-const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'DX', 'ISI POMPASI', 'İŞÇİLİK', 'YEDEK PARÇA'];
+const kategoriListesi = ['KLİMA', 'VRF', 'HAVA PERDESİ', 'SOĞUK ODA', 'DX', 'ISI POMPASI', 'ENDÜSTRİYEL MUTFAK', 'İŞÇİLİK', 'YEDEK PARÇA'];
 let aramaDebounce;
 
 // --- DATA FETCHING (RPC) ---
@@ -244,7 +250,7 @@ const proformaSil = async (id, proformaNo) => {
     if (error) throw error;
     
     alert('Proforma başarıyla silindi.');
-    await verileriGetir(); // Listeyi yenile
+    await verileriGetir(); 
   } catch (err) {
     alert('Silme işlemi başarısız: ' + err.message);
     loading.value = false;
@@ -270,87 +276,144 @@ const formatTarih = (t) => t ? new Date(t).toLocaleDateString('tr-TR') : '-';
 const formatPara = (val, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(val || 0);
 const detayaGitVeDonustur = (proforma) => router.push({ path: `/app/proformalar/${proforma.id}`, query: { otomatikDonustur: 'true' } });
 
-// --- YAZDIRMA ---
+// --- YAZDIRMA (STANDART, KURUMSAL FORMAT) ---
 const yazdirProforma = async (proforma) => {
   try {
     const { data: kalemler, error } = await supabase.from('proforma_kalemleri').select(`*, depolar(ad), tedarikciler(ad), anlasmalar(ad)`).eq('proforma_id', proforma.id);
     if (error) throw error;
     
-    let musteri = {};
     const { data: fullProforma, error: proformaError } = await supabase.from('proformalar').select('*, musteriler(*)').eq('id', proforma.id).single();
     if(proformaError) throw proformaError;
-    musteri = fullProforma.musteriler || {};
+    const musteri = fullProforma.musteriler || {};
     
-
     const logoUrl = window.location.origin + '/logo11.png';
     const tarih = formatTarih(proforma.olusturma_tarihi);
-    const gecerlilik = formatTarih(proforma.gecerlilik_tarihi);
     const pb = proforma.para_birimi || 'TRY';
-    const kdvDahil = proforma.kdv_dahil; 
+    const ilgiliKisi = fullProforma.ilgili_kisi || musteri.ilgili_kisi || '-';
 
     const kalemlerHTML = kalemler.map((kalem, index) => {
       let tutar = kalem.miktar * kalem.birim_fiyat;
-      if (!kdvDahil) tutar = tutar * 1.2;
       return `
         <tr>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${index + 1}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${kalem.aciklama}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: 500;">${kalem.aciklama}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.miktar}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${kalem.birim || 'Adet'}</td>
           <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(kalem.birim_fiyat, pb)}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatPara(tutar, pb)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700;">${formatPara(tutar, pb)}</td>
         </tr>
       `;
     }).join('');
 
-    const genelToplam = proforma.toplam_tutar;
-    const araToplam = genelToplam / 1.2;
-    const toplamKDV = genelToplam - araToplam;
+    const araToplam = kalemler.reduce((acc, k) => acc + (k.miktar * k.birim_fiyat), 0);
+    const toplamKDV = araToplam * 0.20;
+    const genelToplam = araToplam + toplamKDV;
 
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="tr">
       <head>
+        <meta charset="UTF-8">
         <title>Proforma Fatura - ${proforma.proforma_no}</title>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            body { font-family: 'Inter', sans-serif; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { text-align: left; background: #f3f4f6; padding: 8px; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-            .logo { height: 80px; }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          @page { margin: 1cm; size: A4; }
+          body { font-family: 'Inter', sans-serif; color: #333; line-height: 1.4; margin: 0; padding: 0; font-size: 11px; }
+          .container { max-width: 210mm; margin: 0 auto; background: white; padding-bottom: 20px; }
+          
+          /* HEADER */
+          .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; border-bottom: 2px solid #005BBB; padding-bottom: 15px; }
+          .logo-area img { height: 75px; object-fit: contain; }
+          .doc-title { text-align: right; }
+          .doc-title h2 { margin: 0; font-size: 22px; color: #005BBB; font-weight: 800; letter-spacing: 0.5px; }
+          .doc-title .sub { font-size: 11px; color: #666; margin-top: 5px; font-weight: 500; }
+          
+          /* INFO GRID */
+          .info-grid { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 20px; }
+          .info-box { flex: 1; border: 1px solid #e5e7eb; background: #f9fafb; padding: 12px; border-radius: 6px; }
+          .box-title { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+          .info-text { font-size: 11.5px; color: #111827; margin-bottom: 3px; }
+          .info-text strong { color: #000; }
+          
+          /* TABLE */
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background: #005BBB; color: white; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+          th:first-child { border-radius: 4px 0 0 0; }
+          th:last-child { border-radius: 0 4px 0 0; }
+          
+          /* TOTALS */
+          .totals { display: flex; justify-content: flex-end; margin-top: 15px; }
+          .total-wrapper { width: 250px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+          .total-row { display: flex; justify-content: space-between; padding: 6px 12px; font-size: 11px; border-bottom: 1px solid #f3f4f6; }
+          .total-row.final { background: #005BBB; color: white; font-weight: bold; font-size: 13px; border-bottom: none; }
+          
+          /* FOOTER */
+          .footer-note { position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 9px; color: #999; padding: 5px; border-top: 1px solid #eee; }
         </style>
       </head>
       <body>
-        <div style="max-width: 800px; margin: 0 auto;">
-           <div class="header">
-              <img src="${logoUrl}" class="logo">
-              <div style="text-align: right;">
-                 <h2 style="margin:0">PROFORMA FATURA</h2>
-                 <div>No: ${proforma.proforma_no}</div>
-                 <div>Tarih: ${tarih}</div>
-              </div>
-           </div>
-           
-           <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-              <div style="width: 48%; border: 1px solid #eee; padding: 10px; border-radius: 5px;">
-                 <strong>SAYIN:</strong><br>
-                 ${musteri.unvan || '-'}<br>
-                 ${musteri.vergi_dairesi ? 'V.D: ' + musteri.vergi_dairesi : ''} 
-                 ${musteri.vergi_no ? 'V.No: ' + musteri.vergi_no : ''}<br>
-                 ${musteri.adres || ''}
-              </div>
-           </div>
+        <div class="container">
+          <div class="header">
+            <div class="logo-area"><img src="${logoUrl}" alt="Tavlaşoğlu"></div>
+            <div class="doc-title">
+                <h2>PROFORMA FATURA</h2>
+                <div class="sub">Tarih: ${tarih} &nbsp;|&nbsp; No: ${proforma.proforma_no}</div>
+            </div>
+          </div>
 
-           <table>
-             <thead><tr><th>#</th><th>Açıklama</th><th style="text-align:center">Miktar</th><th style="text-align:right">Birim Fiyat</th><th style="text-align:right">Tutar</th></tr></thead>
-             <tbody>${kalemlerHTML}</tbody>
-           </table>
+          <div class="info-grid">
+            <div class="info-box">
+              <div class="box-title">MÜŞTERİ BİLGİLERİ</div>
+              <div class="info-text"><strong>${musteri.unvan || '-'}</strong></div>
+              <div class="info-text">İlgili: ${ilgiliKisi}</div>
+              <div class="info-text">${musteri.adres || '-'}</div>
+              <div class="info-text">${musteri.vergi_dairesi ? 'V.D: ' + musteri.vergi_dairesi : ''} ${musteri.vergi_no ? 'V.No: ' + musteri.vergi_no : ''}</div>
+            </div>
+            
+            <div class="info-box" style="text-align: right;">
+              <div class="box-title">TEKLİF VEREN</div>
+              <div class="info-text"><strong>Tavlaşoğlu Isıtma Soğutma</strong></div>
+              <div class="info-text">Doğalgaz Sis. Tic. San. ve Ltd. Şti.</div>
+              <div class="info-text">Lalapaşa Mah. Samih Kobal Cad.</div>
+              <div class="info-text">Tel: 0(442) 238 83 83</div>
+              ${fullProforma.proje_adi ? `<div style="margin-top:8px; padding-top:8px; border-top: 1px solid #e5e7eb; color:#005BBB; font-weight:700; font-size:12px;">PROJE: ${fullProforma.proje_adi}</div>` : ''}
+            </div>
+          </div>
 
-           <div style="text-align: right; margin-top: 20px;">
-              <div>Ara Toplam: ${formatPara(araToplam, pb)}</div>
-              <div>KDV (%20): ${formatPara(toplamKDV, pb)}</div>
-              <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">GENEL TOPLAM: ${formatPara(genelToplam, pb)}</div>
-           </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: center; width: 30px;">#</th>
+                <th>Açıklama</th>
+                <th style="text-align: center; width: 60px;">Miktar</th>
+                <th style="text-align: center; width: 60px;">Birim</th>
+                <th style="text-align: right; width: 100px;">Birim Fiyat</th>
+                <th style="text-align: right; width: 100px;">Tutar</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${kalemlerHTML}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-wrapper">
+                <div class="total-row"><span>Ara Toplam:</span><span>${formatPara(araToplam, pb)}</span></div>
+                <div class="total-row"><span>KDV (%20):</span><span>${formatPara(toplamKDV, pb)}</span></div>
+                <div class="total-row final"><span>GENEL TOPLAM:</span><span>${formatPara(genelToplam, pb)}</span></div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 25px;">
+            <div style="font-size: 11px; font-weight: bold; color: #005BBB; text-transform: uppercase; margin-bottom: 5px;">Şartlar ve Koşullar</div>
+            <div style="white-space: pre-wrap; font-size: 10px; color: #444; line-height: 1.4; background: #fafafa; padding: 10px; border-left: 3px solid #005BBB;">${fullProforma.sartlar || 'Şart belirtilmemiş.'}</div>
+          </div>
+
+          ${fullProforma.notlar ? `<div style="margin-top:15px;"><div style="font-size: 10px; font-weight: bold; color: #333;">NOTLAR:</div><div style="font-size: 10px; color: #555;">${fullProforma.notlar}</div></div>` : ''}
+          
+          <div class="footer-note">
+            Bu belge bilgilendirme amaçlıdır.
+          </div>
         </div>
       </body>
       </html>
@@ -358,6 +421,8 @@ const yazdirProforma = async (proforma) => {
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 500);
     
   } catch (err) {
     alert('Yazdırma hatası: ' + err.message);
