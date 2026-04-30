@@ -80,12 +80,10 @@
               <div><p class="label-style">Para Birimi</p><p class="font-bold text-indigo-600">{{ isEmri.para_birimi || 'TRY' }}</p></div>
               <div><p class="label-style">KDV Durumu</p><p class="font-semibold text-gray-800">Hariç</p></div>
               <div><p class="label-style">İş Durumu</p><p class="font-semibold" :class="isEmri.is_tamamlandi ? 'text-green-600' : 'text-gray-400'">{{ isEmri.is_tamamlandi ? '✓ Tamamlandı' : '○ Devam Ediyor' }}</p></div>
-              
-              <!-- YENİ MİMARİ: SEVK / REZERVE DURUMU -->
               <div>
                 <p class="label-style">Stok / Sevk Durumu</p>
                 <p class="font-semibold" :class="isEmri.rezerve_edildi ? 'text-orange-500' : 'text-indigo-600'">
-                   {{ isEmri.rezerve_edildi ? '🔒 Stokta Rezerve' : '🚚 Sevk Edildi' }}
+                   {{ isEmri.rezerve_edildi ? '🔒 Stokta Rezerve' : '🚚 Sevk Edildi (Düştü)' }}
                 </p>
               </div>
             </div>
@@ -97,7 +95,6 @@
               <div><label class="label-style">Fatura No</label><input v-model="duzenlemeFormu.fatura_no" type="text" class="form-input" placeholder="Fatura numarası"></div>
               <div><label class="label-style">Para Birimi</label><select v-model="duzenlemeFormu.para_birimi" class="form-input font-bold"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option></select></div>
               
-              <!-- DÜZENLEME MODU CHECKBOX'LAR (YENİ MİMARİ) -->
               <div class="flex flex-col justify-center space-y-3 pt-4 border border-gray-200 rounded-md p-2 bg-gray-50">
                 <label class="flex items-center cursor-pointer" title="Seçilirse ürünler stoktan düşmez, rezerve olarak ayrılır.">
                   <input type="checkbox" v-model="duzenlemeFormu.rezerve_edildi" class="h-5 w-5 text-orange-600 rounded border-gray-300 focus:ring-orange-500">
@@ -229,7 +226,6 @@
               <span class="text-indigo-600">{{ formatParaBirimi(toplamlar.genelToplam, isEmri.para_birimi) }}</span>
            </div>
            
-           <!-- KÂRLILIK ANALİZİ (YÖNETİCİ/MUHASEBE) -->
            <div v-if="userStore.isYonetici || userStore.isMuhasebeci" class="w-64 mt-4 p-3 rounded-md border" 
                 :class="finansalAnaliz.netKar >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
              <h3 class="text-xs font-bold uppercase tracking-wider mb-2 text-center" 
@@ -275,7 +271,6 @@
     <!-- MODALLAR -->
     <IsEmriKapanisModal :show="kapanisModalGoster" :is-emri="isEmri" @close="kapanisModalGoster = false" @success="kapanisBasarili"/>
     
-    <!-- YAZDIRMA MODALI -->
     <BaseModal :show="yazdirModalGoster" @close="yazdirModalGoster = false">
       <template #header>İş Emri Yazdır</template>
       <template #body>
@@ -303,7 +298,6 @@
       </template>
     </BaseModal> 
     
-    <!-- TAHSİLAT MODALI -->
     <BaseModal :show="tahsilatEkleModalGoster" @close="tahsilatEkleModalGoster = false">
       <template #header>Tahsilat Ekle</template>
       <template #body>
@@ -375,14 +369,13 @@ const duzenlemeFormu = ref({
     satisci_id: null, 
     fatura_no: '', 
     is_tamamlandi: false, 
-    rezerve_edildi: false, // YENİ EKLENDİ
+    rezerve_edildi: false, 
     is_emri_tipi: 'SİPARİŞ', 
     sevk_adresi: '', 
     para_birimi: 'TRY',
     kdv_dahil: false 
 });
 
-// GÜVENLİ PARSE FONKSİYONU
 const parseSayi = (deger) => {
     if (deger === null || deger === undefined || deger === '') return 0;
     if (typeof deger === 'number') return deger;
@@ -398,7 +391,6 @@ const getTipRenk = (tip) => { const renkler = { 'SİPARİŞ': 'bg-blue-100 text-
 const getDurumRenk = (durum) => { const renkler = { 'Açık': 'bg-green-100 text-green-800', 'Kapalı': 'bg-gray-200 text-gray-700', 'İptal': 'bg-red-100 text-red-800' }; return renkler[durum] || 'bg-gray-200 text-gray-700'; };
 const formatParaBirimi = (tutar, currency = 'TRY') => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(tutar || 0);
 
-// --- HESAPLAMA MANTIĞI (KDV HARİÇ, GÜVENLİ PARSE EKLENDİ) ---
 const toplamlar = computed(() => {
   const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
   const araToplam = kalemListesi.reduce((acc, k) => {
@@ -588,7 +580,6 @@ const getGerekliVeriler = async () => {
     anlasmalar.value = anlasmalarRes.data || [];
     satiscilar.value = satiscilarRes.data || [];
 
-    // YENİ: sevk_edildi kalktı, rezerve_edildi geldi
     duzenlemeFormu.value = {
       satisci_id: isEmri.value.satisci_id || null,
       fatura_no: isEmri.value.fatura_no || '',
@@ -623,10 +614,12 @@ const isEmriIptalEt = async () => {
     }
 };
 
+// --- YENİ YAPI: AKILLI DIFFING VE UPDATE SİSTEMİ ---
 const guncelle = async () => {
   if (!isEmri.value) return;
   await guncelleWithLoading(async () => {
     try {
+        // 1. Önce eklenecek/güncellenecek kalemleri güvenli parse ile hazırla (Validation)
         const hazirKalemler = [];
         for (const k of guncelKalemler.value) {
             const miktar = parseInt(k.miktar, 10);
@@ -638,7 +631,8 @@ const guncelle = async () => {
 
             let emanetId = k.emanet_id || null;
 
-            if (k.is_emanet && !emanetId) {
+            // Eğer düzenleme sırasında YENİ bir emanet kalemi eklendiyse (ID'si yoksa)
+            if (k.is_emanet && !emanetId && !k.id) {
                 const { data: emanetData, error: emanetError } = await supabase
                     .from('emanetler')
                     .insert({
@@ -658,6 +652,7 @@ const guncelle = async () => {
             }
 
             hazirKalemler.push({
+                id: k.id || undefined, // Eski kayıtsa ID'si vardır
                 is_emri_id: isEmriId,
                 urun_id: k.urun_id || null,
                 aciklama: k.aciklama,
@@ -671,6 +666,7 @@ const guncelle = async () => {
             });
         }
 
+        // 2. İş Emri Başlığını Güncelle
         const yeniToplamMaliyet = duzenlemeMaliyetListesi.value.reduce((s, i) => s + parseSayi(i.tutar), 0);
         const guncellenecekIsEmri = { 
             toplam_tutar: toplamlar.value.genelToplam, 
@@ -678,7 +674,7 @@ const guncelle = async () => {
             fatura_no: duzenlemeFormu.value.fatura_no, 
             maliyet: yeniToplamMaliyet, 
             is_tamamlandi: duzenlemeFormu.value.is_tamamlandi, 
-            rezerve_edildi: duzenlemeFormu.value.rezerve_edildi, // YENİ
+            rezerve_edildi: duzenlemeFormu.value.rezerve_edildi, 
             is_emri_tipi: duzenlemeFormu.value.is_emri_tipi, 
             sevk_adresi: duzenlemeFormu.value.sevk_adresi, 
             para_birimi: duzenlemeFormu.value.para_birimi,
@@ -688,14 +684,32 @@ const guncelle = async () => {
         const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
         if (isEmriError) throw new Error("İş emri başlığı güncellenirken hata: " + isEmriError.message);
 
-        const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().eq('is_emri_id', isEmriId);
-        if (deleteError) throw new Error("Eski kalemler silinirken hata: " + deleteError.message);
+        // 3. Kalemleri Akıllı Şekilde Yönet (Diffing)
+        const eskiKalemler = isEmri.value.is_emri_kalemleri || [];
+        const silinecekIdler = eskiKalemler.filter(e => !hazirKalemler.some(h => h.id === e.id)).map(e => e.id);
+        const guncellenecekler = hazirKalemler.filter(h => h.id);
+        const eklenecekler = hazirKalemler.filter(h => !h.id);
 
-        if (hazirKalemler.length > 0) {
-            const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(hazirKalemler);
+        // A) SİL (Eğer listeden çıkarıldıysa)
+        if (silinecekIdler.length > 0) {
+            const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().in('id', silinecekIdler);
+            if (deleteError) throw new Error("Kalem silinirken hata: " + deleteError.message);
+        }
+
+        // B) EKLE (Listeye yeni satır eklendiyse)
+        if (eklenecekler.length > 0) {
+            const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(eklenecekler);
             if (insertError) throw new Error("Yeni kalemler eklenirken hata: " + insertError.message);
         }
 
+        // C) GÜNCELLE (Var olan satır değiştiyse)
+        if (guncellenecekler.length > 0) {
+            // Upsert (eğer ID varsa günceller)
+            const { error: updateError } = await supabase.from('is_emri_kalemleri').upsert(guncellenecekler);
+            if (updateError) throw new Error("Kalemler güncellenirken hata: " + updateError.message);
+        }
+
+        // 4. Maliyet Kalemlerini Güncelle
         await supabase.from('is_emri_maliyetleri').delete().eq('is_emri_id', isEmriId);
         if (duzenlemeMaliyetListesi.value.length > 0) {
             const maliyetlerToInsert = duzenlemeMaliyetListesi.value.filter(m => m.aciklama && parseSayi(m.tutar) > 0).map(m => ({ 
@@ -719,7 +733,6 @@ const guncelle = async () => {
 
 const iptalEt = async () => { isEditing.value = false; await getGerekliVeriler(); };
 
-// YENİ: Kapanış için Rezerve Kuralı
 const kapanisModaliniAc = () => { 
   if (!isEmri.value) return; 
   if (isEmri.value.durum !== 'Açık') { 

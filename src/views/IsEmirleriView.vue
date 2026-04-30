@@ -49,16 +49,20 @@
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-4 pt-4 border-t border-gray-200">
         <!-- Ana Durum Filtreleri -->
-        <div class="md:col-span-1">
+        <div class="md:col-span-1 border-r border-gray-100 pr-4">
           <label class="text-sm font-medium text-gray-700 block mb-2">İş Emri Durumu</label>
           <div class="flex flex-col space-y-2">
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="filtreler.durum.acik" @change="filtrele" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              <span class="text-sm text-gray-800">Açık</span>
+              <span class="text-sm font-medium text-gray-800">Açık</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer">
               <input type="checkbox" v-model="filtreler.durum.kapali" @change="filtrele" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              <span class="text-sm text-gray-800">Kapalı</span>
+              <span class="text-sm font-medium text-gray-800">Kapalı</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" v-model="filtreler.durum.iptal" @change="filtrele" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              <span class="text-sm font-medium text-red-700">İptal Edildi</span>
             </label>
           </div>
         </div>
@@ -131,7 +135,7 @@
                 <span>Toplam Tutar</span>
               </th>
               <th class="px-5 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Kalan Bakiye</th>
-              <th class="px-5 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Sevk</th>
+              <th class="px-5 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stok</th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Durum</th>
               <th class="px-5 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">İşlemler</th>
             </tr>
@@ -164,19 +168,24 @@
               <td class="px-5 py-4 text-sm font-mono">{{ isEmri.fatura_no || '-' }}</td>
               <td class="px-5 py-4 text-sm text-right font-semibold">{{ formatPara(isEmri.toplam_tutar, isEmri.para_birimi) }}</td>
               <td class="px-5 py-4 text-sm text-right font-semibold" :class="isEmri.kalan_bakiye > 0 ? 'text-red-600' : 'text-green-600'">{{ formatPara(isEmri.kalan_bakiye, isEmri.para_birimi) }}</td>
-              <!-- SEVK SÜTUNU (YENİ) -->
+              
+              <!-- STOK SÜTUNU (REZERVE / SEVK) -->
               <td class="px-5 py-4 text-sm text-center">
-                <div v-if="isEmri.sevk_edildi" title="Sevk Edildi" class="flex justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-green-500">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                <div v-if="isEmri.durum === 'İptal'" title="İptal İade Edildi" class="flex justify-center">
+                  <span class="text-xs font-bold text-gray-400">İade</span>
+                </div>
+                <div v-else-if="isEmri.rezerve_edildi" title="Stokta Rezerve" class="flex justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor">
+                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
                   </svg>
                 </div>
-                <div v-else title="Bekliyor" class="flex justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-300">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <div v-else title="Sevk Edildi (Düştü)" class="flex justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                   </svg>
                 </div>
               </td>
+
               <!-- DURUM SÜTUNU -->
               <td class="px-5 py-4 text-sm">
                 <span class="px-2 py-1 font-semibold leading-tight rounded-full text-xs" :class="getDurumRenk(isEmri.durum)">{{ isEmri.durum }}</span>
@@ -195,7 +204,7 @@
           </tbody>
         </table>
       </div>
-      <!-- Sayfalama -->
+
       <!-- Sayfalama -->
       <div class="bg-gray-50 px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 gap-3">
         <div class="flex items-center gap-4">
@@ -204,7 +213,6 @@
             <span class="font-medium">{{ (mevcutSayfa - 1) * sayfaBasinaKayit + 1 }}</span> - 
             <span class="font-medium">{{ Math.min(mevcutSayfa * sayfaBasinaKayit, toplamKayitSayisi) }}</span> arası gösteriliyor.
           </p>
-          <!-- Sayfa başına kayıt seçici -->
           <div class="flex items-center gap-1.5">
             <span class="text-sm text-gray-500">Sayfa başına:</span>
             <select v-model="sayfaBasinaKayitRef" @change="sayfaBasinaKayitDegistir" class="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-indigo-500 focus:border-indigo-500">
@@ -217,20 +225,17 @@
         </div>
 
         <nav class="flex items-center gap-1">
-          <!-- İlk Sayfa -->
           <button @click="sayfaDegistir(1)" :disabled="mevcutSayfa === 1"
             class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="İlk Sayfa">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
           </button>
-          <!-- Önceki -->
           <button @click="sayfaDegistir(mevcutSayfa - 1)" :disabled="mevcutSayfa === 1"
             class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Önceki Sayfa">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
           </button>
 
-          <!-- Sayfa Numaraları -->
           <template v-for="item in sayfaNumaralari" :key="item">
             <span v-if="item === '...'" class="px-3 py-2 text-sm text-gray-400 select-none">...</span>
             <button v-else @click="sayfaDegistir(item)"
@@ -242,13 +247,11 @@
             </button>
           </template>
 
-          <!-- Sonraki -->
           <button @click="sayfaDegistir(mevcutSayfa + 1)" :disabled="mevcutSayfa >= toplamSayfaSayisi"
             class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Sonraki Sayfa">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
           </button>
-          <!-- Son Sayfa -->
           <button @click="sayfaDegistir(toplamSayfaSayisi)" :disabled="mevcutSayfa >= toplamSayfaSayisi"
             class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Son Sayfa">
@@ -318,7 +321,7 @@ const sortBy = ref('numara');
 const sortDirection = ref('desc');
 
 const filtreler = reactive({
-  durum: { acik: true, kapali: false },
+  durum: { acik: true, kapali: false, iptal: false },
   fatura: { kesilmemis: false, kesilmis: false },
   tahsilat: { eksik: false, tamam: false },
   maliyet: { girilmemis: false, girilmis: false }
@@ -342,11 +345,19 @@ const verileriGetir = async () => {
   try {
     const realOffset = (mevcutSayfa.value - 1) * sayfaBasinaKayit.value;
     const params = {
-      p_limit: sayfaBasinaKayit.value, p_offset: realOffset, p_arama_metni: aramaMetni.value.length >= 3 ? aramaMetni.value : null,
-      p_sort_by: sortBy.value, p_sort_direction: sortDirection.value, p_durum_acik: filtreler.durum.acik,
-      p_durum_kapali: filtreler.durum.kapali, p_fatura_kesilmemis: filtreler.fatura.kesilmemis,
-      p_fatura_kesilmis: filtreler.fatura.kesilmis, p_tahsilat_eksik: filtreler.tahsilat.eksik,
-      p_tahsilat_tamam: filtreler.tahsilat.tamam, p_maliyet_girilmemis: filtreler.maliyet.girilmemis,
+      p_limit: sayfaBasinaKayit.value, 
+      p_offset: realOffset, 
+      p_arama_metni: aramaMetni.value.length >= 3 ? aramaMetni.value : null,
+      p_sort_by: sortBy.value, 
+      p_sort_direction: sortDirection.value, 
+      p_durum_acik: filtreler.durum.acik,
+      p_durum_kapali: filtreler.durum.kapali, 
+      p_durum_iptal: filtreler.durum.iptal,
+      p_fatura_kesilmemis: filtreler.fatura.kesilmemis,
+      p_fatura_kesilmis: filtreler.fatura.kesilmis, 
+      p_tahsilat_eksik: filtreler.tahsilat.eksik,
+      p_tahsilat_tamam: filtreler.tahsilat.tamam, 
+      p_maliyet_girilmemis: filtreler.maliyet.girilmemis,
       p_maliyet_girilmis: filtreler.maliyet.girilmis
     };
     const { data, error } = await supabase.rpc('get_is_emirleri_paginated', params);
@@ -384,6 +395,7 @@ const numaraDuzenleModalAc = (isEmri) => {
   seciliKayit.value = isEmri;
   modalAcik.value = true;
 };
+
 // --- SAYFALAMA HESAPLAMALARI ---
 const toplamSayfaSayisi = computed(() => Math.ceil(toplamKayitSayisi.value / sayfaBasinaKayit.value));
 
@@ -394,7 +406,6 @@ const sayfaNumaralari = computed(() => {
     return Array.from({ length: toplam }, (_, i) => i + 1);
   }
   const sayfalar = [];
-  // Her zaman ilk ve son göster, ortada pencere
   const pencereBaslangic = Math.max(2, mevcut - 2);
   const pencereBitis = Math.min(toplam - 1, mevcut + 2);
 
@@ -410,6 +421,7 @@ const sayfaBasinaKayitDegistir = () => {
   mevcutSayfa.value = 1;
   verileriGetir();
 };
+
 // --- UI ACTIONS ---
 const filtrele = () => { mevcutSayfa.value = 1; verileriGetir(); };
 
@@ -424,5 +436,13 @@ const siralamayiDegistir = (kolonKey) => { if (sortBy.value === kolonKey) { sort
 // --- HELPERS ---
 const formatTarih = (tarih) => { if (!tarih) return '-'; return new Date(tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
 const formatPara = (tutar, currency = 'TRY') => { if (tutar === null || tutar === undefined) tutar = 0; return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(tutar); };
-const getDurumRenk = (durum) => { const renkler = { 'Açık': 'bg-green-100 text-green-800', 'Kapalı': 'bg-gray-200 text-gray-700' }; return renkler[durum] || 'bg-yellow-100 text-yellow-700'; };
+
+const getDurumRenk = (durum) => { 
+    const renkler = { 
+        'Açık': 'bg-green-100 text-green-800', 
+        'Kapalı': 'bg-gray-200 text-gray-700',
+        'İptal': 'bg-red-100 text-red-800' 
+    }; 
+    return renkler[durum] || 'bg-yellow-100 text-yellow-700'; 
+};
 </script>
