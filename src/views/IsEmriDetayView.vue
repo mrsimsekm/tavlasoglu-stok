@@ -614,12 +614,10 @@ const isEmriIptalEt = async () => {
     }
 };
 
-// --- YENİ YAPI: AKILLI DIFFING VE UPDATE SİSTEMİ ---
 const guncelle = async () => {
   if (!isEmri.value) return;
   await guncelleWithLoading(async () => {
     try {
-        // 1. Önce eklenecek/güncellenecek kalemleri güvenli parse ile hazırla (Validation)
         const hazirKalemler = [];
         for (const k of guncelKalemler.value) {
             const miktar = parseInt(k.miktar, 10);
@@ -631,7 +629,6 @@ const guncelle = async () => {
 
             let emanetId = k.emanet_id || null;
 
-            // Eğer düzenleme sırasında YENİ bir emanet kalemi eklendiyse (ID'si yoksa)
             if (k.is_emanet && !emanetId && !k.id) {
                 const { data: emanetData, error: emanetError } = await supabase
                     .from('emanetler')
@@ -651,8 +648,7 @@ const guncelle = async () => {
                 emanetId = emanetData.id;
             }
 
-            hazirKalemler.push({
-                id: k.id || undefined, // Eski kayıtsa ID'si vardır
+            const yeniKalem = {
                 is_emri_id: isEmriId,
                 urun_id: k.urun_id || null,
                 aciklama: k.aciklama,
@@ -663,10 +659,16 @@ const guncelle = async () => {
                 kaynak_tedarikci_id: k.is_emanet ? null : (k.kaynak_tedarikci_id || null),
                 anlasma_id: k.anlasma_id || null,
                 emanet_id: emanetId
-            });
+            };
+            
+            // ESKİ KAYIT İÇİN ID EKLİYORUZ Kİ NULL CONSTRAINT HATASI VERMESİN
+            if (k.id) {
+                yeniKalem.id = k.id;
+            }
+            
+            hazirKalemler.push(yeniKalem);
         }
 
-        // 2. İş Emri Başlığını Güncelle
         const yeniToplamMaliyet = duzenlemeMaliyetListesi.value.reduce((s, i) => s + parseSayi(i.tutar), 0);
         const guncellenecekIsEmri = { 
             toplam_tutar: toplamlar.value.genelToplam, 
@@ -684,32 +686,31 @@ const guncelle = async () => {
         const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
         if (isEmriError) throw new Error("İş emri başlığı güncellenirken hata: " + isEmriError.message);
 
-        // 3. Kalemleri Akıllı Şekilde Yönet (Diffing)
         const eskiKalemler = isEmri.value.is_emri_kalemleri || [];
         const silinecekIdler = eskiKalemler.filter(e => !hazirKalemler.some(h => h.id === e.id)).map(e => e.id);
         const guncellenecekler = hazirKalemler.filter(h => h.id);
-        const eklenecekler = hazirKalemler.filter(h => !h.id);
+        
+        // YENİ EKLENENLER: "id" FIELD'INI TAMAMEN SİL Kİ SUPABASE "NULL" SANIP HATA VERMESİN
+        const eklenecekler = hazirKalemler.filter(h => !h.id).map(h => {
+             const { id, ...kalanlar } = h;
+             return kalanlar;
+        });
 
-        // A) SİL (Eğer listeden çıkarıldıysa)
         if (silinecekIdler.length > 0) {
             const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().in('id', silinecekIdler);
             if (deleteError) throw new Error("Kalem silinirken hata: " + deleteError.message);
         }
 
-        // B) EKLE (Listeye yeni satır eklendiyse)
         if (eklenecekler.length > 0) {
             const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(eklenecekler);
             if (insertError) throw new Error("Yeni kalemler eklenirken hata: " + insertError.message);
         }
 
-        // C) GÜNCELLE (Var olan satır değiştiyse)
         if (guncellenecekler.length > 0) {
-            // Upsert (eğer ID varsa günceller)
             const { error: updateError } = await supabase.from('is_emri_kalemleri').upsert(guncellenecekler);
             if (updateError) throw new Error("Kalemler güncellenirken hata: " + updateError.message);
         }
 
-        // 4. Maliyet Kalemlerini Güncelle
         await supabase.from('is_emri_maliyetleri').delete().eq('is_emri_id', isEmriId);
         if (duzenlemeMaliyetListesi.value.length > 0) {
             const maliyetlerToInsert = duzenlemeMaliyetListesi.value.filter(m => m.aciklama && parseSayi(m.tutar) > 0).map(m => ({ 
