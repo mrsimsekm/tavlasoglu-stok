@@ -394,7 +394,7 @@ const formatParaBirimi = (tutar, currency = 'TRY') => new Intl.NumberFormat('tr-
 const toplamlar = computed(() => {
   const kalemListesi = isEditing.value ? guncelKalemler.value : (isEmri.value?.is_emri_kalemleri || []);
   const araToplam = kalemListesi.reduce((acc, k) => {
-      const miktar = parseInt(k.miktar, 10) || 0;
+      const miktar = parseFloat(k.miktar) || 0;
       const fiyat = parseSayi(k.birim_fiyat);
       return acc + (miktar * fiyat);
   }, 0);
@@ -458,7 +458,7 @@ const isEmriYazdir = () => {
 
   const kalemlerHTML = isEmri.value.is_emri_kalemleri.map((k, i) => {
     const birimFiyat = parseSayi(k.birim_fiyat);
-    const miktar = parseInt(k.miktar, 10) || 0;
+    const miktar = parseFloat(k.miktar) || 0;
     const satirToplam = birimFiyat * miktar;
     
     return `
@@ -620,7 +620,7 @@ const guncelle = async () => {
     try {
         const hazirKalemler = [];
         for (const k of guncelKalemler.value) {
-            const miktar = parseInt(k.miktar, 10);
+            const miktar = parseFloat(k.miktar) || 0;
             const birimFiyat = parseSayi(k.birim_fiyat);
             
             if (isNaN(miktar) || isNaN(birimFiyat)) {

@@ -332,7 +332,7 @@ const kaydet = async () => {
             is_emri_id: newIsEmriId,
             urun_id: kalem.urun_id || null,
             aciklama: kalem.aciklama,
-            miktar: parseInt(kalem.miktar, 10),
+            miktar: parseFloat(kalem.miktar),
             birim: kalem.birim || 'Adet',
             birim_fiyat: parseFloat(kalem.birim_fiyat || 0),
             kaynak_depo_id: kalem.is_emanet ? null : (kalem.kaynak_depo_id || null),
