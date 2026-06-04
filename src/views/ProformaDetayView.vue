@@ -663,24 +663,30 @@ const convertToWorkOrder = async () => {
   converting.value = true;
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: yeniNo } = await supabase.rpc('is_emri_numara_olustur');
     
+    // GÜVENLİ YÖNTEM: Veritabanındaki en son numarayı baz alan RPC'yi çağırıyoruz
+    const { data: yeniNo, error: rpcError } = await supabase.rpc('bir_sonraki_is_emri_numarasi');
+    
+    if (rpcError || !yeniNo) {
+        throw new Error('Yeni numara alınamadı: ' + (rpcError?.message || 'Numara oluşmadı'));
+    }
+
     const { data: isEmri, error: isEmriError } = await supabase.from('is_emirleri').insert([{
       musteri_id: proforma.value.musteri_id,
-      siparis_tarihi: new Date(),
+      siparis_tarihi: new Date().toISOString(),
       durum: 'Açık',
       toplam_tutar: proforma.value.toplam_tutar,
       notlar: workOrderNote.value,
       olusturan_kullanici_id: user?.id,
-      satisci_id: null,
-      numara: yeniNo || 'IE-HATA',
-      is_tamamlandi: false,
+      numara: yeniNo, // RPC'den gelen garantili numara
       is_emri_tipi: 'SİPARİŞ',
       sevk_adresi: proforma.value.musteriler?.adres,
       para_birimi: proforma.value.para_birimi || 'TRY',
       kdv_dahil: false
     }]).select().single();
+    
     if (isEmriError) throw isEmriError;
+
 
     const kalemlerInsert = convertItems.value.map(item => ({
       is_emri_id: isEmri.id,
@@ -693,13 +699,15 @@ const convertToWorkOrder = async () => {
       kaynak_tedarikci_id: item.sourceType === 'tedarikci' ? item.selectedSourceId : null,
       anlasma_id: item.selectedAgreementId
     }));
+    
     await supabase.from('is_emri_kalemleri').insert(kalemlerInsert);
     await supabase.from('proformalar').update({ durum: 'Dönüştürüldü', donusturulen_is_emri_id: isEmri.id }).eq('id', proforma.value.id);
 
-    alert('İş Emri başarıyla oluşturuldu!');
+    alert('İş Emri başarıyla oluşturuldu: ' + yeniNo);
     showConvertModal.value = false;
     router.push(`/app/is-emirleri/${isEmri.id}`);
   } catch (err) {
+    console.error(err);
     alert('Dönüştürme hatası: ' + err.message);
   } finally {
     converting.value = false;
