@@ -618,57 +618,32 @@ const guncelle = async () => {
   if (!isEmri.value) return;
   await guncelleWithLoading(async () => {
     try {
-        const hazirKalemler = [];
-        for (const k of guncelKalemler.value) {
-            const miktar = parseFloat(k.miktar) || 0;
-            const birimFiyat = parseSayi(k.birim_fiyat);
-            
-            if (isNaN(miktar) || isNaN(birimFiyat)) {
-                throw new Error("Lütfen tüm miktar ve fiyat alanlarının geçerli bir sayı olduğundan emin olun.");
-            }
+        // Kalem verilerini atomic RPC için hazırla
+        const kalemVerileri = guncelKalemler.value.map(k => ({
+            id: k.id || null,
+            urun_id: k.urun_id || null,
+            aciklama: k.aciklama,
+            miktar: parseFloat(k.miktar) || 0,
+            birim: k.birim || 'Adet',
+            birim_fiyat: parseSayi(k.birim_fiyat),
+            kaynak_depo_id: k.is_emanet ? null : (k.kaynak_depo_id || null),
+            kaynak_tedarikci_id: k.is_emanet ? null : (k.kaynak_tedarikci_id || null),
+            anlasma_id: k.anlasma_id || null,
+            is_emanet: !!k.is_emanet,
+            emanet_id: k.emanet_id || null,
+            emanet_tedarikci_notu: k.emanet_tedarikci_notu || 'Belirtilmedi'
+        }));
 
-            let emanetId = k.emanet_id || null;
+        // Tek atomic RPC çağrısı - tüm kalem işlemleri (insert/update/delete/emanet) veritabanı transaction'ı içinde
+        const { data, error } = await supabase.rpc('is_emri_kalemleri_guncelle_atomic', {
+            p_is_emri_id: isEmriId,
+            p_kalemler: JSON.stringify(kalemVerileri)
+        });
 
-            if (k.is_emanet && !emanetId && !k.id) {
-                const { data: emanetData, error: emanetError } = await supabase
-                    .from('emanetler')
-                    .insert({
-                        urun_id: k.urun_id,
-                        is_emri_id: isEmriId,
-                        tedarikci_adi_notu: k.emanet_tedarikci_notu || 'Belirtilmedi',
-                        miktar: miktar,
-                        kalan_miktar: miktar,
-                        birim_maliyet: birimFiyat,
-                        durum: 'Bekliyor'
-                    })
-                    .select('id')
-                    .single();
+        if (error) throw error;
+        if (data && !data.success) throw new Error(data.message);
 
-                if (emanetError) throw new Error("Yeni emanet kaydı oluşturulurken hata: " + emanetError.message);
-                emanetId = emanetData.id;
-            }
-
-            const yeniKalem = {
-                is_emri_id: isEmriId,
-                urun_id: k.urun_id || null,
-                aciklama: k.aciklama,
-                miktar: miktar,
-                birim: k.birim || 'Adet',
-                birim_fiyat: birimFiyat,
-                kaynak_depo_id: k.is_emanet ? null : (k.kaynak_depo_id || null),
-                kaynak_tedarikci_id: k.is_emanet ? null : (k.kaynak_tedarikci_id || null),
-                anlasma_id: k.anlasma_id || null,
-                emanet_id: emanetId
-            };
-            
-            // ESKİ KAYIT İÇİN ID EKLİYORUZ Kİ NULL CONSTRAINT HATASI VERMESİN
-            if (k.id) {
-                yeniKalem.id = k.id;
-            }
-            
-            hazirKalemler.push(yeniKalem);
-        }
-
+        // İş emri başlık bilgilerini güncelle
         const yeniToplamMaliyet = duzenlemeMaliyetListesi.value.reduce((s, i) => s + parseSayi(i.tutar), 0);
         const guncellenecekIsEmri = { 
             toplam_tutar: toplamlar.value.genelToplam, 
@@ -686,31 +661,7 @@ const guncelle = async () => {
         const { error: isEmriError } = await supabase.from('is_emirleri').update(guncellenecekIsEmri).eq('id', isEmriId);
         if (isEmriError) throw new Error("İş emri başlığı güncellenirken hata: " + isEmriError.message);
 
-        const eskiKalemler = isEmri.value.is_emri_kalemleri || [];
-        const silinecekIdler = eskiKalemler.filter(e => !hazirKalemler.some(h => h.id === e.id)).map(e => e.id);
-        const guncellenecekler = hazirKalemler.filter(h => h.id);
-        
-        // YENİ EKLENENLER: "id" FIELD'INI TAMAMEN SİL Kİ SUPABASE "NULL" SANIP HATA VERMESİN
-        const eklenecekler = hazirKalemler.filter(h => !h.id).map(h => {
-             const { id, ...kalanlar } = h;
-             return kalanlar;
-        });
-
-        if (silinecekIdler.length > 0) {
-            const { error: deleteError } = await supabase.from('is_emri_kalemleri').delete().in('id', silinecekIdler);
-            if (deleteError) throw new Error("Kalem silinirken hata: " + deleteError.message);
-        }
-
-        if (eklenecekler.length > 0) {
-            const { error: insertError } = await supabase.from('is_emri_kalemleri').insert(eklenecekler);
-            if (insertError) throw new Error("Yeni kalemler eklenirken hata: " + insertError.message);
-        }
-
-        if (guncellenecekler.length > 0) {
-            const { error: updateError } = await supabase.from('is_emri_kalemleri').upsert(guncellenecekler);
-            if (updateError) throw new Error("Kalemler güncellenirken hata: " + updateError.message);
-        }
-
+        // Maliyet kalemlerini güncelle
         await supabase.from('is_emri_maliyetleri').delete().eq('is_emri_id', isEmriId);
         if (duzenlemeMaliyetListesi.value.length > 0) {
             const maliyetlerToInsert = duzenlemeMaliyetListesi.value.filter(m => m.aciklama && parseSayi(m.tutar) > 0).map(m => ({ 

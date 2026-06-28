@@ -719,51 +719,41 @@ const topluKaydet = async () => {
     let grupId;
     
     if (islemGrupId.value) {
-      // DÜZENLEME MODU
-      grupId = islemGrupId.value;
+      // DÜZENLEME MODU - Use atomic update
+      const yeniVeriler = girisListesi.value.map(satir => ({
+        urun_id: satir.urun_id,
+        miktar: satir.miktar,
+        aciklama: satir.aciklama || null,
+        tutar: satir.tutar || 0
+      }));
       
-      // Eski kaydı sil (stokları iade al)
-      const { data, error: delErr } = await supabase.rpc('stok_giris_grubu_sil', { p_grup_id: grupId });
-      if (delErr) throw delErr;
+      const { data, error } = await supabase.rpc('stok_giris_grubu_guncelle', {
+        p_grup_id: islemGrupId.value,
+        p_yeni_veriler: JSON.stringify(yeniVeriler)
+      });
+      
+      if (error) throw error;
       if (data && !data.success) throw new Error(data.message);
       
     } else {
       // YENİ KAYIT MODU
-      grupId = self.crypto.randomUUID(); 
-    }
-
-    // YENİ / GÜNCELLENMİŞ KAYITLARI EKLE
-    for (const satir of girisListesi.value) {
-      const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
-          urun_id: satir.urun_id, 
-          depo_id: genelBilgiler.value.depo_id, 
-          hareket_tipi: 'giris', 
-          miktar: satir.miktar,
-          aciklama: satir.aciklama || null, 
-          kullanici_id: userStore.user?.id || null, 
-          anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
-          tutar: satir.tutar || 0, 
-          olusturulma_tarihi: islemZamani, 
-          grup_id: grupId 
-      }]);
-      if (hareketError) throw hareketError;
+      grupId = self.crypto.randomUUID();
       
-      const { data: mevcutStok } = await supabase
-        .from('stok_seviyeleri')
-        .select('*')
-        .eq('urun_id', satir.urun_id)
-        .eq('depo_id', genelBilgiler.value.depo_id)
-        .single();
-        
-      if (mevcutStok) { 
-        await supabase
-          .from('stok_seviyeleri')
-          .update({ miktar: mevcutStok.miktar + satir.miktar })
-          .eq('id', mevcutStok.id); 
-      } else { 
-        await supabase
-          .from('stok_seviyeleri')
-          .insert([{ urun_id: satir.urun_id, depo_id: genelBilgiler.value.depo_id, miktar: satir.miktar }]); 
+      // Keep the existing insertion logic for new records
+      for (const satir of girisListesi.value) {
+        const { error: hareketError } = await supabase.from('stok_hareketleri').insert([{
+            urun_id: satir.urun_id,
+            depo_id: genelBilgiler.value.depo_id,
+            hareket_tipi: 'giris',
+            miktar: satir.miktar,
+            aciklama: satir.aciklama || null,
+            kullanici_id: userStore.user?.id || null,
+            anlasma_id: anlasmaDahilinde.value ? genelBilgiler.value.anlasma_id : null,
+            tutar: satir.tutar || 0,
+            olusturulma_tarihi: islemZamani,
+            grup_id: grupId
+        }]);
+        if (hareketError) throw hareketError;
       }
     }
     
