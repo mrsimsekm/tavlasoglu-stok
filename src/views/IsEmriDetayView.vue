@@ -619,7 +619,9 @@ const guncelle = async () => {
   await guncelleWithLoading(async () => {
     try {
         // Kalem verilerini atomic RPC için hazırla
-        const kalemVerileri = guncelKalemler.value.map(k => ({
+        // Veri doğrulama: guncelKalemler.value her zaman bir dizi olduğundan emin ol
+        const kalemlerArray = Array.isArray(guncelKalemler.value) ? guncelKalemler.value : [];
+        const kalemVerileri = kalemlerArray.map(k => ({
             id: k.id || null,
             urun_id: k.urun_id || null,
             aciklama: k.aciklama,
@@ -634,10 +636,19 @@ const guncelle = async () => {
             emanet_tedarikci_notu: k.emanet_tedarikci_notu || 'Belirtilmedi'
         }));
 
+        // JSON stringinin geçerli olduğunu kontrol et
+        let kalemVerileriJson;
+        try {
+            kalemVerileriJson = JSON.stringify(kalemVerileri);
+        } catch (jsonError) {
+            console.error("JSON stringify hatası:", jsonError);
+            throw new Error("İş emri kalemleri geçersiz formatta: " + jsonError.message);
+        }
+
         // Tek atomic RPC çağrısı - tüm kalem işlemleri (insert/update/delete/emanet) veritabanı transaction'ı içinde
         const { data, error } = await supabase.rpc('is_emri_kalemleri_guncelle_atomic', {
             p_is_emri_id: isEmriId,
-            p_kalemler: JSON.stringify(kalemVerileri)
+            p_kalemler: kalemVerileriJson
         });
 
         if (error) throw error;
