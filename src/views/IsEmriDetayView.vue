@@ -621,37 +621,60 @@ const guncelle = async () => {
         // Kalem verilerini atomic RPC için hazırla
         // Veri doğrulama: guncelKalemler.value her zaman bir dizi olduğundan emin ol
         const kalemlerArray = Array.isArray(guncelKalemler.value) ? guncelKalemler.value : [];
-        const kalemVerileri = kalemlerArray.map(k => ({
-            id: k.id || null,
-            urun_id: k.urun_id || null,
-            aciklama: k.aciklama,
-            miktar: parseFloat(k.miktar) || 0,
-            birim: k.birim || 'Adet',
-            birim_fiyat: parseSayi(k.birim_fiyat),
-            kaynak_depo_id: k.is_emanet ? null : (k.kaynak_depo_id || null),
-            kaynak_tedarikci_id: k.is_emanet ? null : (k.kaynak_tedarikci_id || null),
-            anlasma_id: k.anlasma_id || null,
-            is_emanet: !!k.is_emanet,
-            emanet_id: k.emanet_id || null,
-            emanet_tedarikci_notu: k.emanet_tedarikci_notu || 'Belirtilmedi'
-        }));
+        
+        // Her bir kalem için detaylı log
+        console.log("Ham kalemler array:", kalemlerArray);
+        
+        const kalemVerileri = kalemlerArray.map((k, index) => {
+            const mappedItem = {
+                id: k.id || null,
+                urun_id: k.urun_id || null,
+                aciklama: k.aciklama,
+                miktar: parseFloat(k.miktar) || 0,
+                birim: k.birim || 'Adet',
+                birim_fiyat: parseSayi(k.birim_fiyat),
+                kaynak_depo_id: k.is_emanet ? null : (k.kaynak_depo_id || null),
+                kaynak_tedarikci_id: k.is_emanet ? null : (k.kaynak_tedarikci_id || null),
+                anlasma_id: k.anlasma_id || null,
+                is_emanet: !!k.is_emanet,
+                emanet_id: k.emanet_id || null,
+                emanet_tedarikci_notu: k.emanet_tedarikci_notu || 'Belirtilmedi'
+            };
+            
+            console.log(`Kalem ${index}:`, k);
+            console.log(`Mapped kalem ${index}:`, mappedItem);
+            
+            return mappedItem;
+        });
+        
+        console.log("Tüm mapped kalemler:", kalemVerileri);
 
         // JSON stringinin geçerli olduğunu kontrol et
         let kalemVerileriJson;
         try {
             kalemVerileriJson = JSON.stringify(kalemVerileri);
+            // Debug için konsola yazdır
+            console.log("Gönderilen kalem verileri:", kalemVerileri);
+            console.log("Stringify edilmiş veri:", kalemVerileriJson);
         } catch (jsonError) {
             console.error("JSON stringify hatası:", jsonError);
             throw new Error("İş emri kalemleri geçersiz formatta: " + jsonError.message);
         }
 
         // Tek atomic RPC çağrısı - tüm kalem işlemleri (insert/update/delete/emanet) veritabanı transaction'ı içinde
+        // Supabase otomatik olarak JSON stringini parse eder, bu yüzden doğrudan objeyi gönderiyoruz
         const { data, error } = await supabase.rpc('is_emri_kalemleri_guncelle_atomic', {
             p_is_emri_id: isEmriId,
-            p_kalemler: kalemVerileriJson
+            p_kalemler: kalemVerileri  // Parse edilmiş JSON objesini direkt gönder
         });
 
-        if (error) throw error;
+        console.log("RPC response - Data:", data);
+        console.log("RPC response - Error:", error);
+        
+        if (error) {
+            console.error("RPC çağrısı hatası:", error);
+            throw new Error("İş emri kalemleri güncellenirken hata oluştu: " + error.message);
+        }
         if (data && !data.success) throw new Error(data.message);
 
         // İş emri başlık bilgilerini güncelle
