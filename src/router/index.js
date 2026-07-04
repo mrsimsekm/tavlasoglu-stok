@@ -9,7 +9,7 @@ import AnlasmalarView from '../views/AnlasmalarView.vue'
 import IsEmirleriView from '../views/IsEmirleriView.vue'
 import SatisciIsEmirleriView from '../views/SatisciIsEmirleriView.vue' 
 import IsEmriFormView from '../views/IsEmriFormView.vue'
-import IsEmriDetayView from '../views/IsEmriDetayView.vue'
+// Removed static import of IsEmriDetayView - now using dynamic import in route
 import StokGirisView from '../views/StokGirisView.vue'
 import YonetimPaneliView from '../views/YonetimPaneliView.vue'
 import DepoStoklariView from '../views/DepoStoklariView.vue'
@@ -70,10 +70,10 @@ const router = createRouter({
           name: 'is-emri-yeni', 
           component: IsEmriFormView 
         },
-        { 
-          path: 'is-emirleri/:id', 
-          name: 'is-emri-detay', 
-          component: IsEmriDetayView 
+        {
+          path: 'is-emirleri/:id',
+          name: 'is-emri-detay',
+          component: () => import('../views/IsEmriDetayView.vue')
         },
         {
           path: 'alacaklar',
@@ -121,22 +121,22 @@ const router = createRouter({
           component: () => import('../views/ProformaDetayView.vue')
         },
         {
-          path: '/app/emanetler',
+          path: 'emanetler',
           name: 'emanetler',
           component: () => import('../views/EmanetlerView.vue')
         },
         {
-          path: '/app/stok/cikis-log',
+          path: 'stok/cikis-log',
           name: 'stok-cikis-log',
           component: () => import('../views/StokCikisLogView.vue')
         },
         {
-          path: '/app/stok/rezerve',
+          path: 'stok/rezerve',
           name: 'stok-rezerve',
           component: () => import('../views/RezerveStokView.vue')
         },
         {
-          path: '/app/proformalar/ayarlar',
+          path: 'proformalar/ayarlar',
           name: 'ProformaAyarlari',
           component: () => import('../views/ProformaAyarlariView.vue'),
           meta: { requiresAuth: true }

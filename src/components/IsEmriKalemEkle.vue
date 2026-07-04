@@ -598,5 +598,18 @@ watch(aktifGrup, (newVal) => {
     yeniKalem.value.grup_adi = newVal;
 });
 
-watch(kalemler, (yeniListe) => { emit('kalemler-guncellendi', yeniListe); }, { deep: true });
+// Debounced watcher to prevent rapid event emission
+let pendingUpdate = null;
+watch(kalemler, (yeniListe) => {
+    // Clear any pending update
+    if (pendingUpdate) {
+        clearTimeout(pendingUpdate);
+    }
+    
+    // Schedule a new update for the next tick
+    pendingUpdate = setTimeout(() => {
+        emit('kalemler-guncellendi', yeniListe);
+        pendingUpdate = null;
+    }, 0);
+}, { deep: true });
 </script>
